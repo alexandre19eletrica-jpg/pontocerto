@@ -8,9 +8,10 @@ Atualize sempre que entrar qualquer mudanca em producao.
 
 ## 2026-04-27
 
+- **Memoria do assistente / continuidade**: `CONTINUIDADE_ATUAL.md`, `MEMORIA_VIVA_SISTEMA.md`, `OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md` e `PROMPT_ASSISTENTE_PONTO_CERTO.md` alinhados a **27/04/2026**; **fonte de verdade** para o assistente = `docs/` (complementar a `OFICIAL_01`…`04`). **Código** da rodada fiscal: `9ebfc14`; o commit que fecha documentação/memória segue o mesmo repositório.
 - **Play / app**: alvo de publicacao **`1.0.83+1054`** (`pontocerto-1.0.83-1054.aab`); ajuste fiscal: token Focus por plataforma (`focusFiscalSetupUsesPlatformToken`); `buildFiscalOperationalPendingItems` nao exige `apiToken` no doc se existir `FOCUS_API_TOKEN` (Focus) como em `validateInvoiceReadinessForOfficialIssue`.
 - **Fiscal (Web)**: governo **empresa suprema** em integracao (dialog «Configurar emissao real»), matriz, preparar CNPJ, reprocessar automacao, homologacao e chip «Integracao real (Focus)»; empresas: «NFS-e oficial», subir **certificado** (provisionamento), **Sincronizar Focus** e emissao; limpeza de part duplicado em `fiscal_readiness_sections.dart`.
-- **Deploy**: apos push, `firebase deploy --only functions` (e hosting se publiquem web); Android: build e Play Console com o AAB canónico.
+- **Deploy**: apos push, `firebase deploy --only functions` (e hosting se publiquem web); Android: build e Play Console com o AAB canónico; se o `firebase deploy` local falhar com timeout, repetir ou seguir a documentacao de timeouts.
 
 ## 2026-04-26
 

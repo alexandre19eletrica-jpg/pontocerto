@@ -1,8 +1,15 @@
 ﻿# Memoria viva do sistema (operacional)
 
-Data (ultima edicao): 23/04/2026
+Data (ultima edicao): 27/04/2026
 
 Este documento consolida o que o sistema **promete**, como ele **funciona hoje**, e onde existem **desalinhamentos**/riscos. Ele complementa (nao substitui) `ESTADO_ATUAL_DO_SISTEMA.md` e deve ser atualizado quando mudancas relevantes entrarem.
+
+## Governanca integracao Focus (atual, 27/04/2026)
+
+- **O que a plataforma (empresa suprema) trata** na tela **Fiscal / prontidao**: ajuste global de integracao com a **Focus** (dialogo *Configurar emissao real*), **matriz fiscal** (edicao do dialogo), *Preparar pelo CNPJ* e *Reprocessar automacao* como camada de plataforma, **checklist de homologacao** (interruptores), e o chip *Integracao real (Focus)* em *Modo fiscal*. O **token** da Focus no `company_settings` segue a regra de **token de plataforma** (`FOCUS_API_TOKEN` / `usesPlatformFocusToken`) quando nao ha token no documento da empresa; ver `focusFiscalSetupUsesPlatformToken` e Cloud Functions.
+- **O que cada empresa cliente (ou contador na empresa) trata** na mesma area: liga a preparacao **NFS-e oficial** quando tiver perfil, **sobe o certificado** (documento do **provisionamento**), usa **Sincronizar Focus** e o fluxo de **emissao** na competencia; **cadastro** central na tela de **Empresa/Empresas** conforme o fluxo. Nao confundir com «integracao real» a nivel de plataforma, que a suprema controla.
+- **Assistente**: as respostas sobre «quem mexe no que» na Focus devem seguir o prompt em `docs/PROMPT_ASSISTENTE_PONTO_CERTO.md` (actualizado) e o registo em `REGISTRO_ATUALIZACOES` (**2026-04-27**).
+- **Play**: versao de referencia de codigo alinhada a **`1.0.83+1054`** no `pubspec` para o proximo AAB; nome canonico `pontocerto-1.0.83-1054.aab`.
 
 **Nota operacional:** **Ate 22/04 inclusive** o cenario operacional estava **ok**; a **unica** data de **erro nao intencional** (deploy, host, dado ou codigo) e **23/04/2026** — nesse dia ocorreu a “burrada” que reintroduziu sintomas (tela em branco, b815, inconsistencia de codigo, etc.). **21/04/2026** foi dia de **emissao normal** e de **sistema redondo** (notas em producao, retorno de autorizacao). O bloco **«Correcoes no repositorio (23/04)»** abaixo e trabalho de codigo para **recuperar** a mesma disciplina; nao apaga a evidencia de 21/04.
 

@@ -1,7 +1,9 @@
 # Memoria e Registro Atual Oficial do Sistema
 
-Data base: 23/04/2026
+Data base: 27/04/2026
 Projeto: Ponto Certo
+
+**Registo recente (27/04/2026):** a memoria viva, o registo de atualizacoes, a continuidade, o prompt do assistente e este ficheiro mantem a **mesma fonte** em `docs/`: a governanca **Focus** (integracao, homologacao, matriz, automacao) concentra-se na **empresa suprema** na UI fiscal; as empresas concentram-se em **documentacao de provisionamento**, **cadastro**, **sincronizacao** e **emissao** — ver `registro_continuidade/REGISTRO_ATUALIZACOES.md` (secao 2026-04-27) e `PROMPT_ASSISTENTE_PONTO_CERTO.md`. Versao de app alvo: `1.0.83+1054` no repositorio.
 
 ## Objetivo
 

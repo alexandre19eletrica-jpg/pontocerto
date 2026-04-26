@@ -1,8 +1,10 @@
 ﻿# Continuidade Atual
 
-Data: 26/04/2026
+Data: 27/04/2026
 
 ## Situacao
+
+- Em **27/04/2026** ficou fechada a **governanca fiscal** na web: o que **depende da integracao com a Focus** (ambiente, credenciais globais, matriz, preparar CNPJ, reprocesso de automacao, homologacao assistida, dialogo «Configurar emissao real», chip «Integracao real (Focus)») fica com **sessao `hasSupremePlatformAccess` (empresa suprema)**. O que fica com cada **empresa**: **documentacao/ certificado** para o provisionamento, **cadastro** na tela de **Empresas**, **Sincronizar Focus** e **emissao**; «NFS-e oficial» (preparar emissao) com perfil de dono/gestor/contador. A **memoria do assistente** e estes `docs` (p.ex. `PROMPT_ASSISTENTE_PONTO_CERTO.md`, `MEMORIA_VIVA_SISTEMA.md`, `REGISTRO_ATUALIZACOES.md`). `pubspec` alvo: **`1.0.83+1054`**. **Git** `origin/master` inclui o commit de produto (ex. `9ebfc14`); o doc-sync de 27/04 fecha o registo no mesmo repositorio.
 
 - Em 26/04/2026 (fim de dia), **código, regras Firestore, Functions e documentação** foram alinhados ao **GitHub** (`origin/master`), com registo completo em `docs/registro_continuidade/REGISTRO_ATUALIZACOES.md` (**2026-04-26**), incluindo a publicação **Play Store** `1.0.82+1053` (`pontocerto-1.0.82-1053.aab`), integração Focus (token de plataforma sem persistir no doc da empresa; `usesPlatformFocusToken`), marketing web + Meta Pixel (web), refator da área fiscal de prontidão, ajuste de `runtime_incidents` nas regras, e a regra explícita de **commit+push** em `.cursor/rules/documentacao-git-e-registro.mdc`.
 
