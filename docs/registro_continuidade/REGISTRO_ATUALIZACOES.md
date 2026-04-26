@@ -8,6 +8,8 @@ Atualize sempre que entrar qualquer mudanca em producao.
 
 ## 2026-04-27
 
+- **Proxima etapa (planeado)**: o **token / credencial do Assistente** (integracao de modelo ou API) deve ser **carregado da empresa suprema** (ou da mesma camada de configuracao de plataforma), no mesmo espirito do **token Focus** global — sem um segredo distinto por empresa cliente na UI; implementar e documentar na rodada em que o Assistente for ligado a essa chave unificada.
+
 - **A conferir (nao se mexeu)**: ainda pode aparecer pedido de **token API** nalgum fluxo, mensagem de validacao ou ecra; anotado para **revisitar** — ver `focusFiscalSetupUsesPlatformToken`, `FOCUS_API_TOKEN` no ambiente das Functions, `fiscalRealIntegration.usesPlatformFocusToken` no Firestore e ecras fora de Fiscal. Sem alteracao de codigo nesta altura.
 
 - **Memoria do assistente / continuidade**: `CONTINUIDADE_ATUAL.md`, `MEMORIA_VIVA_SISTEMA.md`, `OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md` e `PROMPT_ASSISTENTE_PONTO_CERTO.md` alinhados a **27/04/2026**; **fonte de verdade** para o assistente = `docs/` (complementar a `OFICIAL_01`…`04`). **Git**: produto fiscal `9ebfc14`; doc/memoria `b1e5847`.
