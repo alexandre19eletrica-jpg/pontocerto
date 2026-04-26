@@ -1,0 +1,78 @@
+TUDO CERTO (novo ERP) — ONBOARDING CONTADOR + TRIAL 30 DIAS (reaproveitar a mesma etapa)
+
+OBJETIVO (padrao que sera reutilizado no ERP Tudo Certo)
+- O contador consegue cadastrar novas empresas e marcar como “Teste (30 dias)”.
+- A empresa (responsável/owner) recebe e-mail para definir senha e acessar.
+- O contador já fica automaticamente vinculado à empresa criada (entra em “Empresas do contador”).
+- O contador é guiado por etapas: primeiro completa o perfil do escritório, depois prepara o fiscal da empresa.
+
+ROTAS IMPORTANTES (WEB)
+- Login contador: /login-contador
+- Perfil fiscal do contador: /accountant-fiscal-profile
+- Cadastro de empresa (owner): /cadastro-empresa
+- Cadastro de empresa (feito pelo contador via convite): /cadastro-empresa-contador?trialToken=...
+- Cadastro de empresa indicada pelo contador logado: /accountant-register-company
+- Fiscal: /fiscal
+
+CONVITE “TESTE 30 DIAS” (PLATAFORMA)
+- Function: platformIssueTrial90DayInvite (nome historico; comportamento atual = 30 dias)
+- Cria registro: trial_invites (token hash + expiração)
+- Envia 2 e-mails:
+  - Empresa: link /cadastro-empresa?trialToken=...
+  - Contador: link /cadastro-empresa-contador?trialToken=...
+- Ao concluir o cadastro por convite:
+  - empresa entra como lifecycleStatus=trial
+  - billingStatus=trialing
+  - billingIntegration.graceUntil=+30d
+  - allowLogin=true durante o período
+
+CADASTRO FEITO PELO CONTADOR (LOGADO) — TRIAL 30 DIAS
+- Tela: /accountant-register-company
+- UI:
+  - Switch “Marcar como teste (30 dias)” (default ligado)
+  - Quando ligado: não pede senha do owner (owner recebe e-mail de definir senha)
+- Function: accountantRegisterCompanyTrial30d
+  - Cria empresa (company_settings + commercialSettings trial)
+  - Cria owner no Auth com senha temporária (interno) e envia e-mail de reset para definir senha
+  - Vincula contador logado via ensureAccountantAccessForCompany (accountant_links)
+
+ONBOARDING DO CONTADOR (APÓS LOGIN) — modelo reutilizavel
+1) Se faltar perfil do escritório (officeName + officeEmail) => redireciona obrigatório para /accountant-fiscal-profile
+2) Depois que salvar: pode navegar
+3) Se faltar integração fiscal mínima da empresa (apiToken + provider + municipalCode; e focusNfseApi quando provider Focus) => redireciona para /fiscal
+   - Observação: é uma trava “menos rígida”: não exige “produção autorizada”, apenas base mínima para iniciar.
+
+CHECKLIST FISCAL (EMPRESA)
+- A tela Fiscal tem:
+  - Configuração de integração real (provider, token, municipalCode, focusNfseApi etc.)
+  - Checklist assistido de homologação (quando aplicável)
+- Regra operacional desejada:
+  - contador prepara base fiscal
+  - automação Focus cria/sincroniza a empresa e deixa “redondo” quando dados mínimos estiverem completos
+
+REGRAS DO TRIAL 30 DIAS
+- Duração padrão: 30 dias (convite e cadastro via contador)
+- Follow-up automático após expirar graceUntil:
+  - envia e-mail “Teste 30 dias encerrado — formalização”
+  - bloqueia allowLogin
+
+COLEÇÕES/CHAVES (FIRESTORE)
+- company_settings/{companyId}
+  - companyData
+  - commercialSettings.lifecycleStatus = trial
+  - commercialSettings.billingIntegration.graceUntil
+  - fiscalSettings / fiscalRealIntegration / fiscalHomologationChecklist
+- users/{uid}
+  - role = ACCOUNTANT / OWNER
+  - accountantFiscalProfile (para contador)
+- accountant_links/{companyId}_{accountantUid}
+- trial_invites/{id}
+
+PONTOS DE ATENÇÃO (para não ter dor de cabeça)
+- Sempre usar Firebase Functions na mesma region (ex.: us-central1) no app.
+- Rotas públicas:
+  - /cadastro-empresa-contador precisa ser liberada sem sessão.
+- No fluxo “contador cadastra empresa trial”:
+  - owner SEM senha no formulário (e-mail de reset obrigatório).
+  - contador já vinculado sem cadastro duplicado.
+

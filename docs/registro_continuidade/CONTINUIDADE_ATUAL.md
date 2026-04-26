@@ -1,0 +1,2889 @@
+﻿# Continuidade Atual
+
+Data: 23/04/2026
+
+## Situacao
+
+- Em 26/04/2026, foi registrada a rodada de login e governanca:
+  - login de empresa, contador, funcionario e rota legada `/login` agora atualiza o roteador apos definir a sessao, evitando precisar atualizar a pagina para o sistema reconhecer o usuario
+  - o redirect central nao deve devolver usuario autenticado para `/inicio` por falha transitoria durante sincronizacao Firebase/sessao
+  - a governanca do `Pipeline comercial` passou a destacar `billing_webhook_events` sem vinculo financeiro, cobranca pendente/vencida/falha de escritorio contabil, empresa aguardando vinculo pelo contador e erro de automacao da cobranca de implantacao
+  - regra de negocio confirmada: o contador vincula a empresa ao escritorio dele; a plataforma apenas registra e evidencia a pendencia quando esse vinculo ainda nao aconteceu
+  - validacoes: `npm.cmd run build` em `functions` e `flutter analyze` nos arquivos de login/roteador sem issues
+
+- Ainda em 26/04/2026, o modulo `Documentos` foi ajustado para multiempresa no fluxo do contador:
+  - `Solicitar documento` e `Enviar documento` usam sempre a empresa ativa (`session.companyId`) selecionada na carteira do contador
+  - `Enviar documento` ficou independente, criando envio avulso com anexos sem depender de solicitacao anterior
+  - funcionarios exibidos nos dialogos sao apenas da empresa ativa, evitando mistura de documentos e colaboradores entre empresas
+  - validacao: `flutter analyze lib/features/document_drafts/presentation/pages/document_drafts_page.dart` sem issues
+
+- Em 25/04/2026, durante a subida de build/deploy, ficou registrada a rodada atual para continuidade:
+  - mensagens operacionais devem usar `AppUserMessage` no `OverlayEntry` do `Navigator` raiz, aparecer no topo, ficar por cima de dialogos e sair apenas no `OK`
+  - nao voltar a envolver `MaterialApp.router` em `Stack` externo para mensagens, pois essa tentativa travou a navegacao
+  - `Servicos fiscais` devem salvar/editar com aviso claro e o dropdown de emissao deve listar apenas servicos salvos e ativos no catalogo da empresa
+  - notas autorizadas pela Focus/Sefin devem ser consolidadas como `APPROVED`; `EMITTED` e apenas legado/compatibilidade
+  - o agregado fiscal deve usar `approvedInvoicesCount` para quantidade de notas autorizadas e somar valor bruto apenas dessas notas oficiais ativas
+  - a leitura do numero oficial da NFS-e deve procurar tambem dentro de `officialResponse`, incluindo objetos aninhados da Focus
+  - a proxima etapa e atualizar a pagina `/vendas` com copy e imagens novas, mantendo responsividade automatica para celular e computador
+
+- **Ate 22/04** tudo **ok**; a **burrada** foi **só em 23/04/2026**. **21/04/2026**: emissao em producao **normal** e sistema **redondo** (ex.: NFSe n. 36, `cStat=100`, codigo nacional 07.05.01 / `070501` — ver resumo em `MEMORIA_VIVA_SISTEMA.md`, **sem** anexar XML/assinaturas no git). **23/04**: alteracao nao intencional + registro de **correcoes** no repo (LC 116 + leitura web); detalhe em `REGISTRO_ATUALIZACOES.md` (**2026-04-23**).
+
+- Em 22/04/2026 foi formalizada a regra operacional de execucao antes de qualquer nova frente relevante:
+  - primeiro descrever `visual` em [OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md](C:/Users/hp/pontocerto/docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md)
+  - depois descrever `funcional` em [OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md](C:/Users/hp/pontocerto/docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md)
+  - depois descrever `arquitetura` em [OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md](C:/Users/hp/pontocerto/docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md)
+  - so entao implementar no codigo
+  - ao final, registrar o resultado em [OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md](C:/Users/hp/pontocerto/docs/OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md) e nesta continuidade
+
+- Em 22/04/2026 foi aberta a correcao do resumo fiscal e dos observadores de notas:
+  - a correcao foi aplicada no observer fiscal com reconstrucao exata do agregado a partir de `service_invoices`, impedindo que nota cancelada continue entrando como emitida so por manter `officialNumber`
+  - o valor bruto emitido passou a considerar somente notas oficialmente emitidas e ainda ativas
+  - o resumo fiscal por competencia passou a recalcular a partir de `service_invoices`, sem depender do agregado legado para `emitidas` e `valor bruto`
+  - o PDF de resumo fiscal da competencia ficou alinhado para somar apenas notas emitidas e nao canceladas
+  - a area de NFS-e ganhou um botao de limpeza em lote para excluir notas canceladas, rascunhos e erros de emissao da competencia atual
+  - a limpeza em lote reaproveita a mesma regra da exclusao individual: sem `financeMovementId`, sem emissao oficial ativa e fora de processamento
+  - a rodada foi preparada para publicacao na versao `1.0.78+1048`
+  - tambem foram criados dois arquivos separados para consulta rapida de integracao:
+    - `docs/INTEGRACAO_FOCUS.txt`
+    - `docs/INTEGRACAO_ASAAS.txt`
+  - a secao foi encerrada com registro documental consolidado, pronta para retomada futura sem perda de contexto
+  - os emails destinados a escritorio contabil e contador parceiro foram reajustados para apresentar o sistema com a identidade real de `Bonfim Alexandre Sousa Santos`, desenvolvedor do sistema e empresario dos ramos de obras, construcao civil e servicos eletricos
+
+- Em 22/04/2026 foi aberta a rodada comercial de `escritorio primeiro, empresa depois`, com foco em consolidar o fluxo publico e a frente de cobranca/acesso:
+  - a versao local do projeto foi incrementada para `1.0.77+1047` em [pubspec.yaml](C:/Users/hp/pontocerto/pubspec.yaml) e [android/local.properties](C:/Users/hp/pontocerto/android/local.properties)
+  - a tela publica [accounting_office_signup_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/accounting_office_signup_page.dart) foi alinhada ao padrao do projeto `tudo_certo`, mantendo o escritorio como primeiro cadastro do fluxo
+  - a tela inicial [inicio_page.dart](C:/Users/hp/pontocerto/lib/features/auth/presentation/pages/inicio_page.dart) e o acesso do contador [login_contador_page.dart](C:/Users/hp/pontocerto/lib/features/auth/presentation/pages/login_contador_page.dart) passaram a explicitar que o escritorio entra primeiro e que o cadastro da empresa acontece depois, ja dentro do ambiente do escritorio
+  - o cadastro da empresa continua usando a tela existente [cadastro_empresa_page.dart](C:/Users/hp/pontocerto/lib/features/auth/presentation/pages/cadastro_empresa_page.dart), preservado como etapa posterior via modulo interno do contador em `/accountant-register-company`
+  - a rodada de cobranca/acesso da empresa tambem ficou concentrada em:
+    - [functions/src/index.ts](C:/Users/hp/pontocerto/functions/src/index.ts)
+    - [company_billing_service.dart](C:/Users/hp/pontocerto/lib/features/company/presentation/services/company_billing_service.dart)
+    - [company_page.dart](C:/Users/hp/pontocerto/lib/features/company/presentation/pages/company_page.dart)
+    - [company_access_state.dart](C:/Users/hp/pontocerto/lib/core/company/company_access_state.dart)
+    - [empresa_activation_page.dart](C:/Users/hp/pontocerto/lib/features/auth/presentation/pages/empresa_activation_page.dart)
+
+- Snapshot consolidado em 21/04/2026:
+  - estado funcional desta rodada:
+    - auditoria de coerencia entre `rotas`, `menu lateral`, `CTAs`, `vitrines/promessas`, `permissoes por perfil` e `regras principais do Firestore` foi concluida
+    - os desvios estruturais mais relevantes foram corrigidos ou alinhados para nao prometer mais do que o sistema realmente entrega hoje
+    - o fluxo `Focus / NFSe Nacional` com `Simples Nacional + ISS retido` ficou operacional no ambiente real, com autorizacao confirmada
+    - a memoria operacional do assistente e os documentos-base de continuidade foram realinhados ao escopo real atual do sistema
+  - principais frentes fechadas nesta rodada:
+    - contador:
+      - `Contratos` e `Documentos` liberados em modo leitura coerente com as telas implementadas
+      - `Relatorios` removido do escopo do contador por falta de coerencia entre rota liberada e base de dados autorizada
+      - `Home` e vitrine comercial do contador alinhadas com o acesso real entregue hoje
+    - ideias e observabilidade:
+      - CTA de `Abrir observabilidade` escondido para perfis sem acesso supremo
+      - leitura de `runtime_incidents` e `system_issues` liberada para contador no mesmo tenant, sustentando a leitura operacional de `Ideias`
+    - trabalhista:
+      - tela alinhada com a politica central, deixando de aparentar suporte ao contador quando a rota nao suportava esse perfil
+    - fiscal nacional / Focus:
+      - envio de `pAliq` corrigido
+      - remocao do `cTribMun` automatico indevido no fluxo nacional
+      - emissao real autorizada apos eliminacao de `E0621` e `E0314`
+  - arquivos centrais tocados nesta rodada:
+    - [docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md)
+    - [docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md)
+    - [docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md)
+    - [docs/OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md)
+    - [docs/README_OFICIAL_DOCUMENTACAO.md](/C:/Users/hp/pontocerto/docs/README_OFICIAL_DOCUMENTACAO.md)
+    - [firestore.rules](/C:/Users/hp/pontocerto/firestore.rules)
+    - [lib/core/auth/session.dart](/C:/Users/hp/pontocerto/lib/core/auth/session.dart)
+    - [lib/core/router/app_router.dart](/C:/Users/hp/pontocerto/lib/core/router/app_router.dart)
+    - [lib/features/home/presentation/pages/home_page.dart](/C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart)
+    - [lib/features/marketing/presentation/pages/sales_page.dart](/C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart)
+    - [lib/features/product_feedback/presentation/pages/product_feedback_page.dart](/C:/Users/hp/pontocerto/lib/features/product_feedback/presentation/pages/product_feedback_page.dart)
+    - [lib/features/workforce/presentation/pages/workforce_management_page.dart](/C:/Users/hp/pontocerto/lib/features/workforce/presentation/pages/workforce_management_page.dart)
+    - [functions/src/index.ts](/C:/Users/hp/pontocerto/functions/src/index.ts)
+    - [docs/PROMPT_ASSISTENTE_PONTO_CERTO.md](/C:/Users/hp/pontocerto/docs/PROMPT_ASSISTENTE_PONTO_CERTO.md)
+    - [docs/registro_continuidade/MEMORIA_VIVA_SISTEMA.md](/C:/Users/hp/pontocerto/docs/registro_continuidade/MEMORIA_VIVA_SISTEMA.md)
+    - [docs/registro_continuidade/ESTADO_ATUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/registro_continuidade/ESTADO_ATUAL_DO_SISTEMA.md)
+    - [docs/registro_continuidade/ALINHAMENTO_MODULOS_E_PERMISSOES.md](/C:/Users/hp/pontocerto/docs/registro_continuidade/ALINHAMENTO_MODULOS_E_PERMISSOES.md)
+    - [docs/registro_continuidade/MATRIZ_ACESSO_PONTO_CERTO.txt](/C:/Users/hp/pontocerto/docs/registro_continuidade/MATRIZ_ACESSO_PONTO_CERTO.txt)
+  - publicacao pendente desta ultima rodada:
+    - precisa subir `hosting` e `firestore rules`
+    - se quiser alinhar o app, tambem precisa gerar `AAB` novo
+  - proxima frente natural quando retomar:
+    - auditoria de consistencia entre permissoes de tela e regras mais finas de backend/acoes internas por modulo
+
+- Em 21/04/2026 foi fechada a primeira rodada da auditoria de coerencia de rotas, com foco em alinhar o que a interface promete com o que o roteador realmente entrega:
+  - o CTA `Abrir observabilidade` dentro de `Ideias` deixava `manager` e `accountant` tentarem abrir `/runtime-incidents`, mas a rota seguia bloqueada para quem nao tem acesso supremo
+  - a correção aplicada foi esconder esse CTA no card para perfis sem `hasSupremePlatformAccess`, mantendo apenas as acoes operacionais internas que esses perfis realmente podem usar
+  - o contador ja tinha suporte implementado em modo leitura para `Contratos` e `Documentos`, mas o roteador central ainda barrava essas rotas
+  - a correção aplicada foi liberar `/contracts` e `/documents` para `Role.accountant`, sem abrir `Propostas` nem `Trabalhista`, que continuam exigindo revisao funcional separada
+  - o fluxo de autenticacao tambem foi alinhado para impedir que usuario ja autenticado volte a permanecer em `/login-funcionario`; agora esse caso redireciona para `/home`
+  - risco residual conhecido apos esta rodada:
+    - `Trabalhista` ainda aparenta aceitar contador na tela, mas a rota segue bloqueada de forma intencional ate uma revisao funcional mais profunda
+    - a vitrine comercial (`sales_page.dart`) ainda exibe sidebars demonstrativas mais amplas do que as permissoes reais do contador; isso ficou mapeado como divergencia de copy/promessa, mas nao foi corrigido nesta passada
+  - arquivos centrais desta correção:
+    - [lib/core/auth/session.dart](/C:/Users/hp/pontocerto/lib/core/auth/session.dart)
+    - [lib/core/router/app_router.dart](/C:/Users/hp/pontocerto/lib/core/router/app_router.dart)
+    - [lib/features/product_feedback/presentation/pages/product_feedback_page.dart](/C:/Users/hp/pontocerto/lib/features/product_feedback/presentation/pages/product_feedback_page.dart)
+  - observacao de validacao:
+    - a tentativa de `dart analyze` direcionado nos arquivos alterados voltou a falhar por restricao do ambiente local ao subir o `analysis_server` (`CreateFile failed 5 / Acesso negado`)
+    - a rodada foi conferida por consistencia estrutural dos imports, parametros e guardas de rota
+
+- Ainda em 21/04/2026 foi aplicada a segunda rodada da mesma auditoria, agora sobre a vitrine comercial:
+  - o mock `Ambiente do contador` prometia um menu lateral com `Financeiro`, `Trabalhista` e `Empresa`, mas essas rotas nao correspondem ao acesso real atual do contador
+  - a vitrine foi ajustada para refletir o recorte realmente entregue hoje:
+    - `Empresas do contador`
+    - `Perfil fiscal`
+    - `Cadastrar empresa`
+    - `Fiscal`
+    - `Faturamento`
+    - `Relatorios`
+  - os subtitulos do showcase do contador tambem foram reescritos para parar de prometer um escopo mais amplo do que a plataforma libera
+  - arquivo central desta correção:
+    - [lib/features/marketing/presentation/pages/sales_page.dart](/C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart)
+
+- Ainda em 21/04/2026 foi feita uma terceira passada curta de coerencia interna:
+  - o modulo `Trabalhista` aparentava aceitar `accountant` no corpo da tela, embora a politica central de rotas continue bloqueando esse perfil
+  - a tela foi alinhada com a regra vigente e agora bloqueia explicitamente `employee` e `accountant`, deixando claro que o modulo atual e apenas para empresa/gerencia
+  - arquivo central desta correção:
+    - [lib/features/workforce/presentation/pages/workforce_management_page.dart](/C:/Users/hp/pontocerto/lib/features/workforce/presentation/pages/workforce_management_page.dart)
+
+- Ainda em 21/04/2026 foi feita uma passada fina nos textos e atalhos secundários:
+  - o card `Acessos do contador` na `Home` foi reescrito para refletir o conjunto real de botoes mostrados na tela, evitando uma descricao mais estreita do que o proprio painel entrega
+  - arquivo central desta correção:
+    - [lib/features/home/presentation/pages/home_page.dart](/C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart)
+
+- Ainda em 21/04/2026 foi fechada a rodada final da auditoria de coerencia entre UI, rotas e regras de dados:
+  - `Ideias` continuava prometendo leitura operacional ao contador, mas as regras do Firestore ainda bloqueavam leitura de `runtime_incidents` e `system_issues` para esse perfil
+  - as regras foram alinhadas para liberar leitura dessas colecoes ao contador apenas no mesmo tenant, preservando o restante das restricoes
+  - `Relatorios` seguia liberado para contador na rota, no painel e na vitrine, mas a tela depende de colecoes como `work_entries` e `tasks`, que continuam sem leitura coerente para esse perfil nas regras atuais
+  - a decisao de fechamento foi alinhar a promessa ao que o backend realmente suporta hoje:
+    - remover `/reports` do escopo do contador
+    - retirar o CTA correspondente da `Home`
+    - retirar `Relatorios` do mock/sidebar do contador na vitrine comercial
+  - arquivos centrais desta correção:
+    - [firestore.rules](/C:/Users/hp/pontocerto/firestore.rules)
+    - [lib/core/auth/session.dart](/C:/Users/hp/pontocerto/lib/core/auth/session.dart)
+    - [lib/features/home/presentation/pages/home_page.dart](/C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart)
+    - [lib/features/marketing/presentation/pages/sales_page.dart](/C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart)
+
+- Em 21/04/2026 foi fechada a correção crítica do fluxo `Focus / NFSe Nacional` para emissão com `Simples Nacional + ISS retido`:
+  - o erro inicial recorrente era `E0621`, causado porque o XML nacional estava saindo sem a alíquota municipal relativa (`pAliq`)
+  - a correção definitiva no backend compilado de `functions` fez o payload nacional passar a enviar:
+    - `percentual_aliquota_relativa_municipio`
+    - `aliquota`
+    - `valor_iss`
+    - `valor_iss_retido`
+  - isso fez o XML passar a sair com `pAliq`, eliminando o `E0621`
+  - na sequência apareceu `E0314`, causado por envio indevido de `cTribMun = 705`, derivado automaticamente a partir do código nacional do serviço
+  - a correção definitiva foi:
+    - parar de sugerir/preencher `codigo municipal` automaticamente no fluxo `NFSe Nacional`
+    - remover explicitamente `codigo_tributacao_municipal_iss` e `codigo_tributario_municipio` antes do `POST /v2/nfsen` da Focus
+  - depois disso a emissão foi autorizada com sucesso no ambiente real, com retorno `cStat = 100` e `nNFSe = 34`
+  - pontos confirmados do caso:
+    - `codigo_municipio_emissora = 5209705` estava correto e representa o município do emitente
+    - `codigo_municipio_prestacao = 5208707` estava correto e representa o município da prestação/obra
+    - esses códigos IBGE não eram o problema; o bloqueio estava no `cTribMun` inválido
+  - guarda de continuidade para erro futuro:
+    - se voltar `E0621`, conferir primeiro se o XML da Focus contém `pAliq`
+    - se voltar `E0314`, conferir primeiro se o XML voltou a conter `cTribMun`
+    - no fluxo nacional, `cTribMun` não deve ser enviado automaticamente; só pode voltar a existir quando houver código municipal realmente validado para o município de incidência
+  - arquivos centrais desta correção:
+    - [functions/src/index.ts](/C:/Users/hp/pontocerto/functions/src/index.ts)
+    - [lib/features/fiscal/presentation/pages/fiscal_readiness_operational_actions.dart](/C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_operational_actions.dart)
+    - [lib/features/fiscal/presentation/pages/fiscal_readiness_support.dart](/C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_support.dart)
+
+- Ainda em 21/04/2026 foi fechada a passada final de consistência operacional da emissão fiscal nacional:
+  - o caso `Simples Nacional + ISS sem retencao` estava voltando com `E0625`, porque a automação ainda enviava `aliquota` mesmo quando o cenário exigia ausência desse campo
+  - a correção aplicada no backend passou a manter a alíquota preenchida para apoio operacional na tela, mas impedir o envio de `aliquota` e `percentual_aliquota_relativa_municipio` na emissão real quando não houver retenção de ISS no caso nacional aplicável
+  - a interface da emissão foi reforçada para deixar explícito esse comportamento ao operador, evitando conferência enganosa entre preenchimento visual e payload real
+  - na sequência também foi corrigida a leitura do resumo fiscal da competência:
+    - `Aprovadas` passou a contar apenas notas oficialmente emitidas e ainda ativas
+    - `Valor bruto` passou a somar apenas notas oficialmente emitidas e não canceladas
+    - `Tomadores` passou a considerar apenas tomadores dessas notas oficiais ativas
+    - `Notas do mes` e `Emitidas internas` passaram a refletir a saída imediata de notas canceladas da leitura consolidada
+  - resultado operacional confirmado:
+    - a emissão voltou a ficar redondamente funcional no cenário validado
+    - o resumo fiscal passou a refletir melhor o financeiro real ligado à emissão oficial
+  - publicacao pendente desta passada:
+    - precisa subir `hosting` para publicar os ajustes visuais e de resumo fiscal
+    - `functions` só precisam ser republicadas se a correção do `E0625` ainda não estiver no ambiente atual
+  - versao Android local atual no projeto:
+    - `1.0.75+1045` em [pubspec.yaml](C:/Users/hp/pontocerto/pubspec.yaml) e [android/local.properties](C:/Users/hp/pontocerto/android/local.properties)
+    - `AAB` local encontrado em `build/app/outputs/bundle/release/app-release.aab` com data `21/04/2026 11:01`
+  - arquivos centrais desta passada:
+    - [functions/src/index.ts](/C:/Users/hp/pontocerto/functions/src/index.ts)
+    - [lib/features/fiscal/presentation/widgets/invoice_dialog_sections.dart](/C:/Users/hp/pontocerto/lib/features/fiscal/presentation/widgets/invoice_dialog_sections.dart)
+    - [lib/features/fiscal/presentation/pages/fiscal_readiness_dashboard_sections.dart](/C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_dashboard_sections.dart)
+    - [lib/features/fiscal/presentation/pages/fiscal_readiness_invoice_sections.dart](/C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_invoice_sections.dart)
+
+- Ainda em 21/04/2026 a estrategia comercial/publica foi reposicionada para `accountant-first`, com foco em escritorio contabil:
+  - a versao local do projeto foi incrementada para `1.0.76+1046` em [pubspec.yaml](C:/Users/hp/pontocerto/pubspec.yaml) e [android/local.properties](C:/Users/hp/pontocerto/android/local.properties)
+  - o pre-cadastro publico passou a tratar o escritorio contabil como contato principal do fluxo, sem depender de uma escolha paralela entre plataforma e contador nessa etapa
+  - `publicCreateSalesPreRegistration` passou a assumir `implementationMode = accountant` por padrao e a reutilizar nome/email do escritorio como referencia principal do onboarding
+  - o email automatico do pre-cadastro foi reescrito para deixar claro que o escritorio recebe o onboarding e conduz o cadastro inicial da empresa
+  - o onboarding comercial deixou de pre-preencher o responsavel da empresa com os dados do escritorio quando o fluxo vem do contador
+  - o cadastro da empresa pelo escritorio passou a aceitar email da empresa opcional, usando o email do responsavel como fallback operacional
+  - a landing comercial e o card interno da plataforma foram alinhados para reforcar o escritorio como protagonista do convite e do cadastro inicial
+  - arquivos centrais desta passada:
+    - [functions/src/index.ts](/C:/Users/hp/pontocerto/functions/src/index.ts)
+    - [lib/features/marketing/presentation/pages/sales_preregistration_page.dart](/C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_preregistration_page.dart)
+    - [lib/features/marketing/presentation/pages/sales_onboarding_page.dart](/C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_onboarding_page.dart)
+    - [lib/features/marketing/presentation/pages/sales_page.dart](/C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart)
+    - [lib/features/auth/presentation/pages/cadastro_empresa_page.dart](/C:/Users/hp/pontocerto/lib/features/auth/presentation/pages/cadastro_empresa_page.dart)
+    - [lib/features/platform_admin/presentation/pages/platform_admin_page.dart](/C:/Users/hp/pontocerto/lib/features/platform_admin/presentation/pages/platform_admin_page.dart)
+
+- Em 10/04/2026 foi aberta uma passada preventiva de armazenamento/midia sem alterar regras de acesso:
+  - a checagem confirmou que o `AAB` da `1.0.71+1041` continua em torno de `54,6 MB`, entao o numero de `4,18 GB` observado no aparelho nao corresponde ao tamanho real do pacote
+  - o mapeamento do codigo nao encontrou persistencia local pesada por banco offline ou armazenamento proprio amplo; `SharedPreferences` esta sendo usado apenas para dados pequenos de contexto/analytics
+  - o ponto de risco real encontrado estava nos fallbacks de visualizacao de imagem em `Justificativas` e `Tarefas`, que podiam puxar ate `20 MB` diretamente em memoria quando a URL do Storage falhava
+  - como prevencao, esses fallbacks foram reduzidos para limite de `5 MB`, com bloqueio de visualizacao inline acima disso:
+    - [justifications_page.dart](/C:/Users/hp/pontocerto/lib/features/justifications/presentation/pages/justifications_page.dart)
+    - [task_details_media_pdf.dart](/C:/Users/hp/pontocerto/lib/features/tasks/presentation/pages/task_details_media_pdf.dart)
+  - validacao real passou limpa com `dart analyze` nos arquivos alterados
+  - observacao operacional residual desta mesma passada:
+    - os principais uploads continuam usando `FilePicker` com `withData: true`, o que le o arquivo inteiro em memoria antes do envio
+    - isso aparece hoje em frentes como `Trabalhista`, `Fiscal`, `Onboarding`, `Clausulas`, `Catalogo` e `Materiais`
+    - neste momento isso foi mantido para nao abrir nova frente estrutural, mas fica registrado como proximo ponto natural de endurecimento se houver sinal de consumo alto em aparelhos mais fracos ou uploads grandes
+
+- Ainda em 10/04/2026 foi aplicada uma blindagem leve adicional so para o app movel, sem mexer na web:
+  - foi criado o helper [mobile_upload_optimizer.dart](/C:/Users/hp/pontocerto/lib/core/media/mobile_upload_optimizer.dart)
+  - a regra nova no app passou a ser:
+    - upload selecionado no dispositivo precisa respeitar limite movel de tamanho
+    - a web continua sem essa intervencao preventiva
+  - essa protecao foi ligada nos fluxos moveis mais sensiveis:
+    - upload de imagem via [firebase_media_upload.dart](/C:/Users/hp/pontocerto/lib/core/media/firebase_media_upload.dart)
+    - documentos do cadastro trabalhista em [workforce_management_operational_actions.dart](/C:/Users/hp/pontocerto/lib/features/workforce/presentation/pages/workforce_management_operational_actions.dart)
+    - certificado digital em [fiscal_readiness_integration_actions.dart](/C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_integration_actions.dart)
+    - uploads do onboarding em [sales_onboarding_page.dart](/C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_onboarding_page.dart)
+    - PDFs de clausulas em [contract_clauses_page.dart](/C:/Users/hp/pontocerto/lib/features/proposals/presentation/pages/contract_clauses_page.dart)
+  - o endurecimento foi mantido conservador para nao quebrar o que ja estava validado:
+    - sem mudar regra de acesso
+    - sem reescrever fluxo da web
+    - sem trocar a estrategia de upload dos modulos
+  - validacao real voltou a passar limpa com `dart analyze` nos arquivos afetados
+
+- Em 10/04/2026 foi feita a tentativa de fechamento da publicacao apos a revisao visual e a conferencia final de `Funcionarios` + `Trabalhista`:
+  - a checagem confirmou que a regra pedida segue aplicada:
+    - `Funcionarios e acessos` ficou apenas como tela de consulta/status da equipe
+    - o cadastro operacional do colaborador segue no modulo `Trabalhista`
+    - os atalhos e textos atuais continuam coerentes com essa divisao
+  - a checagem tambem confirmou que a rodada de `pagamento individual` e `pagamento em massa` ja esta registrada e implementada no `Trabalhista`:
+    - ambos os fluxos permitem escolher tipo (`diaria`, `semanal`, `mensal`, `comissao`)
+    - ambos os fluxos permitem `marcar como pago ao lancar`
+    - o lote em massa continua com retorno de criados, ignorados e falhas sem derrubar todo o processo no primeiro erro
+  - validacao/build antes da publicacao:
+    - `npm.cmd --prefix functions run build` concluiu com sucesso
+    - `scripts/build_flutter_direct.ps1 -Target web` concluiu com sucesso fora do sandbox e gerou `build/web`
+  - tentativa de deploy:
+    - `firebase deploy --only functions,hosting --project pontocerto-e1dab` ficou bloqueado por credenciais expiradas do Firebase CLI nesta maquina
+    - o erro atual pede `firebase login --reauth` ou novo token `firebase login:ci`
+    - portanto, as alteracoes desta rodada ainda devem ser tratadas como `nao publicadas`
+  - tentativa de gerar novo `AAB`:
+    - a versao local segue em `1.0.70+1040`
+    - duas execucoes de `flutter build appbundle --release` atingiram timeout local sem confirmar artefato novo desta rodada
+    - o arquivo existente em `build/app/outputs/bundle/release/app-release.aab` permanece com carimbo anterior do mesmo dia (`10/04/2026 09:09`), entao ainda nao foi confirmado como bundle final desta ultima rodada
+
+- Ainda em 10/04/2026, depois da reautenticacao local do Firebase CLI:
+  - a autenticacao deixou de ser o bloqueio principal, mas o deploy continuou falhando ao chamar a API do Google Cloud:
+    - `Failed to make request to https://cloudresourcemanager.googleapis.com/v1/projects/pontocerto-e1dab`
+  - com isso, o estado segue como:
+    - build web local pronto
+    - `functions` compiladas
+    - deploy de `functions + hosting` ainda nao concluido
+  - a tentativa estendida de gerar o `AAB` tambem nao confirmou bundle novo:
+    - o comando `flutter build appbundle --release` voltou a atingir timeout local mesmo com janela longa
+    - nao ficou processo `java/gradle/flutter` rodando ao final
+    - o artefato `build/app/outputs/bundle/release/app-release.aab` continua com o mesmo carimbo `10/04/2026 09:09`, sem evidencia de regeneracao desta ultima rodada
+
+- Ainda em 10/04/2026 foi preparada a proxima release como `1.0.71+1041`:
+  - a versao local foi atualizada em [pubspec.yaml](/C:/Users/hp/pontocerto/pubspec.yaml) e [local.properties](/C:/Users/hp/pontocerto/android/local.properties)
+  - `functions` foram recompiladas com sucesso
+  - a web foi rebuildada com sucesso e o artefato atual confirma:
+    - `build/web/version.json` = `1.0.71` + `1041`
+  - a publicacao web e functions foi concluida com sucesso apos forcar o Firebase CLI a priorizar IPv4 no Node:
+    - `firebase deploy --only functions,hosting --project pontocerto-e1dab --debug`
+    - `Deploy complete!`
+  - publicacao confirmada:
+    - hosting em `https://pontocerto-e1dab.web.app`
+    - console do projeto em `https://console.firebase.google.com/project/pontocerto-e1dab/overview`
+  - a causa real do bloqueio anterior ficou caracterizada como falha do CLI/Node na rota padrao de rede, resolvida ao priorizar `ipv4first`
+  - a frente web desta release `1.0.71+1041` pode ser considerada publicada
+
+- Em 10/04/2026 foi fechada uma nova rodada da revisao visual transversal com foco em `cards responsivos por funcao e responsabilidade`:
+  - a regra visual retomou exatamente o padrao confirmado em `09/04/2026` no `Financeiro da empresa`: evitar `card pai` que empurra o grupo para coluna alta, manter leitura `horizontal first` e deixar titulo/subtitulo empilhados dentro do proprio card
+  - os componentes compartilhados [app_layout.dart](/C:/Users/hp/pontocerto/lib/core/theme/app_layout.dart) e [app_branding.dart](/C:/Users/hp/pontocerto/lib/core/theme/app_branding.dart) passaram a reforcar essa composicao na base do sistema:
+    - `AppWorkspaceCard` agora fixa o cabecalho em pilha vertical com texto acima e acoes abaixo, sem disputar lateral com o conteudo
+    - `HeroBanner` deixou de depender de composicao lateral para titulo/subtitulo e passou a respeitar a mesma leitura empilhada
+    - `AppHorizontalCardGrid` ganhou comportamento mais firme em larguras menores para manter grade responsiva sem voltar a lista vertical por acidente
+  - na tela do funcionario [home_page.dart](/C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart), os cards de resumo pessoal e `Meu dia` passaram de `Wrap` solto para `AppHorizontalCardGrid`, com celulas que ocupam melhor a largura disponivel
+  - na tela `Funcionarios e acessos` [employees_page.dart](/C:/Users/hp/pontocerto/lib/features/employees/presentation/pages/employees_page.dart), o resumo da equipe e as listas operacionais/contabeis passaram a usar grade responsiva de cards; os cards individuais tambem deixaram o formato de `ListTile` alto para uma composicao por responsabilidade mais clara
+  - na tela `Empresas do contador` [accountant_companies_page.dart](/C:/Users/hp/pontocerto/lib/features/accountant_links/presentation/pages/accountant_companies_page.dart), o resumo da carteira e a lista de empresas foram reorganizados em grade responsiva, reduzindo o bloco vertical longo quando o contador tiver varias empresas
+  - durante a limpeza da rodada foi removido codigo morto antigo da tela de `Funcionarios`, junto com imports e helpers que ja nao participavam mais do fluxo atual
+  - validacao real da frente passou limpa com `dart analyze` nos arquivos compartilhados e nas telas centrais alteradas
+
+- Em 10/04/2026 foi reafirmada e aplicada como regra operacional prioritaria do projeto:
+  - nunca deixar erro, aviso tecnico relevante, quebra estrutural ou sobra de validacao para depois
+  - toda frente deve fechar com correcao imediata do que aparecer na rodada, evitando acumulo silencioso de divida tecnica
+  - quando surgir validacao falhando, a prioridade passa a ser estabilizar e limpar o ponto antes de seguir para nova funcionalidade
+  - a regra vale para frontend, backend, rotas, integracoes, build e consistencia estrutural
+  - nesta mesma rodada a regra foi aplicada na pratica com limpeza dos avisos antigos que ainda restavam em `home_page.dart` e substituicao do seletor legado de implantacao em `sales_preregistration_page.dart`
+  - a validacao real voltou a fechar limpa com `dart analyze` nesses arquivos e `npm.cmd --prefix functions run build`
+
+- Em 10/04/2026 foi fechada a rodada funcional de ligacao entre `Ideias` e `Observabilidade`, mantendo a paridade da frente web com a referencia `AAB 1.0.70+1040`:
+  - foi reconferido no roteamento e no fluxo de sessao que a diferenca permitida continua sendo apenas o login de `funcionario`, que segue bloqueado na web e restrito ao app/Play Store
+  - os links operacionais da rotina do contador na `Home` e os acessos fiscais do modulo `Fiscal` foram revisitados; a leitura atual ficou confirmada apontando para rotas reais do sistema ou para portais oficiais externos, sem reintroduzir pagina fake intermediaria
+  - a analise assistida da `Observabilidade` deixou de depender de acesso supremo no backend e passou a aceitar `owner`, `manager` e `accountant`, alinhando a permissao real com a interface liberada nesses perfis
+  - `Ideias` ficou mais robusto para nao perder registros quando existir incidente ligado na `Observabilidade` sem o documento principal em `product_feedback`, usando fallback pela trilha de `runtime_incidents`
+  - cada ideia agora tambem consegue refletir a situacao da pasta operacional em `system_issues`, alem de expor acao direta para `reanalisar`, `salvar na pasta operacional` e `abrir observabilidade`
+  - a consulta da pasta operacional foi mantida leve e segura: a leitura de `system_issues` ficou apenas por `companyId`, com filtro de `source = product_feedback` no app, evitando depender de indice novo desnecessario
+  - o atalho `Seja nosso parceiro` tambem foi removido do menu lateral global para nao poluir a navegacao operacional do contador com rota comercial fora da rotina real
+  - a rodada foi validada com `scripts/validate_flutter_direct.ps1 -Mode check -Paths lib/features/product_feedback/presentation/pages` e `npm.cmd --prefix functions run build`
+  - a limpeza final do shell tambem passou em `scripts/validate_flutter_direct.ps1 -Mode check -Paths lib/core/navigation lib/features/product_feedback/presentation/pages`
+  - com isso, esta frente funcional pode ser considerada fechada nesta rodada, restando apenas conferencia de dados reais em uso quando houver novo registro ou nova triagem operacional
+
+- Em 10/04/2026 foi aberta e fechada a rodada seguinte do fluxo comercial e operacional do contador:
+  - o modulo `Seja nosso parceiro` voltou a ficar exposto no menu lateral do contador, preservando a frente comercial de captacao de clientes
+  - foi criado o modulo real `Cadastrar empresa` no acesso do contador, com rota propria e entrada direta no `Painel`, no menu lateral e em `Empresas do contador`
+  - essa nova entrada reutiliza o cadastro direto ja existente, mas em modo contador: o escritorio atual entra vinculado automaticamente na nova empresa e a cobranca automatica continua sendo gerada no mesmo fluxo
+  - a copy da pagina de pre-cadastro comercial e dos emails do fluxo com contador foi ajustada para deixar explicito que, depois da confirmacao, o contador pode usar o modulo `Cadastrar empresa` com os dados recebidos por email
+  - a validacao tecnica real passou com `npm.cmd --prefix functions run build`
+  - na validacao Dart dos arquivos alterados restaram apenas avisos antigos ja presentes em `home_page.dart` e os avisos legados de `RadioListTile` em `sales_preregistration_page.dart`, sem novo erro estrutural introduzido por esta rodada
+
+- Em 10/04/2026 foi iniciada a retomada funcional pos-refatoracao com foco em paridade do `AAB 1.0.70+1040`, links reais do contador e trilha de ideias/observabilidade:
+  - foi reconfirmado no roteamento que a unica diferenca permitida entre web e `AAB 1.0.70+1040` continua sendo o login de `funcionario`, que permanece restrito ao app/Play Store
+  - `Observabilidade` deixou de ficar travada so para acesso supremo e passou a ficar operacional para `owner`, `manager` e `accountant`, inclusive no menu lateral e na fila do assistente
+  - os atalhos operacionais do contador na `Home` foram limpos para apontar apenas para paginas reais de trabalho (`assistente`, `ideias`, `observabilidade`, `empresas do contador`, `perfil fiscal`, `faturamento`, `fiscal`, `relatorios`), removendo o link de parceria da area de rotina operacional
+  - o bloco de acessos do escritorio dentro do `Fiscal` deixou de aparecer para empresa/gerencia e ficou restrito ao fiscal do contador; o CTA de PDF tambem passou a usar rotulo neutro para empresa (`Resumo fiscal PDF`)
+  - o modulo `Ideias` passou a recuperar tambem registros que existam apenas na trilha de `runtime_incidents` com origem `product_feedback`, evitando sumico visual quando o item entrou na observabilidade e nao voltou para a lista principal
+  - `Ideias` passou a exibir resumo/direcionamento do assistente quando ja houver analise na observabilidade, consolidando a pasta operacional acessivel no proprio sistema sem criar camada pesada nova
+
+- Em 10/04/2026 foi iniciado e fechado o primeiro ciclo seguro de refatoracao de `Tarefas`:
+  - a base compartilhada de documento, cliente fiscal reaproveitavel e busca de responsavel saiu de `lib/features/tasks/presentation/pages/tasks_page.dart`
+  - esses helpers puros e funcoes de persistencia compartilhada foram extraidos para `lib/features/tasks/presentation/pages/tasks_page_support.dart` com `part file`
+  - a tela principal continuou com o mesmo fluxo, os mesmos dialogs e os mesmos contratos de dados; a rodada foi apenas estrutural para reduzir concentracao no arquivo grande
+  - a validacao automatica real deste primeiro ciclo passou com `dart analyze` e `dart format -o none` apontados para `lib/features/tasks/presentation/pages`
+  - com isso, `Tarefas` entrou na mesma trilha segura ja usada em `Fiscal` e `Trabalhista`, preparando a proxima rodada de extracao por responsabilidade
+
+- Em 10/04/2026 foi fechado o segundo ciclo seguro de `Tarefas`, ainda sem mudar fluxo:
+  - as funcoes puras compartilhadas de status, datas, anexos e moeda foram centralizadas em `lib/features/tasks/presentation/pages/tasks_page_support.dart`
+  - `tasks_page.dart` deixou de manter logica duplicada entre a lista principal e a `TaskDetailsPage`, passando a delegar formatacao e rotulos para helpers comuns
+  - `_OpcaoAnexo` tambem foi movida para o arquivo de suporte, reduzindo sobra estrutural no fim do modulo
+  - a validacao automatica real voltou a passar limpa com `dart analyze` e `dart format -o none` apontados para `lib/features/tasks/presentation/pages`
+  - o proximo ciclo seguro no modulo continua sendo separar a `TaskDetailsPage` por responsabilidade, mas agora com a base utilitaria ja consolidada
+
+- Em 10/04/2026 foi fechado o ciclo principal de segmentacao estrutural de `Tarefas`:
+  - a `TaskDetailsPage` foi separada de `lib/features/tasks/presentation/pages/tasks_page.dart` para `lib/features/tasks/presentation/pages/task_details_page.dart`, deixando o arquivo principal concentrado na lista/orquestracao
+  - o detalhe tambem foi repartido por responsabilidade em `lib/features/tasks/presentation/pages/task_details_sections.dart`, `lib/features/tasks/presentation/pages/task_details_operations.dart` e `lib/features/tasks/presentation/pages/task_details_media_pdf.dart`
+  - a estrategia usada repetiu o padrao que estabilizou `Fiscal` e `Trabalhista`: `part file` + extensoes na mesma biblioteca, preservando contratos, rotas, campos, regras e comportamento
+  - houve apenas uma correcao mecanica imediata apos a extracao, com remocao de uma chave sobrando em `task_details_media_pdf.dart`; depois disso a validacao automatica real voltou a passar limpa
+  - neste ponto, a frente estrutural segura de `Tarefas` pode ser considerada fechada nesta rodada, restando apenas limpeza fina posterior ou validacao funcional mais ampla quando necessario
+
+- Em 10/04/2026 foi concluida a limpeza fina transversal e a validacao tecnica orientada a risco de `Fiscal`, `Trabalhista` e `Tarefas`:
+  - foram removidos residuos estruturais que restaram da segmentacao, incluindo imports mortos, helpers orfaos, um `part` inteiro de folha que ja nao tinha uso no `Fiscal` e pequenas sobras mecanicas de validacao
+  - a revisao orientada a risco confirmou que os pontos centrais continuam ligados: notas fiscais oficiais, fechamento e documentos do `Trabalhista`, abertura/lista/detalhe/anexos/PDF em `Tarefas`
+  - a validacao automatica real transversal passou limpa com `dart analyze` e `dart format -o none` apontados para os tres diretorios de paginas, alem do fallback estrutural documentado em `docs/registro_continuidade/ULTIMA_VALIDACAO_TECNICA.md`
+  - com isso, a frente de refatoracao estrutural desta rodada pode ser considerada encerrada, e a evolucao funcional normal do sistema pode ser retomada com a guarda tecnica obrigatoria ativa no fim de cada ciclo relevante
+
+- Em 10/04/2026 foi restabelecido o fluxo de validacao automatica e build rapido fora do sandbox:
+  - a causa do travamento local nao estava nos modulos refatorados, e sim no acesso do sandbox ao SDK em `C:\Users\hp\flutter\flutter\bin\cache`, onde o processo isolado so tinha leitura e nao conseguia abrir `lockfile` nem subir o `analysis_server`
+  - a validacao real voltou a funcionar pelo script `scripts/validate_flutter_direct.ps1`, executado com `PowerShell -ExecutionPolicy Bypass`, usando o `dart.exe` direto do SDK
+  - a rodada de correcao removeu dois erros estruturais reais da segmentacao (`draft` orfao no PDF fiscal e chave final ausente em `workforce_management_workspace_sections.dart`) e limpou os avisos esperados de `setState` nos `part files`
+  - o comando direcionado passou com `dart analyze`, `dart format -o none` e fallback estrutural, regenerando `docs/registro_continuidade/ULTIMA_VALIDACAO_TECNICA.md`
+  - o build web direto tambem voltou a fechar com `scripts/build_flutter_direct.ps1`, confirmando que o caminho recomendado daqui em diante e usar os scripts diretos com `-ExecutionPolicy Bypass` fora do sandbox quando for validar ou compilar
+  - ficou estabelecida como regra permanente a guarda tecnica por rodada: rodar `scripts/guard_flutter_cycle.ps1` em `validate-only` antes de abrir ou fechar frente grande, e usar `web-fast` ou `appbundle-fast` como caminho padrao de build rapido sem acumular erro para depois
+  - o fluxo permanente ja foi testado na pratica com `scripts/guard_flutter_cycle.ps1 -Mode appbundle-fast`, concluindo validacao limpa e gerando `build/app/outputs/bundle/release/app-release.aab`; essa passa a ser a rotina padrao para evitar acúmulo de erro tecnico entre ciclos
+
+- Em 10/04/2026 foi concluida a primeira rodada segura de refatoracao estrutural do `Fiscal` sem alterar regra de negocio:
+  - o arquivo principal `lib/features/fiscal/presentation/pages/fiscal_readiness_page.dart` deixou de concentrar toda a cauda de modelos e automacoes puras
+  - essa base de suporte foi extraida para `lib/features/fiscal/presentation/pages/fiscal_readiness_support.dart` usando `part file`, preservando a mesma biblioteca e os simbolos privados
+  - foram movidos para o arquivo de suporte os modelos/configuracoes fiscais, matriz de compliance, automacao fiscal, geracao de servicos, checks de competencia e helpers puros do fim do modulo
+  - o objetivo desta rodada foi reduzir peso estrutural do arquivo principal e preparar a fase seguinte de extracao de blocos visuais grandes
+  - nenhuma rota, colecao, campo, permissao ou contrato operacional foi alterado nesta etapa
+  - a validacao automatica por `dart analyze` e `dart format -o none` voltou a travar no ambiente desta sessao mesmo quando apontada apenas para os dois arquivos do modulo, entao a rodada foi fechada com validacao estrutural/manual e a pendencia automatica permanece registrada
+
+- Em 10/04/2026 foi fechada a rodada seguinte da fase 2 segura de refatoracao visual do `Fiscal`, ainda sem alterar fluxo:
+  - os blocos visuais grandes de `Emissao fiscal real` foram extraidos para `lib/features/fiscal/presentation/pages/fiscal_readiness_sections.dart`
+  - os blocos de cabecalho e dashboard do modulo foram extraidos para `lib/features/fiscal/presentation/pages/fiscal_readiness_dashboard_sections.dart`
+  - com isso, `fiscal_readiness_page.dart` ficou mais focado na composicao da tela e nas acoes/dialogos, enquanto as secoes pesadas de interface passaram a ficar segmentadas por responsabilidade
+  - a estrategia continuou sendo `part file` + `extension on _FiscalReadinessPageState`, para manter acesso ao mesmo estado, callbacks e helpers privados sem reescrever contratos
+  - nenhuma mudanca de regra de negocio, dados persistidos, permissoes ou integracoes externas foi introduzida nesta rodada
+  - a validacao automatica ampla continua pendente por travamento do ambiente; a rodada foi conferida por consistencia estrutural dos `parts`, referencias e chamadas ainda usadas pelo modulo
+
+- Em 10/04/2026 foi fechado mais um ciclo seguro da fase 2 do `Fiscal`, levando tambem os blocos operacionais centrais para arquivos segmentados:
+  - o fluxo de notas e seus blocos auxiliares (`InvoiceSection`, buckets, acoes e resumo de notas) foi extraido para `lib/features/fiscal/presentation/pages/fiscal_readiness_invoice_sections.dart`
+  - o bloco de folha/competencia (`PayrollSection`, checks, acompanhamento por funcionario e notas) foi extraido para `lib/features/fiscal/presentation/pages/fiscal_readiness_payroll_sections.dart`
+  - `fiscal_readiness_page.dart` passou a concentrar principalmente a montagem da tela, dialogs e operacoes, enquanto quase toda a interface pesada do modulo ficou repartida em `parts` menores
+  - a extracao continuou sem alterar regras de negocio, colecoes, campos, permissoes ou contratos com backend
+  - a conferenca desta rodada foi feita por integridade dos `part files`, presenca das diretivas no arquivo principal e permanencia das referencias chamadas na tela
+
+- Em 10/04/2026 foi fechado o ciclo seguinte da fase 3 segura do `Fiscal`, separando PDF e acoes de integracao/configuracao:
+  - as rotinas de PDF foram extraidas para `lib/features/fiscal/presentation/pages/fiscal_readiness_pdf_actions.dart`, incluindo preview de nota e resumo fiscal para contador
+  - as acoes de integracao/configuracao fiscal foram extraidas para `lib/features/fiscal/presentation/pages/fiscal_readiness_integration_actions.dart`, incluindo configuracao da emissao real, matriz, certificado, sincronizacao/provisionamento e persistencia dos checklists fiscais
+  - `fiscal_readiness_page.dart` ficou mais concentrado na orquestracao de tela e dialogs remanescentes, com a maior parte das responsabilidades transversais ja segmentada em arquivos especificos
+  - a estrategia permaneceu em `part file` + `extension on _FiscalReadinessPageState`, preservando o mesmo estado e os mesmos acessos privados sem mudar contratos
+  - nao houve alteracao de regra de negocio, colecoes, campos, permissoes ou chamadas externas nesta rodada
+
+- Em 10/04/2026 foi fechado o ciclo final de segmentacao principal do `Fiscal`:
+  - as acoes operacionais restantes do emissor e do catalogo fiscal foram extraidas para `lib/features/fiscal/presentation/pages/fiscal_readiness_operational_actions.dart`
+  - as acoes de governanca/configuracao sensivel foram extraidas para `lib/features/fiscal/presentation/pages/fiscal_readiness_governance_actions.dart`
+  - com isso, `fiscal_readiness_page.dart` passou a ficar essencialmente como orquestrador da tela, mantendo no arquivo principal apenas composicao, alguns helpers simples e utilitarios basicos
+  - o modulo ficou repartido em `parts` por responsabilidade: suporte, dashboard, secoes visuais, notas, folha, integracao, PDF, operacao e governanca
+  - esta frente de refatoracao segura do `Fiscal` pode ser considerada estruturalmente fechada nesta rodada, restando apenas limpeza fina posterior ou validacao automatica quando o ambiente voltar a responder
+
+- Em 10/04/2026 foi iniciado o mesmo padrao seguro no `Trabalhista` (`workforce_management_page.dart`):
+  - a primeira rodada estrutural extraiu a cauda de enums, modelos locais e helpers puros para `lib/features/workforce/presentation/pages/workforce_management_support.dart`
+  - a estrategia repetiu a do `Fiscal`: `part file` preservando a mesma biblioteca e os simbolos privados do modulo
+  - nenhuma regra de negocio, permissao, colecao ou contrato operacional foi alterado nesta abertura da frente
+  - com isso, a base do `Trabalhista` ja esta preparada para os proximos ciclos seguros de extracao de blocos visuais grandes e acoes transversais
+
+- Em 10/04/2026 foi fechado o ciclo seguinte de refatoracao visual segura do `Trabalhista`:
+  - os blocos visuais grandes da frente de folha/dashboard foram extraidos para `lib/features/workforce/presentation/pages/workforce_management_payroll_sections.dart`
+  - as abas de notas/contratos e demais secoes de workspace foram extraidas para `lib/features/workforce/presentation/pages/workforce_management_workspace_sections.dart`
+  - `workforce_management_page.dart` ficou mais focado na orquestracao da tela e nos dialogs/acoes remanescentes, repetindo o padrao que estabilizou o `Fiscal`
+  - a estrategia continuou sendo `part file` + `extension on _WorkforceManagementPageState`, preservando o mesmo estado e os mesmos acessos privados
+  - nenhuma regra de negocio, campo persistido, permissao ou contrato externo foi alterado nesta rodada
+
+- Em 10/04/2026 foi fechado o ciclo principal de segmentacao do `Trabalhista`:
+  - os dialogs e fluxos operacionais remanescentes foram extraidos para `lib/features/workforce/presentation/pages/workforce_management_operational_actions.dart`
+  - as acoes de governanca, fechamento, aprovacoes, configuracoes sensiveis e exportacoes/resumos foram extraidas para `lib/features/workforce/presentation/pages/workforce_management_governance_actions.dart`
+  - o modulo passou a ficar segmentado em `parts` por responsabilidade, no mesmo padrao estrutural adotado no `Fiscal`
+  - `workforce_management_page.dart` ficou essencialmente como orquestrador da tela, mantendo no principal apenas composicao e utilitarios basicos
+  - esta frente estrutural segura do `Trabalhista` pode ser considerada fechada nesta rodada, restando apenas limpeza fina posterior e validacao automatica quando o ambiente permitir
+
+- Em 10/04/2026 a limpeza fina pos-refatoracao encontrou e corrigiu um ponto estrutural real no `Trabalhista`:
+  - `lib/features/workforce/presentation/pages/workforce_management_page.dart` ficou com uma chave extra apos a extracao dos `parts`, e isso foi removido
+  - a revisao estatica manual desta rodada nao identificou outro ponto estrutural tao evidente nos arquivos principais de `Fiscal` e `Trabalhista`
+  - a validacao automatica ampla continua pendente porque o ambiente desta sessao segue travando em comandos de analise/formatacao
+
+- Em 10/04/2026 a passada seguinte de revisao funcional/estrutural confirmou o encadeamento principal entre `parts` de `Fiscal` e `Trabalhista`:
+  - chamadas centrais de notas, pagamentos, documentos, fechamento, aprovacoes e exportacoes continuam apontando para os metodos segmentados corretos
+  - comentarios residuais de `unused_element` deixados pela extracao foram limpos nos `parts` onde eram apenas sobra mecanica da segmentacao
+  - nesta rodada nao apareceu outro ponto critico evidente de ligacao quebrada por leitura estatica manual
+
+- Em 09/04/2026 foi consolidada a diretriz segura para a proxima sequencia tecnica:
+  - a versao de referencia para alinhamento continua sendo o `AAB 1.0.70+1040` ja validado para Play Store em `C:\Users\hp\Desktop\pontocerto-v1.0.70+1040-teste-playstore-fluxo-real.aab`
+  - a `web` deve espelhar essa versao em tudo, mantendo como unica diferenca permitida o acesso de `funcionario` restrito ao app/Play Store
+  - o `AAB` local atual tambem voltou a ser gerado com sucesso em `build/app/outputs/bundle/release/app-release.aab`, confirmando que o Android segue compilando
+  - a compilacao `web` segue instavel no ambiente desta sessao: os artefatos de `build/web` existem, mas `flutter build web --release` continua travando por tempo excessivo e nao deve ser tratado como validacao confiavel ate nova rodada controlada
+  - foi criada a camada central de saida de PDF por plataforma em:
+    - `lib/core/pdf/pdf_output.dart`
+    - `lib/core/pdf/pdf_output_native.dart`
+    - `lib/core/pdf/pdf_output_web.dart`
+    - `lib/core/pdf/pdf_output_stub.dart`
+  - com isso, telas pesadas deixaram de depender diretamente de `printing` no fluxo web, reduzindo acoplamento do target web:
+    - `Audit`
+    - `Employee review`
+    - `Propostas/Contratos`
+    - `Tarefas`
+    - `Trabalhista`
+    - `Fiscal`
+  - regra de continuidade confirmada para as proximas rodadas:
+    - primeiro estabilizar ambiente e build
+    - depois refatorar estrutura sem mudar regra de negocio
+    - comecar por `Fiscal`
+    - depois `Trabalhista`
+    - depois `Tarefas`
+    - manter `Home` por ultimo nessa frente estrutural
+  - prioridade de refatoracao segura confirmada:
+    - `Fiscal` e hoje o modulo mais pesado por tamanho e responsabilidade concentrada
+    - `Trabalhista` vem logo depois
+    - `Tarefas` e o terceiro ponto de maior impacto
+  - estrategia de confianca definida:
+    - nao misturar refatoracao estrutural com mudanca de fluxo
+    - preservar rotas, colecoes, campos, regras de permissao e contratos existentes
+    - validar modulo a modulo antes de qualquer nova publicacao
+  - sequencia segura registrada como referencia operacional:
+    - fase 1: estabilizar o ambiente de build e a rotina de validacao
+    - fase 2: extrair classes/helpers internos do fim de `fiscal_readiness_page.dart`
+    - fase 3: extrair blocos visuais grandes do `Fiscal`
+    - fase 4: extrair PDF, integracao real e compliance do `Fiscal`
+    - fase 5: repetir o padrao no `Trabalhista`
+    - fase 6: repetir o padrao em `Tarefas`
+    - fase 7: revalidar `web` antes de qualquer novo deploy de hosting
+
+- Em 09/04/2026 a tela `Financeiro da empresa` finalmente encontrou um padrao visual que funcionou para leitura horizontal e deve virar referencia para as demais telas:
+  - o problema real nao era apenas ordem dos cards; o erro principal era manter `card pai` e estruturas internas em `Column` ou `Wrap`, o que fazia os blocos crescerem para baixo mesmo quando pareciam estar em uma grade
+  - a solucao que funcionou foi manter a pagina organizada por faixas de assunto, mas refazer o conteudo interno das faixas com comportamento `horizontal first`
+  - na area de analise do financeiro, `Tesouraria`, `Risco`, `Agenda` e `Fluxo` passaram a usar containers proprios em [finance_company_page.dart](/C:/Users/hp/pontocerto/lib/features/finance/presentation/pages/finance_company_page.dart)
+  - dentro desses containers, os conteudos deixaram de usar listas verticais altas e passaram a usar `AppHorizontalCardGrid` com celulas compactas e de mesmo porte
+  - o acerto principal foi: a faixa continua horizontal, mas cada celula pode crescer em altura quando o texto exigir; nao usar `ellipsis` nem forcar palavras espremidas
+  - no bloco `Risco`, o formato final correto ficou com `titulo` em cima e `subtitulo` abaixo dentro de cada card, em vez de tentar colocar os dois lado a lado
+  - isso resolveu o caso que estava quebrando visualmente, como `Cobertura de recebiveis`
+  - regra confirmada para seguir amanha:
+    - grade horizontal sem rolagem lateral
+    - preencher a largura da esquerda para a direita
+    - itens do mesmo grupo com mesmo porte visual
+    - se o texto nao couber bem na largura, o card pode crescer para baixo
+    - nao quebrar palavra por aperto horizontal
+    - evitar `card pai` quando ele fizer o grupo voltar a crescer verticalmente
+    - quando o grupo tiver titulo de faixa, usar o container de faixa para o grupo e celulas horizontais para os itens internos
+  - heuristica pratica que funcionou:
+    - faixa por assunto
+    - dentro da faixa, cards irmaos pequenos ou medios
+    - nada de lista longa vertical dentro de bloco curto
+    - titulo e detalhe podem ficar empilhados dentro do card se isso evitar quebra feia de texto
+  - proximo passo recomendado para 10/04/2026:
+    - repetir exatamente esse padrao no restante do `Financeiro da empresa`
+    - depois aplicar a mesma regra em `Painel`, `Empresa`, `Equipe`, `Pagamentos`, `Dividas` e `Tarefas`
+    - sempre validar visualmente se o erro voltou a ser `estrutura horizontal por fora e conteudo vertical por dentro`
+  - publicacao desta rodada:
+    - hosting republicado com sucesso em `https://gestao-ponto-certo.com` e `https://pontocerto-e1dab.web.app`
+
+- Pendencias registradas para a proxima rodada:
+  - melhorar a pagina de vendas, especialmente refinando a abertura visual e a apresentacao comercial do topo
+  - concluir a validacao final do lancamento de pagamentos no uso real, confirmando em qual tela ainda resta erro se houver novo bloqueio
+
+- Em 08/04/2026 o lancamento de pagamentos foi ampliado novamente e esta e a regra atual:
+  - no lancamento individual e no lancamento em massa agora existe a opcao `Marcar como pago ao lancar`
+  - quando essa opcao e marcada, o pagamento nasce como `PAID`, grava `paidAt` na data atual do lancamento e reflete imediatamente no financeiro da empresa como saida/despesa
+  - quando essa opcao nao e marcada, o operador pode informar a `Data prevista do pagamento`, mantendo o registro como pendente ate a baixa manual posterior
+  - a regra foi aplicada nos fluxos de `Financeiro`, `Trabalhista` e `Pagamentos`
+  - backend publicado em `paymentsCreate` e `paymentsCreateBulk`
+  - frontend republicado em `functions + hosting`
+- Ainda em 08/04/2026 a regra da competencia da folha foi corrigida para nao travar semanal/diaria/comissao:
+  - o sistema deixou de tratar qualquer lancamento anterior como bloqueio automatico da competencia
+  - pagamentos `semanais`, `diarios` e `comissao` agora podem acumular no mesmo mes ate completar o valor devido da competencia
+  - pagamento `mensal` continua sendo tratado como fechamento unico da competencia
+  - o calculo semanal passou a considerar a quantidade de semanas realmente trabalhadas no mes
+  - o resumo e o fechamento da folha agora consideram o total somado dos lancamentos da competencia por funcionario
+  - a competencia so pode ser fechada quando os pagamentos estiverem completos para todos os funcionarios
+  - pagamentos antigos da competencia sem `paymentType` passam a ser reparados para o tipo do novo lancamento nao mensal quando houver continuidade da rotina
+- Ainda em 08/04/2026 a landing `/vendas` recebeu mais um refinamento comercial e visual:
+  - no bloco `Fiscal`, o texto do DAS passou a deixar explicito que o MEI pode visualizar e baixar a DAS para pagamento
+  - o bloco `O que muda na pratica` deixou de ser um texto longo e passou a usar cards lado a lado para leitura melhor no desktop
+  - hosting republicado com esse ajuste
+- Ainda em 08/04/2026 o hero inicial da landing `/vendas` foi redesenhado para ficar mais impactante e coerente com os demais blocos:
+  - o topo passou a abrir dentro de um container visual mais forte, com gradiente leve e composicao integrada
+  - o texto principal ganhou uma faixa de abertura, mais hierarquia visual e menos sensacao de tela vazia
+  - a vitrine do sistema foi encaixada em um painel lateral com metricas curtas, aproximando o hero do padrao dos outros blocos da pagina
+  - hosting republicado novamente
+- Ainda em 08/04/2026 o ajuste do hero foi estabilizado e a tela branca da landing foi corrigida:
+  - o painel lateral do hero deixou de usar uma estrutura que podia quebrar a renderizacao web em tempo de execucao
+  - o hosting foi republicado com essa correção
+- Ainda em 08/04/2026 o modulo `Pagamentos` foi alinhado com a nova regra de tipo da competencia:
+  - o cadastro individual passou a escolher o tipo do pagamento com base no colaborador selecionado
+  - o cadastro multiplo passou a enviar o tipo de pagamento do colaborador em cada lancamento
+  - isso evita que o modulo simples de pagamentos caia em `mensal` por padrao e bloqueie uma competencia que deveria aceitar semanal/diaria/comissao
+- Ainda em 08/04/2026 uma ultima correção fechou a consistencia do lancamento:
+  - o gerador automatico de pagamentos faltantes no `Trabalhista` passou a enviar tambem o `paymentType` do colaborador
+  - o calculo sugerido do tipo `Semanal` foi alinhado para usar o total de semanas trabalhadas no mes, em vez de considerar apenas um unico valor semanal fixo
+  - hosting republicado com esse ajuste final de interface
+- Em 08/04/2026 a landing `/vendas` recebeu um ajuste visual forte para melhorar leitura no desktop:
+  - o hero `Sua empresa nao esta desorganizada` passou a abrir com a imagem do sistema acima e o texto centralizado abaixo
+  - o bloco `Fiscal` passou a mostrar primeiro a imagem do sistema e depois o texto centralizado, removendo o vazio lateral que estava ruim no desktop
+  - as areas claras da landing migraram de branco para azul claro, mantendo os blocos escuros onde ja funcionavam bem
+  - hosting republicado com esse ajuste
+- Em 08/04/2026 a organizacao de equipe foi repartida entre `Funcionarios` e `Trabalhista`:
+  - `Funcionarios e acessos` passou a ficar focado em leitura da equipe, status e jornada
+  - a entrada operacional de cadastro de colaborador passou para `Trabalhista`
+  - `Trabalhista` ganhou `Cadastro trabalhista`, com criacao do colaborador e upload opcional de documentos de registro a partir do PC ou do celular
+  - os documentos opcionais passaram a ser gravados em `employee_registration_documents`
+- Em 08/04/2026 o lancamento de pagamentos foi ampliado:
+  - no fluxo individual e no fluxo em massa agora e possivel escolher se o pagamento e `diaria`, `semanal`, `mensal` ou `comissao`
+  - `paymentsCreate` e `paymentsCreateBulk` passaram a gravar `paymentType`
+  - o financeiro da empresa passou a exibir esse tipo na leitura dos pagamentos
+- Em 08/04/2026 a rodada de captacao de testadores para destravar a publicacao Android na Play Store avancou e foi publicada em `functions + hosting`:
+  - criadas as rotas publicas `teste-funcionario` e `jornada-ponto-certo`
+  - a landing ganhou CTA para captar testadores do app de funcionario sem alterar a operacao web principal da plataforma
+  - a plataforma passou a registrar leads em `employee_tester_leads`, exibir a fila no painel interno e permitir copiar email individual ou copiar toda a lista para levar ao cadastro manual de testadores da Play Store
+  - a regra operacional foi ajustada: o lead testador nao vira funcionario da empresa real; ele permanece como `lead testador` em base isolada propria, sem acesso a dados da empresa suprema
+  - a inclusao na lista fechada da Play Store continua manual fora do app; depois disso, a acao interna `Liberar Play Store + email` cria ou reaproveita o acesso isolado, envia o email de definicao de senha e entrega o link da Play Store
+  - o painel da plataforma passou a permitir abrir um resumo de uso por lead testador, com UID, ultimo login, ultima atividade e contagens da rotina de funcionario
+  - no app do testador foi criada a tela `Jornada Ponto Certo`, uma vitrine interna para converter o teste em potencial contratacao da versao completa
+  - a regra desta frente ficou definida: esta captacao e este fluxo existem para destravar a aprovacao da Play Store; depois, quando a versao Android completa voltar a producao, os testadores atuais devem receber email para baixar a versao real em producao
+- Ainda em 08/04/2026 a usabilidade web foi ajustada para operacao comercial e suporte:
+  - os textos do sistema autenticado passaram a ser selecionaveis por mouse pelo `AppShell`
+  - a pagina de vendas e as novas paginas publicas desse fluxo tambem passaram a aceitar selecao e copia por arraste do mouse
+- Ainda em 08/04/2026 foi criada a rota curta publica `/cadastro-teste` no dominio principal, apontando para o mesmo formulario de captacao de testadores de `/teste-funcionario`
+- Ainda em 08/04/2026 foi gerado o `AAB` Android desta frente temporaria de testes:
+  - origem: `build/app/outputs/bundle/release/app-release.aab`
+  - copia inicial preparada para upload: `C:\Users\hp\Desktop\pontocerto-v1.0.69+1039-teste-playstore-funcionario.aab`
+  - versao inicial da fase: `1.0.69+1039`
+- Ainda em 08/04/2026 a correção global de selecao/copia de texto no web foi finalmente republicada no hosting:
+  - a base da solucao passou para o nivel do app em `lib/app/app.dart`
+  - com isso, o sistema web e a pagina de vendas passaram a herdar selecao por mouse de forma mais ampla
+- Ainda em 08/04/2026 o painel `Plataforma` ganhou, ao lado do link da landing, o link copiavel de `https://gestao-ponto-certo.com/cadastro-teste`
+- Ainda em 08/04/2026 foi gerado na area de trabalho um resumo comercial atualizado do sistema para apoiar a revisao da copy da landing:
+  - arquivo: `C:\Users\hp\Desktop\descricao-atual-sistema-para-copy-vendas.txt`
+- Ainda em 08/04/2026 a landing `/vendas` recebeu nova copy comercial alinhada com a fase atual:
+  - reforco da dor de operacao + financeiro + fiscal
+  - bloco fiscal reescrito com emissao, DAS e declaracao anual
+  - nova secao `Comece testando na pratica` apontando para `/cadastro-teste`
+  - planos reescritos com linguagem mais direta para Solo, Equipe e acesso adicional
+  - hosting republicado com essa copy
+- Ainda em 08/04/2026 a landing recebeu uma segunda passada focada em conversao:
+  - CTA principal do topo passou a empurrar para o teste
+  - CTA secundario passou a empurrar para planos
+  - bloco de teste ficou mais direto e com promessa mais clara
+  - CTA final tambem passou a oferecer teste antes da contratacao
+  - hosting republicado novamente
+- Ainda em 08/04/2026 a landing recebeu ajuste visual e de responsividade:
+  - o hero passou a empilhar mais cedo em desktop intermediario para evitar composicao desbalanceada
+  - o bloco fiscal deixou de forcar lado a lado em telas largas, removendo o espaco vazio visual que aparecia no desktop
+  - a pagina passou a usar faixas de viewport mais claras para telefone compacto, telefone, tablet e desktop
+  - cards e CTAs finais do fluxo foram ajustados para ocupar melhor telas pequenas
+  - hosting republicado novamente
+- Ainda em 08/04/2026 o fluxo de `lead testador` foi consolidado e republicado em `functions + hosting`:
+  - `publicCreateEmployeeTesterLead` continua captando apenas os dados essenciais do interessado
+  - `platformReleaseEmployeeTesterAccess` deixou de tentar qualquer inclusao automatica em distribuicao externa; o operador inclui o email manualmente na Play Store e depois usa o sistema para disparar o acesso
+  - `platformGetEmployeeTesterUsageSummary` passou a entregar ao painel um resumo de uso do lead liberado, sem exigir que ele exista como funcionario da empresa real
+  - o hosting permaneceu no ar em `https://gestao-ponto-certo.com` e `https://pontocerto-e1dab.web.app`
+- Ainda em 08/04/2026 a fila de leads testadores recebeu leitura operacional mais clara e link oficial da loja:
+  - o email disparado ao lead passou a usar como padrao o link `https://play.google.com/store/apps/details?id=br.com.alexandresousa.pontocerto`
+  - o card interno de cada lead passou a mostrar se ele ainda esta pendente de inclusao manual na Play Store ou se ja teve `Play Store liberada e email enviado`
+  - quando houver liberacao, o painel tambem mostra a data `playStoreReleasedAt`
+- Ainda em 08/04/2026 o fluxo de testador foi expandido para a saida do teste e migracao ao ambiente real:
+  - o painel `Plataforma` ganhou tres passos explicitos para cada lead: `Marcar na Play Store`, `Enviar acesso do teste` e `Liberar ambiente real`
+  - a liberacao do ambiente real agora grava estado no lead e no usuario isolado, habilitando um botao interno no app de teste para sair do teste quando a plataforma liberar manualmente
+  - a vitrine interna do app foi renomeada para `Conhecer o sistema real`, funcionando como pagina de apresentacao da versao completa para empresa, equipe e contador
+  - o backend passou a enviar email de migracao ao ambiente real quando essa liberacao e executada
+  - um novo `AAB` desta rodada foi gerado e copiado para `C:\Users\hp\Desktop\pontocerto-v1.0.69+1039-teste-playstore-fluxo-real.aab`
+- Ainda em 08/04/2026 a fila de leads testadores recebeu destacacao visual por etapa no painel da plataforma:
+  - card amarelo para pendente de inclusao na Play Store
+  - card laranja para lead ja incluido na Play Store e pronto para receber o acesso do teste
+  - card azul para teste liberado
+  - card verde para ambiente real liberado
+  - hosting republicado com essa leitura visual
+- Ainda em 08/04/2026 a versao Android alvo desta frente foi corrigida para `1.0.70+1040`:
+  - `pubspec.yaml` foi atualizado para `1.0.70+1040`
+  - novo bundle valido gerado em `build/app/outputs/bundle/release/app-release.aab`
+  - copia valida atual para upload: `C:\Users\hp\Desktop\pontocerto-v1.0.70+1040-teste-playstore-fluxo-real.aab`
+  - nota curta atualizada: `C:\Users\hp\Desktop\nota-curta-play-store-v1.0.70+1040.txt`
+- Registro consolidado manualmente em 24/03/2026 apos retomada do contexto.
+- O retrato consolidado do projeto continua em ESTADO_ATUAL_DO_SISTEMA.md.
+- Este arquivo deve refletir o ponto atual de continuidade e os arquivos tocados mais recentemente.
+- Em 01/04/2026 o icone padrao do Flutter foi substituido pelo arquivo `assets/icon/icone-principal.jpeg`:
+  - `web/favicon.png`
+  - `web/icons/Icon-192.png`
+  - `web/icons/Icon-512.png`
+  - `web/icons/Icon-maskable-192.png`
+  - `web/icons/Icon-maskable-512.png`
+  - `assets/icon/app_icon.png`
+  - icones Android em `android/app/src/main/res`
+- O hosting foi publicado em `https://pontocerto-e1dab.web.app`.
+- Em 01/04/2026 a rodada mais recente fechou dois pontos pendentes:
+  - o shell passou a localizar o `Scrollable` real da area central mesmo quando a pagina usa `ListView` propria, para melhorar a rolagem por mouse e teclado sem voltar a quebrar telas
+  - `Trabalhista > Acoes da competencia > Lancar em massa` ficou preparado para usar o valor previsto de cada colaborador, sem exigir edicao manual do valor no dialogo
+- Em 01/04/2026 a web foi recompilada e republicada, com confirmacao dos dois enderecos:
+  - `https://pontocerto-e1dab.web.app`
+  - `https://gestao-ponto-certo.com`
+- Em 01/04/2026 a base de escala recebeu uma primeira blindagem de baixo risco:
+  - a `Home` deixou de abrir listeners pesados desnecessarios em perfis que nao usam aqueles dados, principalmente no ambiente do contador
+  - o `Assistente Inteligente` ganhou protecao de rajada por usuario/empresa para reduzir explosao de uso, custo e travamento por chamadas repetidas em pouco tempo
+  - `functions + hosting` foram republicados e confirmados no `web.app` e no dominio personalizado
+- Em 01/04/2026 o ciclo de escala recebeu uma segunda camada:
+  - endpoints mais pesados de `Assistente` e `Fiscal` passaram a usar runtime reforcado no backend
+  - `functions` e `hosting` foram republicados novamente com confirmacao em:
+    - `https://pontocerto-e1dab.web.app`
+    - `https://gestao-ponto-certo.com`
+  - o sistema ficou mais preparado para subida comercial, mas ainda depende de teste de carga real antes de afirmar suporte seguro a volume muito alto como `1000 acessos simultaneos`
+  - proximo passo tecnico de escala, quando voltar a essa frente:
+    - materializar sumarios leves para `Home`, `Financeiro` e `Fiscal`
+    - revisar listeners grandes restantes modulo por modulo
+    - rodar teste de carga controlado
+- Em 01/04/2026 a materializacao de resumo leve foi iniciada:
+  - `payments*` e `debts*` no backend passaram a atualizar `company_runtime_summary/{companyId}`
+  - o projeto ganhou o provider `companyRuntimeSummaryProvider`
+  - a `Home` do contador ja consegue aproveitar esse resumo quando ele estiver disponivel
+  - `functions + hosting` foram publicados e confirmados novamente no `web.app` e no dominio personalizado
+- Ainda em 01/04/2026 a materializacao avancou mais um passo:
+  - triggers `syncFinanceMovementRuntimeSummary` e `syncFiscalInvoiceRuntimeSummary` foram criados no backend
+  - com isso, alteracoes diretas em `finance_movements` e `service_invoices` tambem passam a atualizar `company_runtime_summary`
+  - o deploy de `functions + hosting` concluiu com sucesso
+  - o dominio personalizado `https://gestao-ponto-certo.com` confirmou `200`
+  - a checagem HTTP do `https://pontocerto-e1dab.web.app` ficou instavel neste terminal apos o deploy, com erro transitório de conexao, entao o deploy foi considerado valido pela confirmacao do Firebase e do dominio personalizado
+- Em 02/04/2026 o ciclo curto de estabilizacao do frontend avancou sem abrir nova frente:
+  - a tela `Assistente` passou a sincronizar a conversa imediatamente pelo `threadId` apos o `200` do backend, reduzindo a janela em que a resposta podia nao aparecer no frontend
+  - a `Home` deixou de assinar `device_consents` para perfis que nao usam esse dado no fluxo atual
+  - o `Fiscal` passou a usar `company_runtime_summary.fiscal` no bloco de overview quando o agregado estiver disponivel, evitando listener completo de `service_invoices` apenas para os chips-resumo
+  - isso fecha a rodada de blindagens leves desta retomada sem mexer em regras sensiveis nem em deploy
+- Ainda em 02/04/2026 o painel do contador ganhou a secao `Impostos e guias` com foco em rotina real de escritorio:
+  - `MEI` passou a apontar para o fluxo oficial de `Emitir DAS` e consulta de comprovantes pelos canais da Receita
+  - `Empresa` deixou de usar atalho generico e passou a orientar o contador para o fluxo mais usual:
+    - `PGDAS-D / DAS` quando a empresa estiver no Simples
+    - `e-CAC`
+    - `DCTFWeb`
+    - `Comprovantes`
+    - `Autorizacoes`
+  - o objetivo foi aproximar a tela do que o contador ja usa no dia a dia, sem simular emissao interna de tributos federais
+  - a propria tela agora tambem explica `quando usar` cada opcao, para reduzir ambiguidade operacional no escritorio contabil
+- Ainda em 02/04/2026 a tela `Fiscal` do contador foi corrigida para carregar a configuracao salva da empresa vinculada quando `company_settings.companyData` ja estiver preenchido:
+  - o perfil `contador` deixou de misturar, como prioridade, dados do proprio cadastro do usuario com a base fiscal da empresa
+  - isso evita abrir o modulo fiscal com dados errados quando a empresa ja estiver configurada corretamente
+- As duas atualizacoes acima foram validadas localmente com `analyze`, rebuildadas e publicadas no hosting:
+  - `https://pontocerto-e1dab.web.app`
+- Ainda em 02/04/2026 foi iniciada a rodada de alivio de carregamento das telas mais pesadas:
+  - `Empresa` deixou de abrir multiplos listeners redundantes para o mesmo `company_settings/{companyId}` e passou a usar leitura reativa compartilhada
+  - `Relatorios` passou a usar `company_runtime_summary` nos cards executivos de `Fiscal da empresa` e `Financeiro da empresa` quando o agregado estiver disponivel, evitando duas leituras amplas apenas para o topo resumido
+  - `Funcionarios` passou a reduzir a consulta de `users` por perfil ja na query, em vez de carregar toda a base da empresa e filtrar tudo no cliente
+  - `Fiscal > Servicos concluidos para nota` passou a consultar apenas tarefas com status `finalizado`, reduzindo o volume inicial dessa lista
+  - a validacao local dos arquivos alterados concluiu com `No issues found!`
+- O Android foi recompilado com o novo icone:
+  - `build/app/outputs/flutter-apk/app-release.apk`
+  - `build/app/outputs/bundle/release/app-release.aab`
+- No processo foram corrigidos erros antigos de compilacao em:
+  - `lib/core/firebase/employee_access_service.dart`
+  - `lib/features/home/presentation/pages/home_page.dart`
+  - `lib/features/accountant_links/presentation/pages/accountant_companies_page.dart`
+- Em 04/04/2026 a frente comercial web com Asaas avancou para um fluxo mais controlado:
+  - a landing deixou de jogar o cliente direto no checkout publico e passou a abrir um `pre-cadastro` antes do pagamento
+  - esse pre-cadastro coleta `nome`, `email` e a escolha entre:
+    - seguir para pagamento e implantacao assistida
+    - enviar a implantacao e o cadastro inicial para o contador da empresa
+  - quando o cliente escolhe o contador, o backend gera convite publico em `/convite-contador`, envia email imediato com instrucoes detalhadas e abre a pagina `Seja nosso parceiro`
+  - quando o pagamento do plano publico e confirmado pelo webhook do Asaas, o onboarding web da empresa passa a ser enviado para o responsavel correto:
+    - o proprio cliente
+    - ou o contador indicado
+  - o email comercial do pre-cadastro passou a deixar claro que:
+    - o onboarding inicial cobre apenas o sistema web
+    - o app Play Store ainda segue em producao
+    - a cobranca da implantacao assistida e tratada depois da entrega, em boleto para 30 dias junto da proxima fatura recorrente
+  - a web ganhou as rotas publicas:
+    - `/contratar`
+    - `/convite-contador`
+    - `/boas-vindas-empresa`
+  - `functions.config()` legado foi removido do ambiente e o deploy deixou de exibir o aviso deprecado relacionado a runtime config antigo
+  - `functions + hosting` foram publicados com sucesso em:
+    - `https://pontocerto-e1dab.web.app`
+  - ainda em 04/04/2026 o onboarding publico foi separado em dois modos:
+    - `modo contador`: o contador conclui o cadastro completo da empresa direto no sistema
+    - `modo cliente`: o cliente precisa enviar todos os documentos e dados fiscais para implantacao
+  - o onboarding passou a pedir tambem a base fiscal que sustenta a automacao da Focus:
+    - regime tributario
+    - natureza juridica
+    - porte
+    - CNAE principal e descricao
+    - codigo do municipio / IBGE
+    - codigo padrao de servico
+    - senha do certificado digital
+    - login/senha do responsavel no portal municipal, quando aplicavel
+  - no modo cliente, a tela passou a exigir:
+    - cartao CNPJ
+    - documento do responsavel
+    - comprovante de endereco
+    - contrato social
+    - certificado digital A1
+    - senha do certificado digital
+- Ainda em 04/04/2026 o painel da plataforma ganhou a etapa operacional do pipeline comercial:
+  - a lista de onboardings passou a enxergar corretamente a cobranca de implantacao salva no objeto `implementationCharge`
+  - o admin da plataforma agora consegue concluir a implantacao direto do pipeline e converter o onboarding em empresa operacional com envio do acesso inicial
+  - quando a implantacao e da plataforma, o boleto da implantacao passa a ser gerado automaticamente nesse fechamento, com vencimento em 30 dias
+  - a emissao manual da cobranca continua disponivel apenas como contingencia
+- Em 04/04/2026 a versao Android foi incrementada para `1.0.62+1032` para evitar reaproveitar o bundle ja usado em `1.0.61+1031`
+- Em 05/04/2026 a governanca de cadastro foi apertada mais um passo:
+  - a tela `Empresa` do cliente passou a editar apenas dados seguros de contato e endereco operacional
+  - CNPJ, inscricoes, CNAE, emitente e base fiscal deixaram de ficar editaveis pela empresa cliente
+  - a `pasta da implantacao` ficou restrita ao painel da plataforma e ao contador vinculado em `Empresas do contador`
+  - a pagina `Seja nosso parceiro` do contador foi reescrita para refletir o fluxo atual:
+    - pre-cadastro
+    - pagamento da adesao
+    - onboarding
+    - vinculo automatico do contador quando ele implanta a empresa
+  - os CTAs principais da landing foram encurtados para leitura mais direta
+  - a versao Android foi incrementada para `1.0.63+1033`
+- Ainda em 05/04/2026 a copy comercial subiu mais um nivel:
+  - `Empresas do contador` ganhou linguagem mais profissional, com foco em carteira, contexto e operacao
+  - a landing `/vendas` foi revisada para reduzir repeticao operacional e reforcar:
+    - dor
+    - risco de continuar no improviso
+    - proposta de valor
+    - conversao para escolha do plano
+  - a pagina `Seja nosso parceiro` passou a atuar como material comercial para contador, com:
+    - beneficios claros
+    - leitura de valor do sistema
+    - sugestao de faixa para embutir o servico contabil por cliente
+  - a versao Android foi incrementada para `1.0.64+1034`
+- Ainda em 05/04/2026 a frente comercial do contador recebeu um fechamento mais completo:
+  - `Seja nosso parceiro` passou a explicar de forma objetiva o que a empresa compra ao entrar no sistema
+  - a tela agora mostra:
+    - beneficios do sistema para a empresa
+    - beneficios indiretos para o contador
+    - valores atuais dos planos
+    - sugestao de faixa comercial para o contador embutir o proprio servico
+    - contato da empresa suprema para fechar parceria, puxado do cadastro real da empresa suprema
+  - para suportar isso, foi criada a callable autenticada `accountantGetPartnerContact`
+  - a versao Android foi incrementada para `1.0.65+1035`
+- Em 05/04/2026 o ambiente do contador ganhou um `Perfil fiscal` centralizado:
+  - o contador agora pode preparar uma vez a base oficial do escritorio para Receita Federal / Integra Contador
+  - esse perfil fica disponivel para toda a carteira vinculada, sem repetir a mesma configuracao cliente por cliente
+  - o sistema reforca a regra de seguranca:
+    - senha pessoal de `gov.br`
+    - senha de `e-CAC`
+    - nao devem ser armazenadas no sistema
+  - a centralizacao vale para:
+    - identificacao do escritorio
+    - referencias de contrato / Integra Contador
+    - status de credenciais oficiais da API
+    - status do e-CNPJ do escritorio
+    - escopos oficiais liberados
+  - continuam por empresa:
+    - procuracoes
+    - autorizacoes do contribuinte
+    - certificado da propria empresa quando aplicavel
+    - dados fiscais do cliente
+  - `Empresas do contador` e `Home` passaram a apontar para esse novo perfil centralizado
+  - a versao Android foi incrementada para `1.0.66+1036`
+- Ainda em 05/04/2026 a tela `Plataforma` foi enxugada para reduzir poluicao visual:
+  - foram removidos da interface os identificadores soltos que nao ajudam na operacao comercial do painel
+  - `companyId`, `owner`, `documento` e referencias internas do Asaas deixaram de aparecer nos cards principais
+  - o foco do painel ficou em:
+    - status operacional
+    - plano
+    - login liberado ou bloqueado
+    - cidade / UF
+    - cobranca e implantacao
+- Ainda em 05/04/2026 foi iniciada a blindagem final do perfil `funcionario`:
+  - o menu lateral do funcionario foi reduzido para mostrar apenas rotas da rotina individual
+  - `assistant`, `improvements`, `clients`, `payments`, `debts` e `reports` deixaram de fazer parte do acesso do funcionario
+  - o shell deixou de mostrar `companyId` para funcionario e passou a identificar o acesso apenas como `Acesso de funcionario`
+  - a `Home` do funcionario ganhou um painel proprio, separado do painel da empresa, com foco apenas em:
+    - tarefas do proprio funcionario
+    - ordens de servico ligadas a ele
+    - ponto
+    - justificativas
+    - financeiro pessoal
+    - atalhos operacionais do proprio fluxo
+  - a compilacao Android desta rodada voltou a passar com sucesso
+  - a rodada foi concluida com sucesso depois do destravamento do ambiente local de build
+  - a web desta rodada foi recompilada e publicada
+  - um novo Android App Bundle foi gerado para essa versao
+- Ainda em 05/04/2026 o diagnostico do ambiente web desta maquina foi fechado:
+  - `dart.exe` responde normal
+  - o `flutter_tools.snapshot` responde normal
+  - quem trava e o wrapper Windows `flutter.bat` / `shared.bat`
+  - o build web concluiu com sucesso ao chamar o tool diretamente por:
+    - `C:\Users\hp\flutter\flutter\bin\cache\dart-sdk\bin\dart.exe`
+    - `C:\Users\hp\flutter\flutter\bin\cache\flutter_tools.snapshot`
+  - conclusao pratica:
+    - o problema principal nao esta no projeto
+    - o problema principal esta no launcher Windows do Flutter neste PC
+  - workaround operacional validado para esta maquina:
+    - usar o `dart.exe` do SDK do Flutter chamando o `flutter_tools.snapshot` direto para build web
+  - esse workaround foi validado em producao na propria rodada:
+    - `build web` concluiu
+    - `build appbundle` concluiu
+    - `hosting` foi publicado com sucesso em `https://pontocerto-e1dab.web.app`
+- Regra operacional local definida a partir desta data:
+  - nesta maquina, sempre priorizar o caminho mais seguro, rapido e eficiente para builds Flutter:
+    - `dart.exe + flutter_tools.snapshot`
+  - usar `flutter.bat` apenas quando houver motivo claro e validado
+  - para web, o caminho padrao local passa a ser o snapshot direto
+  - para publicacao, so seguir depois de bundle gerado com esse caminho validado
+  - a versao Android foi incrementada para `1.0.67+1037`
+  - o repositorio ganhou o script:
+    - `scripts/build_flutter_direct.ps1`
+  - uso padrao nesta maquina:
+    - `.\scripts\build_flutter_direct.ps1 -Target web`
+    - `.\scripts\build_flutter_direct.ps1 -Target web -PublishHosting`
+    - `.\scripts\build_flutter_direct.ps1 -Target appbundle`
+- Ainda em 04/04/2026 a empresa suprema da plataforma foi blindada no codigo:
+  - nunca exige codigo de ativacao
+  - nunca depende de liberacao comercial manual
+  - login e acesso passam a ignorar bloqueios de ativacao para os `SUPREME_PLATFORM_COMPANY_IDS`
+  - `functions + hosting` foram republicados com essa regra
+
+## Onde paramos
+
+- O sistema segue na consolidacao do shell web-first.
+- O ciclo atual de blindagens leves do frontend foi fechado em 02/04/2026.
+- As frentes mais sensiveis continuam sendo:
+  - Financeiro
+  - Fiscal
+  - Trabalhista
+  - base compartilhada de Clientes e Tarefas
+- O proximo passo tecnico seguro, a partir deste ponto, volta a ser:
+  - revisar listeners grandes restantes modulo por modulo, com prioridade em `Fiscal` e `Workforce`
+  - validar tecnicamente os arquivos tocados nesta rodada quando o ambiente permitir (`analyze`)
+  - depois disso, decidir entre nova camada de sumarios leves ou teste de carga controlado
+- A retomada de 24/03/2026 validou os arquivos alterados por ultimo no fluxo de cadastro da empresa e fiscal.
+- Analise estatica validada sem issues para:
+  - `lib/features/auth/presentation/pages/login_page.dart`
+  - `lib/features/auth/presentation/pages/cadastro_empresa_page.dart`
+  - `lib/features/company/presentation/pages/company_page.dart`
+  - `lib/features/fiscal/presentation/widgets/invoice_workspace_cards.dart`
+  - `lib/features/fiscal/presentation/pages/fiscal_readiness_page.dart`
+- O ciclo de preparacao para emissao fiscal real avancou em 24/03/2026:
+  - a UI passou a normalizar `natureza da operacao` para codigo valido de emissao
+  - o backend ganhou compatibilidade com notas antigas que ainda estavam com texto nesse campo
+  - `functions/src/index.ts` recompilou sem erros apos os ajustes
+  - deploy das `Cloud Functions` concluido em `pontocerto-e1dab`, incluindo:
+    - `fiscalSyncFocusCompany`
+    - `fiscalIssueServiceInvoice`
+    - `fiscalCancelServiceInvoice`
+    - `fiscalRefreshServiceInvoiceStatus`
+    - `fiscalReconcileProcessingInvoices`
+- Em 25/03/2026 a integracao Focus recebeu suporte estrutural para dois cenarios:
+  - `Focus NFSe municipal`
+  - `Focus NFSe Nacional`
+- O backend agora bifurca endpoint e payload de emissao/consulta/cancelamento conforme a modalidade configurada.
+- A tela fiscal passou a aceitar a modalidade da API Focus no setup de emissao real.
+- Em 25/03/2026 o onboarding multiempresa passou a criar base fiscal automatica no backend:
+  - `syncCompanyProfile` agora inicializa/atualiza `company_settings`
+  - o backend classifica a rota fiscal recomendada por empresa e grava `fiscalRouting`
+  - o backend inicializa `fiscalRealIntegration` e `fiscalFeatures` sem depender de preenchimento manual
+  - cadastro de nova empresa nas telas de autenticacao agora tenta provisionar essa base automaticamente apos criar a conta
+  - a base suporta overrides futuros por municipio via colecao `fiscal_municipality_routes`
+- Em 25/03/2026 e 26/03/2026 a emissao real de Hidrolandia-GO foi validada ponta a ponta em `NFSe Nacional`:
+  - a empresa foi sincronizada com a Focus no modo nacional
+  - o payload nacional passou a suportar:
+    - municipio emissor e de prestacao corretos
+    - codigo nacional de tributacao do ISS
+    - dados de obra/local da prestacao
+    - regras de Simples Nacional ME/EPP
+    - totais tributarios aceitos pelo schema nacional
+  - uma nota piloto foi autorizada em producao e depois cancelada com sucesso
+- Em 26/03/2026 o fluxo oficial da tela fiscal passou a salvar `service.workSite` para reaproveitar os dados de obra quando a NFSe Nacional exigir.
+- Em 26/03/2026 o ambiente foi higienizado:
+  - catalogo fiscal basico restaurado em `fiscal_service_catalog`
+  - notas de teste em `DRAFT` e `ERRO_AUTORIZACAO` foram removidas
+  - permaneceu apenas a nota piloto validada e cancelada
+- Em 26/03/2026 todas as rotas HTTP temporarias de debug usadas na homologacao foram removidas de `functions/src/index.ts`.
+- Em 26/03/2026 a automacao multiempresa de provisionamento fiscal avancou mais um passo:
+  - o backend ganhou a callable `fiscalRefreshCompanyProvisioning`
+  - `syncCompanyProfile` e `fiscalSyncFocusCompany` passaram a persistir melhor o status de `focusProvisioning`
+  - a tela fiscal passou a reprocessar automaticamente a empresa ao salvar estrutura fiscal, preparar pelo CNPJ e enviar certificado
+  - a tela fiscal agora exibe o status do provisionamento automatico da Focus e oferece a acao `Reprocessar automacao`
+  - deploy de `functions` e `hosting` concluido em `pontocerto-e1dab`
+- Em 26/03/2026 foi registrada a nova diretriz de evolucao controlada do produto e aberto o plano macro `ERP + IA + Contador` em `docs/registro_continuidade/PLANO_EVOLUCAO_ERP_IA_CONTADOR.md`.
+- Em 27/03/2026 a Fase 1 do papel `contador` foi iniciada:
+  - `functions/src/index.ts` passou a reconhecer `ACCOUNTANT` em claims e RBAC
+  - `firestore.rules` passou a suportar o papel `contador` com leitura financeira e operacao fiscal compativel com a proposta
+  - o app Flutter ganhou o papel `accountant` em sessao, login local, cadastro de acesso e contratos em modo leitura
+  - backend e regras ja foram publicados em `pontocerto-e1dab`
+  - o frontend web/app do `contador` esta implementado no codigo, mas o rebuild/deploy da web ficou pendente porque `flutter build web` travou por horas nesta maquina
+- Ainda em 27/03/2026 a separacao entre `equipe operacional` e `contadores` foi reforcada no Flutter:
+  - `Employee` ganhou sinalizadores para distinguir time operacional de acesso contabil
+  - `Home`, `Trabalhista` e `Relatorios` passaram a ignorar contadores nas contagens de equipe e folha
+  - a tela `Equipe` agora mostra secoes separadas para colaboradores operacionais e contadores vinculados
+- Ainda em 27/03/2026 a governanca do contador avancou:
+  - `company_settings.accountantPermissions` passou a ser a base de controle por empresa
+  - o backend fiscal passou a respeitar essa governanca para emissao manual de notas por contador
+  - `firestore.rules` deixaram o contador fora da leitura generica de jornadas e limitaram financeiro/contratos ao que a empresa liberar
+  - essa camada de backend/regras ja foi publicada em `pontocerto-e1dab`
+- Ainda em 27/03/2026 a base estrutural do `Assistente Inteligente` foi adicionada como modulo isolado:
+  - `functions/src/index.ts` recebeu a callable `assistantSendMessage`
+  - o backend passou a aceitar configuracao via `OPENAI_API_KEY` e `OPENAI_MODEL`
+  - o historico do assistente foi separado em `assistant_threads/{threadId}/messages/{messageId}`
+  - o prompt base usa contexto seguro da empresa, da tela atual e dos modos `financeiro`, `fiscal` e `trabalhista`
+  - `firestore.rules` ganharam leitura protegida do historico do assistente por `companyId`
+  - o Flutter source ganhou rota `/assistant`, item no menu, service proprio e tela dedicada para web/app
+  - backend e regras ja foram publicados em `pontocerto-e1dab`
+  - essa frente ainda depende de um futuro rebuild web para aparecer no hosting publicado
+- Ainda em 27/03/2026 o `Assistente Inteligente` foi ajustado para modelo SaaS centralizado:
+  - a chave OpenAI permanece centralizada na plataforma, nao por empresa
+  - `company_settings.assistantSettings` passou a controlar:
+    - `enabled`
+    - `allowManagerAccess`
+    - `allowAccountantAccess`
+    - `allowEmployeeAccess`
+    - `blockWhenLimitReached`
+    - `monthlyRequestLimit`
+    - `plan`
+  - `company_settings.assistantUsage` passou a registrar consumo mensal por empresa
+  - o backend agora bloqueia uso quando a empresa ou o perfil nao estiverem liberados
+  - o backend tambem bloqueia por franquia mensal quando o teto estiver ativo
+  - a tela `Empresa` ganhou governanca do assistente no source para o owner operar isso sem mexer em codigo
+  - backend e regras desse modelo SaaS ja foram publicados em `pontocerto-e1dab`
+- Ainda em 27/03/2026 a governanca comercial SaaS das empresas ganhou base estrutural:
+  - `company_settings.commercialSettings` passou a armazenar plano, ciclo de vida, faturamento, aprovacao e liberacao de acesso
+  - o onboarding/sincronizacao (`syncCompanyProfile`) agora cria defaults comerciais seguros para novas empresas
+  - login da empresa, login da equipe e bootstrap de sessao passaram a respeitar o estado comercial da empresa
+  - a tela `Empresa` ganhou leitura do status comercial no source
+  - o backend recebeu as callables:
+    - `platformListCompanies`
+    - `platformUpdateCompanyCommercialSettings`
+  - essas callables dependem de `PLATFORM_ADMIN_EMAILS` no ambiente para operacao segura da administracao da plataforma
+  - backend e regras dessa camada comercial ja foram publicados em `pontocerto-e1dab`
+- Ainda em 27/03/2026 o painel visual da plataforma foi aberto no Flutter source:
+  - modulo novo `platform_admin`
+  - rota `/platform-admin`
+  - item `Plataforma` no shell administrativo
+  - atalho em `Configuracoes`
+  - leitura de empresas via `platformListCompanies`
+  - edicao de plano/status via `platformUpdateCompanyCommercialSettings`
+  - essa parte ainda depende de rebuild/deploy web para aparecer no hosting publicado
+- Ainda em 27/03/2026 a proxima camada do ERP de servicos foi iniciada com `Ordens de Servico`:
+  - modulo novo `service_orders`
+  - colecao nova `service_orders`
+  - rota `/service-orders`
+  - item proprio no shell administrativo
+  - leitura e escrita no Flutter source via provider proprio
+  - ligacao inicial com cliente, tarefa, responsavel, data prevista, status e registro de campo
+  - `firestore.rules` ja publicadas para a nova colecao em `pontocerto-e1dab`
+  - essa parte ainda depende de rebuild/deploy web para aparecer no hosting publicado
+- Ainda em 27/03/2026 a sequencia do ERP de servicos avancou com `Projetos + Timesheet`:
+  - modulo novo `projects`
+  - colecao nova `projects`
+  - rota `/projects`
+  - item proprio no shell administrativo
+  - provider dedicado para leitura e escrita de projetos por empresa
+  - quadro inicial por etapas (`planning`, `active`, `completed`) sem reescrever o modulo de tarefas existente
+  - criacao de projeto ligada a cliente, responsavel e prazo
+  - `work_entries` foi estendido sem quebra para suportar:
+    - `projectId`
+    - `projectName`
+    - `clientId`
+    - `clientName`
+    - `taskId`
+    - `serviceOrderId`
+    - `notes`
+  - modulo novo `timesheet`
+  - rota `/timesheet`
+  - item proprio no shell administrativo
+  - tela inicial de lancamento e leitura de horas reaproveitando `work_entries` como base, sem substituir o controle atual
+  - `firestore.rules` de `projects` publicadas em `pontocerto-e1dab`
+  - essa parte ainda depende de rebuild/deploy web para aparecer no hosting publicado
+- Ainda em 27/03/2026 a camada `Faturamento recorrente + cobranca` foi aberta como extensao isolada:
+  - modulo novo `recurring_billing`
+  - colecao nova `recurring_billings`
+  - rota `/billing`
+  - item `Faturamento` no shell administrativo
+  - leitura e escrita no Flutter source via provider proprio
+  - perfil de recorrencia ligado a:
+    - cliente
+    - valor
+    - periodicidade
+    - proximo vencimento
+    - referencia contratual opcional
+  - acao inicial de `Gerar cobranca` passou a criar movimento de receita em `finance_movements` com `sourceModule = recurring_billing`
+  - a recorrencia agora registra ultima geracao e avanca o proximo vencimento sem alterar o modulo financeiro existente
+  - `firestore.rules` ja publicadas para `recurring_billings` em `pontocerto-e1dab`
+  - essa parte ainda depende de rebuild/deploy web para aparecer no hosting publicado
+- Ainda em 27/03/2026 a camada `Rentabilidade por projeto/cliente` foi iniciada como leitura gerencial:
+  - modulo novo `profitability`
+  - rota `/profitability`
+  - item `Rentabilidade` no shell administrativo
+  - leitura analitica inicial baseada em:
+    - `projects`
+    - `work_entries`
+    - `finance_movements`
+  - calculo inicial de:
+    - receita atribuida
+    - horas lancadas
+    - custo estimado por hora configurado na tela
+    - margem estimada por projeto
+  - margem estimada por cliente
+  - essa camada foi mantida somente em leitura para nao alterar financeiro, fiscal nem folha
+  - essa parte ainda depende de rebuild/deploy web para aparecer no hosting publicado
+- Ainda em 27/03/2026 a etapa `Geracao assistida de documentos` foi aberta como rascunho seguro:
+  - modulo novo `document_drafts`
+  - colecao nova `generated_documents`
+  - rota `/documents`
+  - item `Documentos` no shell administrativo
+  - leitura e escrita no Flutter source via provider proprio
+  - templates iniciais para:
+    - contrato de colaborador
+    - contrato de prestacao
+    - proposta comercial
+    - orcamento
+  - os rascunhos agora usam dados ja existentes de:
+    - empresa
+    - cliente
+    - colaborador
+    - proposta base
+    - clausulas da empresa
+  - os documentos ficam editaveis antes de qualquer uso final
+  - o contador ficou somente em leitura desses rascunhos
+  - `firestore.rules` ja publicadas para `generated_documents` em `pontocerto-e1dab`
+  - essa parte ainda depende de rebuild/deploy web para aparecer no hosting publicado
+- Ainda em 27/03/2026 o bloco `Vinculo formal empresa x contadores` foi fechado como camada isolada:
+  - colecao nova `accountant_links`
+  - provider novo `accountant_links`
+  - sincronizacao automatica do vinculo formal passou a acontecer ao:
+    - criar contador
+    - editar contador
+    - ativar/inativar contador
+    - remover contador
+  - a tela `Equipe` passou a mostrar o painel de vinculos formais e ganhou a acao `Regularizar vinculos`
+  - essa regularizacao cobre contadores antigos que ja existiam antes da nova camada
+  - `firestore.rules` ja publicadas para `accountant_links` em `pontocerto-e1dab`
+  - essa parte ainda depende de rebuild/deploy web para aparecer no hosting publicado
+- Ainda em 27/03/2026 o frontend web foi finalmente recompilado e publicado com sucesso:
+  - `flutter build web --release` concluiu apos correcao de erros de compilacao no source
+  - `firebase deploy --only hosting --project pontocerto-e1dab` concluiu com sucesso
+  - hosting publicado em `https://pontocerto-e1dab.web.app`
+  - com isso, as frentes novas agora tambem ficaram disponiveis na web publicada:
+    - `contador`
+    - `assistant`
+    - `platform-admin`
+    - `service-orders`
+    - `projects`
+    - `timesheet`
+    - `billing`
+    - `profitability`
+    - `documents`
+- Ainda em 27/03/2026 houve um ajuste de foco no ERP:
+  - `projects` e `timesheet` foram retirados da navegacao ativa do sistema sem apagar o codigo-fonte
+  - links antigos dessas rotas agora redirecionam para `/home` para evitar quebra de acesso
+  - `service-orders` ganhou acao de exclusao com confirmacao
+  - `billing` foi reforcado com:
+    - indicadores de vencimento
+    - edicao de recorrencia
+    - exclusao de recorrencia
+    - manutencao das cobrancas ja geradas no financeiro ao excluir o perfil recorrente
+- Em 28/03/2026 foi resolvido o bloqueio do build web:
+  - o travamento vinha de locks do Flutter SDK fora do workspace e da execucao dentro do sandbox sem permissao de escrita no cache do SDK
+  - `flutter build web --release --no-pub` concluiu com sucesso fora do sandbox
+  - `firebase deploy --only hosting --project pontocerto-e1dab` concluiu com sucesso
+  - hosting atualizado em `https://pontocerto-e1dab.web.app`
+- Em 28/03/2026 entrou uma blindagem adicional multiempresa:
+  - `service_orders` passou a usar verificacao de funcionario proprio via helper mais seguro nas regras
+  - `app_updates` deixou de ser legivel por qualquer usuario autenticado e passou a respeitar isolamento por empresa
+  - `firestore.rules` publicadas novamente em `pontocerto-e1dab`
+- Em 28/03/2026 a entrada do `contador` foi formalizada no frontend:
+  - nova rota `/login-contador`
+  - nova tela dedicada de acesso contábil
+  - a tela inicial ganhou o atalho explicito `Entrar como Contador`
+  - o login do contador respeita o estado comercial da empresa antes de abrir sessao
+- Em 28/03/2026 o painel do dono da plataforma evoluiu para gestao comercial detalhada por empresa:
+  - lista de empresas clicavel com detalhe operacional/comercial na mesma tela
+  - bloqueio e liberacao rapidos
+  - configuracao por empresa de:
+    - plano
+    - porte da empresa
+    - acessos incluidos
+    - apps/acessos contratados
+    - valor base do sistema
+    - valor por app extra
+    - valor mensal final
+    - observacao interna da plataforma
+  - o backend agora calcula e expõe o mensal sugerido com base `sistema + apps extras`
+  - `functions` e `hosting` publicados novamente em `pontocerto-e1dab`
+
+## Arquivos mais recentes
+
+- `functions/src/index.ts` | 26/03/2026
+- `functions/src/index.ts` | 27/03/2026
+- `firestore.rules` | 27/03/2026
+- `lib/core/auth/session.dart` | 27/03/2026
+- `lib/core/router/app_router.dart` | 27/03/2026
+- `lib/core/navigation/app_shell.dart` | 27/03/2026
+- `lib/core/company/company_access_state.dart` | 27/03/2026
+- `lib/core/auth/session_bootstrap.dart` | 27/03/2026
+- `lib/features/platform_admin/presentation/services/platform_admin_service.dart` | 27/03/2026
+- `lib/features/platform_admin/presentation/pages/platform_admin_page.dart` | 27/03/2026
+- `lib/features/service_orders/domain/service_order.dart` | 27/03/2026
+- `lib/features/service_orders/presentation/service_orders_provider.dart` | 27/03/2026
+- `lib/features/service_orders/presentation/pages/service_orders_page.dart` | 27/03/2026
+- `lib/features/recurring_billing/domain/recurring_billing_profile.dart` | 27/03/2026
+- `lib/features/recurring_billing/presentation/recurring_billing_provider.dart` | 27/03/2026
+- `lib/features/recurring_billing/presentation/pages/recurring_billing_page.dart` | 27/03/2026
+- `lib/features/profitability/domain/project_profitability.dart` | 27/03/2026
+- `lib/features/profitability/presentation/profitability_provider.dart` | 27/03/2026
+- `lib/features/profitability/presentation/pages/profitability_page.dart` | 27/03/2026
+- `lib/features/document_drafts/domain/generated_document_draft.dart` | 27/03/2026
+- `lib/features/document_drafts/presentation/document_drafts_provider.dart` | 27/03/2026
+- `lib/features/document_drafts/presentation/document_template_builder.dart` | 27/03/2026
+- `lib/features/document_drafts/presentation/pages/document_drafts_page.dart` | 27/03/2026
+- `lib/features/accountant_links/domain/accountant_link.dart` | 27/03/2026
+- `lib/features/accountant_links/presentation/accountant_links_provider.dart` | 27/03/2026
+- `lib/features/projects/domain/project.dart` | 27/03/2026
+- `lib/features/projects/presentation/projects_provider.dart` | 27/03/2026
+- `lib/features/projects/presentation/pages/projects_page.dart` | 27/03/2026
+- `lib/features/timesheet/presentation/pages/timesheet_page.dart` | 27/03/2026
+- `lib/features/assistant/domain/assistant_thread.dart` | 27/03/2026
+- `lib/features/assistant/domain/assistant_message.dart` | 27/03/2026
+- `lib/features/assistant/presentation/services/assistant_service.dart` | 27/03/2026
+- `lib/features/assistant/presentation/pages/assistant_page.dart` | 27/03/2026
+- `lib/features/auth/presentation/pages/login_empresa_page.dart` | 27/03/2026
+- `lib/features/auth/presentation/pages/login_funcionario_page.dart` | 27/03/2026
+- `lib/features/employees/domain/employee.dart` | 27/03/2026
+- `lib/features/employees/presentation/employees_provider.dart` | 27/03/2026
+- `lib/features/employees/presentation/pages/employees_page.dart` | 27/03/2026
+- `lib/features/finance/presentation/pages/finance_company_page.dart` | 27/03/2026
+- `lib/features/company/presentation/pages/company_page.dart` | 27/03/2026
+- `build/web/main.dart.js` | 27/03/2026
+- `lib/features/home/presentation/pages/home_page.dart` | 27/03/2026
+- `lib/features/workforce/presentation/pages/workforce_management_page.dart` | 27/03/2026
+- `lib/features/work_entries/domain/work_entry.dart` | 27/03/2026
+- `lib/features/work_entries/presentation/work_entries_provider.dart` | 27/03/2026
+- `lib/features/reports/presentation/pages/reports_page.dart` | 27/03/2026
+- `lib/features/proposals/presentation/pages/service_proposals_page.dart` | 27/03/2026
+- `lib/features/fiscal/presentation/pages/fiscal_readiness_page.dart` | 26/03/2026
+- `docs/registro_continuidade/PLANO_EVOLUCAO_ERP_IA_CONTADOR.md` | 26/03/2026
+- `lib/features/fiscal/presentation/widgets/invoice_dialog_sections.dart` | 26/03/2026
+- `lib/features/fiscal/presentation/widgets/invoice_workspace_cards.dart` | 23/03/2026 23:11:29
+- `lib/features/company/presentation/pages/company_page.dart` | 23/03/2026 23:11:18
+- `lib/features/auth/presentation/pages/login_page.dart` | 23/03/2026 23:11:09
+- `lib/features/auth/presentation/pages/cadastro_empresa_page.dart` | 23/03/2026 23:10:58
+- `docs/registro_continuidade/README.md` | 22/03/2026 22:02:10
+- `lib/features/proposals/presentation/pages/service_proposals_page.dart` | 22/03/2026 21:32:09
+- `lib/features/finance/presentation/pages/finance_employee_page.dart` | 22/03/2026 21:32:09
+- `lib/features/proposals/presentation/pages/contract_clauses_page.dart` | 22/03/2026 21:32:09
+- `lib/features/service_catalog/presentation/pages/service_catalog_page.dart` | 22/03/2026 21:32:09
+- `lib/features/material_catalog/presentation/pages/material_catalog_page.dart` | 22/03/2026 21:32:09
+- `lib/features/punch/presentation/pages/punch_page.dart` | 22/03/2026 21:32:09
+- `lib/features/employees/presentation/pages/employees_page.dart` | 22/03/2026 21:32:09
+- `lib/features/justifications/presentation/pages/justifications_page.dart` | 22/03/2026 21:32:09
+- `lib/features/payments/presentation/pages/payments_page.dart` | 22/03/2026 21:32:09
+- `lib/features/debts/presentation/pages/debts_page.dart` | 22/03/2026 21:32:09
+- `lib/features/clients/presentation/pages/clients_page.dart` | 22/03/2026 21:32:09
+
+- 28/03/2026
+  - corrigido o fluxo de geracao de contrato de funcionario em `lib/features/workforce/presentation/pages/workforce_management_page.dart`
+  - o contrato agora salva no Firestore mesmo se a abertura/impressao do PDF falhar no navegador ou dispositivo
+  - criada a configuracao segura de chave OpenAI por empresa em `functions/src/index.ts` com callables:
+    - `assistantGetCompanyConfigStatus`
+    - `assistantSaveCompanyApiKey`
+  - criada a colecao protegida `assistant_secure` nas regras em `firestore.rules`
+  - criada a tela de configuracao do token da OpenAI da empresa em `lib/features/company/presentation/pages/company_page.dart`
+  - criado o service `lib/features/assistant/presentation/services/assistant_admin_service.dart`
+  - `assistantSendMessage` agora prioriza a chave da propria empresa e usa a chave central da plataforma apenas como fallback
+  - validacao local concluida:
+    - `npm.cmd run build` em `functions`: ok
+    - `flutter analyze` dos arquivos alterados: ok
+  - publicacao concluida no projeto `pontocerto-e1dab`:
+    - `functions`
+    - `firestore.rules`
+    - `hosting`
+  - web atualizada em `https://pontocerto-e1dab.web.app`
+  - iniciada a camada de observabilidade segura:
+    - coleta automatica de falhas do app em `lib/main.dart`
+    - acoplamento de sessao no coletor em `lib/core/auth/session_bootstrap.dart`
+    - reporter central em `lib/core/monitoring/runtime_incident_reporter.dart`
+    - fila visual de incidentes em `lib/features/runtime_incidents/presentation/pages/runtime_incidents_page.dart`
+    - stream/acoes em `lib/features/runtime_incidents/presentation/runtime_incidents_provider.dart`
+    - rota publicada `/runtime-incidents`
+    - item no menu e atalho em `Configuracoes`
+    - regras Firestore para `runtime_incidents`
+  - a observabilidade atual ja permite:
+    - capturar erros globais de `Flutter`, `PlatformDispatcher` e `Zone`
+    - separar incidentes por empresa
+    - manter status `open`, `resolved` e `ignored`
+    - permitir triagem por owner e manager sem apagar historico
+  - ainda NAO foi liberada auto correcao por IA em producao
+  - REGRA GERAL SALVA:
+    - acesso supremo da plataforma, observabilidade e correcoes seguras ficou vinculado somente a empresa dona do sistema
+    - ids aceitos no gate supremo para evitar lockout durante esta transicao:
+      - `comp_1771754418259`
+      - `comp_17717554418259`
+    - backend:
+      - `platformListCompanies`
+      - `platformUpdateCompanyCommercialSettings`
+      - `runtimeIncidentAnalyze`
+      - `runtimeIncidentExecuteSafeAction`
+      agora exigem acesso supremo quando aplicavel
+    - frontend:
+      - menu `Plataforma`
+      - menu `Observabilidade`
+      - rotas `/platform-admin`
+      - rotas `/runtime-incidents`
+      ficaram escondidos/bloqueados fora da empresa suprema
+    - esta regra deve ser preservada nas proximas evolucoes, salvo alteracao explicita sua
+  - corrigida a causa estrutural que ainda podia bloquear `Contrato simples`:
+    - `company_settings` agora aceita `payrollDocumentSequence` e `payrollDocumentSequences` nas regras
+    - o fluxo de contrato deixa de falhar ao reservar numeracao interna
+  - numeracao interna trabalhista padronizada com prefixo por tipo e contagem comum crescente:
+    - `CTR-000001` contrato
+    - `HOL-000001` holerite
+    - `REC-000001` recibo
+    - `REN-000001` comprovante de renda
+    - `DEC-000001` 13 salario
+    - `FER-000001` ferias
+    - `RES-000001` rescisao
+  - a numeracao agora usa `payrollDocumentSequences` por tipo, com compatibilidade retroativa via `payrollDocumentSequence`
+  - fechada a etapa seguinte de incidentes:
+    - painel permite `Analisar/Reanalisar`
+    - painel permite `Executar correcao segura` quando o incidente for elegivel
+    - primeiro playbook automatico seguro implementado: `refresh_fiscal_provisioning`
+  - validacao local concluida:
+    - `flutter analyze` dos arquivos alterados: ok
+    - `npm.cmd run build` em `functions`: ok
+  - publicacao concluida:
+    - `firestore.rules`
+    - `hosting`
+    - `functions` ja estavam sincronizadas nesta rodada e permaneceram sem diff adicional
+  - camada de problemas confirmados implementada:
+    - colecao `system_issues`
+    - callable `runtimeIssueUpsertFromIncident`
+    - callable `runtimeIssueUpdateStatus`
+    - painel de observabilidade agora separa:
+      - `runtime_incidents`: ocorrencia bruta
+      - `system_issues`: problema consolidado e acompanhado ate resolver
+  - regra operacional consolidada:
+    - erro aconteceu => salva em `runtime_incidents`
+    - problema confirmado/repetido => salvar tambem em `system_issues`
+    - acao executada => trilha em `audit_logs`
+  - isso permite acompanhar:
+    - primeira ocorrencia
+    - recorrencia
+    - status do problema
+    - recomendacao
+    - fixStatus
+    - resolucao
+  - ajuste adicional para o contrato de funcionario:
+    - `company_settings` legado agora pode ser atualizado pelo `docId` correto mesmo quando o campo `companyId` antigo estiver ausente em `resource.data`
+    - falhas de geracao de contrato agora tambem entram automaticamente em `runtime_incidents` com categoria `workforce`
+  - assistente evoluido com contexto de problemas conhecidos:
+    - `assistantSendMessage` agora injeta resumo dos `system_issues` mais recentes da empresa nas instrucoes
+    - consulta de `system_issues` foi ajustada para evitar dependencia de indice composto no Firestore
+    - parser da resposta da OpenAI foi ampliado para aceitar mais formatos da Responses API
+    - quando a OpenAI devolver payload sem texto util, o backend agora grava um resumo seguro do formato retornado para diagnostico
+    - ultima chamada validada no log com `status code: 200`
+  - UX do assistente e web movel ajustadas:
+    - `assistant_page.dart` agora mostra resposta direta recebida mesmo antes da sincronizacao visual do Firestore
+    - chat ganhou modo compacto com alternancia `Conversas` / `Chat` no navegador do celular
+    - composer do assistente ficou responsivo em telas estreitas
+    - componentes compartilhados `AppPageLayout`, `AppWorkspaceCard` e `AppWorkspaceHeader` passaram a reduzir padding e empilhar cabecalho de forma mais segura no mobile web
+    - a tela do assistente foi refeita novamente com logica simplificada de conversa, rascunho local e composer visivel
+  - pendencia aberta ao encerrar o dia:
+    - o backend do assistente segue retornando `status code: 200` nas ultimas chamadas
+    - porem o frontend ainda apresenta falha intermitente e nao exibe a resposta de forma confiavel
+    - o modulo `Assistente Inteligente` NAO deve ser considerado validado para uso real ate fechar esse retorno visual
+  - prompt base do assistente salvo em:
+    - `docs/PROMPT_ASSISTENTE_PONTO_CERTO.md`
+  - publicacao concluida novamente:
+    - `functions`
+    - `firestore.rules`
+    - `hosting`
+  - proximo passo natural apos esta base:
+    - resumir incidentes para o assistente
+    - sugerir acao segura
+    - opcionalmente executar apenas retries/reprocessamentos controlados
+
+## Proximo passo seguro
+
+- validacao da emissao real de Hidrolandia-GO foi concluida
+- o fluxo oficial ja suporta dados de obra para `NFSe Nacional`
+- o modulo `Assistente Inteligente` ja foi iniciado no source
+- proximo ponto de entrada recomendado:
+  - isolar definitivamente por que a resposta do `assistantSendMessage` nao esta sendo renderizada de forma confiavel no frontend, apesar do `200` no backend
+  - testar o assistente com token proprio salvo pela tela da empresa
+  - configurar `PLATFORM_ADMIN_EMAILS` para habilitar a administracao segura dos status comerciais via callable
+  - evoluir a observabilidade para recomendacao assistida por IA e playbooks seguros
+- backlog salvo para depois desta etapa:
+  - implantar papel `contador` com permissoes isoladas
+  - permitir vinculo de 1 ou mais contadores por empresa
+  - evoluir o `Assistente Inteligente` para geracao assistida de documentos
+  - concluir o painel visual e a operacao segura da governanca comercial de planos, vigencia, ativacao e desativacao de empresas
+  - ligar contratos a faturamento recorrente e cobranca automatica
+  - ligar faturamento recorrente a rascunho fiscal automatico e cobranca externa quando a estrategia comercial estiver definida
+  - consolidar rentabilidade por projeto/cliente com custo de equipe
+  - gerar documentos assistidos a partir de empresa, cliente, contrato e servico
+  - evoluir os rascunhos de documentos para uso opcional de IA quando a chave OpenAI da plataforma estiver configurada
+  - endurecer seguranca contra invasao, vazamento e abuso operacional
+  - estruturar observabilidade e suporte automatico guiado por erro
+- manter ESTADO_ATUAL_DO_SISTEMA.md alinhado quando a arquitetura mudar
+
+## Atualizacao 29/03/2026 - Assistente Fallback Pelo Historico
+
+- diagnostico confirmado:
+  - `assistantSendMessage` segue fechando com `status code: 200` em producao
+  - nao apareceu log de `no usable text`, o que reforca que o backend provavelmente esta retornando conteudo
+  - o problema ficou concentrado no consumo do retorno pelo frontend web
+- ajuste aplicado no frontend:
+  - [assistant_service.dart](C:/Users/hp/pontocerto/lib/features/assistant/presentation/services/assistant_service.dart) ganhou fallback para buscar a ultima resposta do assistente no `assistant_threads/{threadId}/messages`
+  - [assistant_page.dart](C:/Users/hp/pontocerto/lib/features/assistant/presentation/pages/assistant_page.dart) passou a:
+    - manter `threadId` ativo
+    - reaproveitar a thread nas proximas mensagens
+    - tentar recuperar a resposta pelo historico se a callable voltar vazia ou estourar tempo
+    - marcar no status quando a resposta vier recuperada do historico
+- publicacao concluida:
+  - `flutter build web --release`
+  - `firebase deploy --only hosting --project pontocerto-e1dab`
+  - web atualizada em `https://pontocerto-e1dab.web.app`
+- pendencia atual:
+  - validar no uso real se o fallback fecha definitivamente o ciclo do assistente
+
+## Atualizacao 29/03/2026 - Monitoramento Do Assistente
+
+- diretriz aplicada:
+  - o assistente passa a usar a observabilidade ja existente do sistema em vez de criar trilhas paralelas
+  - falhas do endpoint HTTP do assistente agora sao registradas automaticamente em `runtime_incidents`
+  - a classificacao inicial usa a heuristica ja existente, com `assistantSummary`, `recommendedAction` e `recommendedActionType`
+- visibilidade:
+  - sua empresa suprema continua vendo isso em `Observabilidade`
+  - esses incidentes ficam no mesmo fluxo de acompanhamento, analise e promocao para `system_issues`
+- prompt/base de contexto:
+  - [PROMPT_ASSISTENTE_PONTO_CERTO.md](C:/Users/hp/pontocerto/docs/PROMPT_ASSISTENTE_PONTO_CERTO.md) foi atualizado para permitir que a empresa suprema use o assistente tambem como apoio de monitoramento operacional
+  - o backend agora injeta tambem resumo de `runtime_incidents` recentes quando o contexto e da empresa suprema
+- publicacao concluida:
+  - `npm run build`
+  - `firebase deploy --only functions --project pontocerto-e1dab`
+
+## Atualizacao 29/03/2026 - Assistente Visivel E Exportacao Web
+
+- assistente:
+  - a tela passou a mostrar a resposta em um bloco fixo acima do chat, com o titulo `Resposta recebida`
+  - o status agora orienta o usuario a olhar esse bloco, em vez de depender so da lista de mensagens
+  - a versao publicada inclui esse texto no bundle web
+- observabilidade:
+  - `Exportar snapshot` deixou de depender de arquivo local no navegador
+  - na web, a exportacao agora abre um dialogo com duas abas:
+    - `Markdown`
+    - `JSON`
+  - ambos os formatos podem ser copiados diretamente por botoes `Copiar Markdown` e `Copiar JSON`
+- publicacao concluida:
+  - `flutter build web --release`
+  - `firebase deploy --only hosting --project pontocerto-e1dab`
+  - hosting atualizado em:
+    - `https://pontocerto-e1dab.web.app`
+    - `https://gestao-ponto-certo.com/`
+- pendencia ainda aberta:
+  - validar no uso real se o backend do assistente esta populando o bloco `Resposta recebida` com o texto completo
+
+## Atualizacao 29/03/2026 - Assistente Com Inventario Real Do Sistema
+
+- causa identificada:
+  - o assistente estava respondendo com linguagem generica de ERP e citando fluxos nao confirmados no Ponto Certo
+- ajuste aplicado no backend:
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts) agora injeta um inventario explicito dos modulos reais do sistema
+  - tambem passou a marcar como desativados `projetos` e `timesheet`
+  - a orientacao por rota foi reforcada:
+    - `/workforce`: contrato de funcionario deve ser tratado como `Contrato simples`
+    - `/documents`: rascunho editavel, sem prometer assinatura/protocolo automatico
+    - `/fiscal`: configuracao, readiness, Focus e NFS-e
+- regra nova do assistente:
+  - se a funcionalidade nao estiver confirmada no inventario, ele deve dizer isso em vez de inventar fluxo
+- prompt de referencia atualizado:
+  - [PROMPT_ASSISTENTE_PONTO_CERTO.md](C:/Users/hp/pontocerto/docs/PROMPT_ASSISTENTE_PONTO_CERTO.md)
+- publicacao concluida:
+  - `npm.cmd run build`
+  - `firebase deploy --only functions --project pontocerto-e1dab`
+
+## Atualizacao 29/03/2026 - Historico Do Assistente E Exportacao Visivel
+
+- assistente:
+  - o endpoint HTTP agora tambem salva `assistant_threads` e `messages`
+  - a tela do assistente passou a aceitar `threadId` e carregar conversa antiga
+  - o menu lateral ganhou submenu abaixo de `Assistente` com historico recente clicavel
+  - o FAQ do backend foi endurecido para `Tarefas`, usando nomes reais em portugues:
+    - botao `Criar`
+    - campos `Nome`, `Descricao`, `Cliente`, `CPF ou CNPJ do cliente`, `Data da execucao` e `Direcionar para funcionario`
+- observabilidade:
+  - `Exportar snapshot` agora abre painel deslizante com:
+    - aba `Markdown`
+    - aba `JSON`
+    - botoes `Copiar Markdown` e `Copiar JSON`
+- publicacao concluida:
+  - `firebase deploy --only functions --project pontocerto-e1dab`
+  - `flutter build web --release`
+  - `firebase deploy --only hosting --project pontocerto-e1dab`
+
+## Atualizacao 29/03/2026 - Limpeza Da Plataforma
+
+- diagnostico:
+  - o painel `Plataforma` listava varios cadastros antigos de `Profissao Eletrica`
+  - a lista vinha da colecao `users` filtrando `role = OWNER`
+- acao executada:
+  - criada funcao temporaria `platformCleanupSupremeCompaniesEphemeral`
+  - listados os cadastros antigos e preservado apenas o cadastro supremo atual
+  - removidos 7 owners/empresas antigos
+  - preservada a empresa:
+    - `comp_1771754418259`
+    - `B. A. E. BONFIM AUTOMAÇÃO ELÉTRICA`
+- confirmacao final:
+  - a checagem posterior retornou apenas 1 empresa no conjunto de owners da plataforma
+
+## Atualizacao 29/03/2026 - Exportacao Real Da Observabilidade E Assistente Em Portugues
+
+- assistente:
+  - o backend foi endurecido para responder sempre somente em portugues do Brasil
+  - passou a reforcar uso dos nomes reais das telas em portugues, evitando ingles, espanhol ou nomes estrangeiros
+  - o prompt-base em [PROMPT_ASSISTENTE_PONTO_CERTO.md](C:/Users/hp/pontocerto/docs/PROMPT_ASSISTENTE_PONTO_CERTO.md) foi alinhado com essa regra
+- observabilidade:
+  - o endpoint `observabilityExportSupremeEphemeral` passou a exportar ate 200 registros recentes
+  - agora aceita `format=json` e `format=md`
+  - passou a devolver arquivo real para download, alem do conteudo copiavel
+  - a tela ganhou botoes:
+    - `Baixar Markdown`
+    - `Baixar JSON`
+    - `Copiar Markdown`
+    - `Copiar JSON`
+- limpeza tecnica:
+  - a funcao temporaria `platformCleanupSupremeCompaniesEphemeral` foi removida do codigo e apagada da producao apos a limpeza da plataforma
+- publicacao concluida:
+  - `npm.cmd run build`
+  - `firebase deploy --only functions --project pontocerto-e1dab`
+  - `flutter build web --release`
+  - `firebase deploy --only hosting --project pontocerto-e1dab`
+  - hosting atualizado em:
+    - `https://pontocerto-e1dab.web.app`
+    - `https://gestao-ponto-certo.com/`
+
+## Atualizacao 29/03/2026 - Contrato De Funcionario E Observabilidade Reforcada
+
+- contrato de funcionario:
+  - o erro real foi identificado em `Observabilidade` como quebra de paginacao do PDF:
+    - `Widget won't fit into the page`
+  - o fluxo de `Contrato simples` em [workforce_management_page.dart](C:/Users/hp/pontocerto/lib/features/workforce/presentation/pages/workforce_management_page.dart) foi ajustado para dividir textos e clausulas longas em blocos menores, permitindo paginacao correta no PDF
+  - a web foi recompilada e publicada com essa correcao
+- observabilidade:
+  - o registrador base em [runtime_incident_reporter.dart](C:/Users/hp/pontocerto/lib/core/monitoring/runtime_incident_reporter.dart) foi reforcado para:
+    - normalizar dados extras de forma segura
+    - evitar valores quebrados como `NaN` em campos serializados
+    - registrar contexto tecnico adicional:
+      - rota atual
+      - URL atual
+      - plataforma
+      - versao do app
+      - tipo do erro
+    - agrupar repeticoes do mesmo erro por `fingerprint`
+    - manter `occurrenceCount`, `firstSeenAt` e `lastSeenAt`
+  - a tela de `Observabilidade` passou a mostrar recorrencia do incidente quando houver repeticao
+  - as regras do Firestore foram ajustadas para permitir atualizacao do mesmo incidente agrupado pelo proprio usuario que o gerou
+- publicacao concluida:
+  - `firebase deploy --only firestore:rules --project pontocerto-e1dab`
+  - `flutter build web --release`
+  - `firebase deploy --only hosting --project pontocerto-e1dab`
+
+## Atualizacao 29/03/2026 - Limpeza Do Texto Do Contrato E Roteiro De Revisao Final
+
+- trabalhista:
+  - o contrato simples de funcionario voltou a gerar no uso real
+  - foi removido do PDF o texto interno que falava sobre risco juridico e revisao interna
+  - o documento final ficou focado apenas no conteudo contratual e nas clausulas necessarias
+- revisao final antes da escala:
+  - foi criado o roteiro [REVISAO_MODULOS_PONTO_CERTO.txt](C:/Users/hp/pontocerto/docs/REVISAO_MODULOS_PONTO_CERTO.txt)
+  - esse arquivo organiza a revisao modulo por modulo antes da escala comercial
+- pendencia ainda aberta:
+  - `Observabilidade > Exportar snapshot` ainda precisa de fechamento no uso real
+
+## Atualizacao 30/03/2026 - Exportacao Da Observabilidade Com Fallback
+
+- observabilidade:
+  - o fluxo de exportacao na web foi reforcado em [runtime_incidents_page.dart](C:/Users/hp/pontocerto/lib/features/runtime_incidents/presentation/pages/runtime_incidents_page.dart)
+  - `Baixar Markdown` e `Baixar JSON` agora:
+    - tentam salvar o arquivo localmente com nome e timestamp
+    - mostram confirmacao visual quando o download e preparado
+    - fazem fallback automatico para copiar o conteudo para a area de transferencia se o navegador bloquear o download
+- publicacao concluida:
+  - `flutter build web --release`
+  - `firebase deploy --only hosting --project pontocerto-e1dab`
+  - hosting atualizado em:
+    - `https://pontocerto-e1dab.web.app`
+    - `https://gestao-ponto-certo.com/`
+
+## Atualizacao 30/03/2026 - Contador Restrito Ao Escopo Fiscal
+
+- perfil `contador`:
+  - o acesso foi reduzido ao que e realmente necessario para apoio fiscal
+  - o contador agora fica restrito a:
+    - `Painel`
+    - `Assistente`
+    - `Faturamento`
+    - `Fiscal`
+    - `Relatorios`
+  - o modulo `Financeiro` foi removido do acesso do contador por ser mais operacional e administrativo
+  - o modulo `Contratos` tambem permanece fora do escopo do contador
+- fiscal da empresa:
+  - o fluxo fiscal continua priorizando os dados oficiais da empresa em `company_settings.companyData`
+  - se a empresa ja estiver configurada corretamente, o contador entra e visualiza a integracao Focus, dados do prestador e configuracao fiscal da propria empresa vinculada
+- arquivos principais:
+  - [session.dart](C:/Users/hp/pontocerto/lib/core/auth/session.dart)
+  - [fiscal_readiness_page.dart](C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_page.dart)
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts)
+
+## Atualizacao 30/03/2026 - Painel Proprio Do Contador
+
+- painel:
+  - o `Painel` do contador deixou de herdar a leitura executiva completa da empresa
+  - agora esse perfil ve apenas:
+    - faturamento previsto
+    - faturamento confirmado
+    - contestacoes
+    - estado fiscal da empresa vinculada
+  - o painel ganhou atalhos apenas para:
+    - `Faturamento`
+    - `Fiscal`
+    - `Relatorios`
+    - `Assistente`
+  - foram removidas da home do contador as leituras amplas de equipe, tarefas, caixa e modulos operacionais
+- arquivo principal:
+  - [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart)
+- pendencia de ambiente:
+  - a publicacao dessa alteracao ficou bloqueada por expiracao das credenciais do Firebase CLI nesta maquina
+
+## Atualizacao 30/03/2026 - Atualizacao Da Pagina Por Gesto Na Web
+
+- web:
+  - o arquivo [index.html](C:/Users/hp/pontocerto/web/index.html) agora implementa gesto de puxar para baixo no navegador do celular
+  - quando o usuario arrasta a tela para baixo a partir do topo, a pagina faz reload real, como um `F5`
+  - o gesto mostra um pequeno aviso visual:
+    - `Puxe para atualizar`
+    - `Solte para atualizar`
+    - `Atualizando...`
+- objetivo:
+  - aproximar o comportamento do Ponto Certo web ao de paginas comuns do navegador no celular
+
+## Atualizacao 30/03/2026 - Historico Do Assistente Por Login
+
+- assistente:
+  - o historico deixou de ficar exposto diretamente no menu lateral por empresa
+  - abaixo de `Assistente` agora deve aparecer apenas a entrada `Historico de conversa`
+  - ao clicar nessa entrada, a propria tela do assistente abre o painel de historico
+  - a lista de conversas agora considera o login atual, e nao mais apenas a empresa:
+    - filtra `assistant_threads` por `createdByUid == session.userId`
+  - ao clicar em uma conversa do historico, ela volta para o dialogo do assistente com aquela thread carregada
+- arquivos principais:
+  - [assistant_page.dart](C:/Users/hp/pontocerto/lib/features/assistant/presentation/pages/assistant_page.dart)
+  - [assistant_thread.dart](C:/Users/hp/pontocerto/lib/features/assistant/domain/assistant_thread.dart)
+  - [app_shell.dart](C:/Users/hp/pontocerto/lib/core/navigation/app_shell.dart)
+
+## Atualizacao 30/03/2026 - Fiscal Com Servicos Para Nota E Notas Emitidas
+
+- fiscal:
+  - a tela [fiscal_readiness_page.dart](C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_page.dart) ganhou o modulo `Servicos concluidos para nota`
+  - esse bloco lista tarefas finalizadas da empresa que ainda nao foram vinculadas a nenhuma nota fiscal
+  - quando permitido, a empresa ou o contador podem clicar em `Gerar nota` para abrir a NFS-e ja puxando os dados da tarefa
+  - o modulo `Notas emitidas` tambem foi criado dentro do proprio Fiscal
+  - ao abrir esse modulo, a tela separa as notas em:
+    - `Emitidas`
+    - `Canceladas`
+  - os rascunhos e itens ainda em preparo continuam em um bloco separado de apoio operacional
+- objetivo:
+  - evitar notas soltas no fiscal
+  - concentrar o fluxo de servico concluido -> geracao de nota -> consulta de emitidas/canceladas na mesma area
+
+## Atualizacao 30/03/2026 - Base Adaptativa MEI E EMPRESA
+
+- empresa:
+  - a configuracao aplicada em [company_page.dart](C:/Users/hp/pontocerto/lib/features/company/presentation/pages/company_page.dart) agora tambem persiste `companyExperience`
+  - essa base guarda:
+    - `type`: `MEI` ou `EMPRESA`
+    - `plan`: `SOLO` ou `EQUIPE`
+  - isso foi ligado ao perfil operacional sem criar um segundo sistema
+- home:
+  - a tela [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart) agora abre um painel simplificado para empresas com perfil `mei`
+  - o painel MEI mostra:
+    - entradas do mes
+    - saidas do mes
+    - saldo atual
+    - card de `DAS do MEI`
+    - atalhos para:
+      - `Emitir DAS`
+      - `Criar tarefa`
+      - `Cadastrar cliente`
+      - `Gerar cobranca`
+  - o botao `Emitir DAS` apenas abre o portal oficial do Simples Nacional
+- regra:
+  - continua sendo o mesmo sistema, com experiencia adaptativa
+  - empresa nao perde modulos gerais; o que muda e a priorizacao da experiencia
+  - o que for exclusivo de `MEI` deve aparecer apenas para `MEI`
+  - o que for exclusivo de `EMPRESA` deve aparecer apenas para `EMPRESA`
+  - a base dessa regra passou a ficar centralizada em [company_experience.dart](C:/Users/hp/pontocerto/lib/core/company/company_experience.dart)
+
+## Atualizacao 30/03/2026 - DAS So Para MEI
+
+- empresa:
+  - a tela [company_page.dart](C:/Users/hp/pontocerto/lib/features/company/presentation/pages/company_page.dart) ganhou o bloco `DAS do MEI`
+  - esse bloco aparece apenas quando a empresa esta marcada como `MEI`
+  - ele permite controlar:
+    - status
+    - valor estimado
+    - vencimento
+  - a alteracao continua simples e interna; a emissao oficial segue no portal do Simples Nacional
+- home:
+  - o card `DAS do MEI` continua aparecendo apenas no dashboard MEI
+- regra consolidada:
+  - `DAS` e tudo que for exclusivo de `MEI` nao deve aparecer para `EMPRESA`
+- 30/03/2026: Varredura da experiencia MEI concluida. O perfil MEI foi alinhado para manter os modulos gerais do sistema ativos, sem bloqueio estrutural de financeiro, faturamento, fiscal, assistente, contador, contratos e trabalhista quando fizer sentido. Ficou exclusivo ao MEI apenas o que realmente e proprio dele, como o bloco do DAS.
+- 30/03/2026: Matriz de acesso formalizada. Separacao registrada entre modulos multiempresa e modulos supremos da empresa dona da plataforma. No painel Plataforma, os planos comerciais passaram a trabalhar somente com Solo e Equipe, mantendo o porte da empresa em campo separado.
+- 01/04/2026: Cadastro da empresa evoluido para comecar pelo CNPJ, com busca automatica via callable publica `lookupBrazilCnpjForSignup`, preenchimento automatico dos dados disponiveis e classificacao visual imediata de `MEI / Solo` ou `Empresa / Equipe`.
+- 01/04/2026: Criada a base visual de identificacao da empresa com `companyDisplayCode` no formato `comp_12345_nome`, preservando o `companyId` tecnico interno.
+- 01/04/2026: Painel Plataforma simplificado para trabalhar comercialmente apenas com `Solo` e `Equipe`, exibindo a classificacao `MEI / Solo` ou `Empresa / Equipe`.
+- 01/04/2026: Iniciada a base multiempresa do contador com rota e tela `Empresas do contador`, leitura por `accountant_links` e troca local de contexto de empresa pela sessao. Regras do Firestore foram ampliadas para permitir leitura de empresas vinculadas por contador.
+- 01/04/2026: Hosting publicado em `https://pontocerto-e1dab.web.app` com as mudancas de cadastro, plataforma e UI do contador.
+- 01/04/2026: Deploy de `functions` e `firestore.rules` executado. A nova callable `lookupBrazilCnpjForSignup` foi criada com sucesso e as regras novas foram publicadas. Ficaram duas falhas de update em functions antigas nao ligadas a esta rodada: `debtsSettle` e `observabilityCleanupSupremeEphemeral`.
+- 01/04/2026: Linguagem visual simplificada em `Financeiro`, `Trabalhista`, `Fiscal` e `Funcionarios`, com textos mais populares e diretos na interface, sem alterar a logica operacional dos modulos. Hosting publicado novamente em `https://pontocerto-e1dab.web.app`.
+- 01/04/2026: Leitura consolidada do `Financeiro` da empresa ajustada em [finance_company_page.dart](C:/Users/hp/pontocerto/lib/features/finance/presentation/pages/finance_company_page.dart) para separar melhor `Faturamento do periodo`, `Contas a receber`, `Contas a pagar`, `Saldo atual` e `Saldo projetado`. A tela passou a diferenciar:
+  - receitas previstas x receitas recebidas
+  - despesas previstas x despesas pagas
+  - folha prevista x folha ja liquidada
+  - adiantamentos e valores a receber de colaboradores
+  Isso melhora a coerencia entre entradas, saidas, saldo e operacao sem trocar o modelo ja validado do banco. A validacao estatica do arquivo nao concluiu dentro da janela local do terminal, entao a mudanca ainda precisa de teste real na tela antes de ser considerada fechada.
+- 01/04/2026: Base visual do sistema reforcada para facilitar leitura e compreensao antes da revisao final:
+  - [app_layout.dart](C:/Users/hp/pontocerto/lib/core/theme/app_layout.dart) com largura mais controlada, padding mais confortavel no celular e cards com leitura mais firme
+  - [app_shell.dart](C:/Users/hp/pontocerto/lib/core/navigation/app_shell.dart) com cabechalhos mais claros, subtitulos mais legiveis e metric cards mais consistentes
+  - [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart) simplificada para leitura mais direta:
+    - `Painel da empresa`
+    - resumo rapido
+    - acesso rapido
+    - operacao do dia melhor adaptada para celular
+    - textos menos tecnicos e mais orientados ao uso real
+  A validacao estatica desses arquivos nao concluiu dentro da janela local do terminal, entao a etapa precisa de verificacao visual no uso real.
+- 01/04/2026: Corrigida a base de desativacao de funcionario e contador:
+  - [employee_access_service.dart](C:/Users/hp/pontocerto/lib/core/firebase/employee_access_service.dart) ganhou o fluxo `setEmployeeActiveStatus`
+  - [employees_provider.dart](C:/Users/hp/pontocerto/lib/features/employees/presentation/employees_provider.dart) passou a refletir a desativacao tambem no Auth quando o cadastro usa UID real do Firebase
+  - [session_bootstrap.dart](C:/Users/hp/pontocerto/lib/core/auth/session_bootstrap.dart) passou a respeitar o vinculo ativo do contador em `accountant_links` para carregar a empresa certa no bootstrap, evitando bloqueio indevido por verificacao de seguranca em empresa antiga ou fora do contexto atual
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts) ganhou a callable `setEmployeeActiveStatus`
+  O objetivo foi garantir:
+  - funcionario inativo sem continuar acessando como se estivesse ativo
+  - contador entrando pela empresa vinculada correta
+- 01/04/2026: Camada de escala reforcada com leitura otimizada por resumo materializado, sem trocar a logica validada dos modulos:
+  - [finance_company_page.dart](C:/Users/hp/pontocerto/lib/features/finance/presentation/pages/finance_company_page.dart) passou a usar `company_runtime_summary.finance` como fonte prioritaria apenas para os valores rapidos de:
+    - folha pendente, paga e confirmada
+    - valores a receber e adiantamentos de colaboradores
+    - contas a receber e contas a pagar da empresa
+    - faturamento do periodo, saldo atual e saldo projetado
+  - a tela continua com fallback integral para os streams atuais de `payments`, `debts` e `finance_movements` quando o resumo ainda nao existir
+  - [fiscal_readiness_page.dart](C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_page.dart) passou a mostrar no topo, quando disponivel, o resumo global do fiscal vindo de `company_runtime_summary.fiscal`:
+    - quantidade de notas emitidas no sistema
+    - valor bruto emitido no sistema
+  - isso nao substitui o resumo por competencia nem altera emissao, Focus, readiness ou fluxo fiscal ja validado
+  - `build web` gerou artefato novo em `01/04/2026 22:00`
+  - deploy de `functions + hosting` concluido com sucesso no projeto `pontocerto-e1dab`
+  - confirmacao do dominio personalizado concluida com `200` em `https://gestao-ponto-certo.com`
+  - a validacao estatica local de alguns arquivos nao concluiu dentro da janela do terminal, entao a etapa correta seguinte no uso real e conferir:
+    - `Financeiro` com os cartoes batendo com a base atual
+    - `Fiscal` mostrando os novos indicadores globais sem afetar o fluxo da competencia
+- 02/04/2026: O painel do contador em [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart) evoluiu de atalhos fiscais soltos para uma rotina anual mais proxima do escritorio contabil real:
+  - nova secao `Rotina anual do escritorio`, condicionada ao perfil da empresa (`MEI`, `Simples Nacional` ou `demais regimes`) e ao uso real de folha pela quantidade de colaboradores ativos
+  - o painel agora orienta o contador, por contexto:
+    - `MEI`:
+      - `DAS do MEI` mensal
+      - `DASN-SIMEI` anual
+      - `eSocial + FGTS Digital` quando houver empregado
+      - `procuração / Portal Receita` para acesso e regularidade
+    - `Empresa no Simples`:
+      - `PGDAS-D / DAS` mensal
+      - `DEFIS` anual
+      - `DCTFWeb`
+      - `eSocial + FGTS Digital` quando houver folha
+      - `procuração / Portal Receita`
+    - `Demais empresas`:
+      - `Portal Receita`
+      - `DCTFWeb`
+      - `eSocial + FGTS Digital` quando houver folha
+      - `procuração / Portal Receita`
+  - foram adicionados atalhos oficiais para canais que contador realmente usa no ano:
+    - `Agenda tributaria` da Receita Federal
+    - `Portal Receita`
+    - `eSocial`
+    - `FGTS Digital`
+    - `DASN-SIMEI`
+  - a ideia desta rodada foi tornar o ambiente do contador mais util no dia a dia e mais aderente ao fluxo real de escritorio, sem simular integracoes internas que nao existem
+  - validacao estatica local concluida com sucesso: `dart analyze` sem issues no arquivo alterado
+- 02/04/2026: O painel do contador ganhou um quadro operacional novo em [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart) para aproximar a experiencia do fechamento real de escritorio:
+  - nova secao `Controle do escritorio` com leitura rapida por status:
+    - `Em dia`
+    - `Pede acao`
+    - `Acompanhar`
+    - `Nao se aplica`
+  - os cards agora derivam o status da base real ja salva no sistema, sem fingir automacao externa:
+    - cadastro principal da empresa
+    - regime tributario
+    - base fiscal ou guia mensal do MEI
+    - inscricao municipal
+    - rotina oficial de folha
+    - acesso formal do escritorio
+  - a leitura foi desenhada para dar proximo passo claro ao contador em cada bloco, mantendo a operacao honesta quando a conferencia ainda depende de Gov.br / Receita
+  - validacao estatica local concluida com sucesso: `dart analyze` sem issues no arquivo alterado
+- 02/04/2026: O painel do contador passou a ter fechamento mensal persistente por competencia em [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart):
+  - nova secao `Fechamento da competencia atual`
+  - a tela agora grava em `company_settings.accountantMonthlyControl.{competencia}` o andamento operacional do escritorio para a empresa atual
+  - itens controlados nesta primeira camada:
+    - `Cadastro revisado`
+    - `DAS do MEI` ou `PGDAS-D / Tributos federais`
+    - `Base fiscal pronta`
+    - `DCTFWeb revisada`
+    - `Folha oficial revisada`
+    - `Comprovantes organizados`
+  - cada item pode ser marcado como `feito` ou voltar para `pendente`, sempre respeitando se a base minima da empresa ja existe ou se a rotina nao se aplica
+  - com isso, o ambiente do contador deixa de ser apenas leitura e passa a oferecer um controle operacional repetivel por competencia, mais proximo da rotina real de escritorio
+  - validacao estatica local concluida com sucesso: `dart analyze` sem issues no arquivo alterado
+- 02/04/2026: Pacote de entrega consolidado para publicacao e escala inicial:
+  - novo Android App Bundle gerado em `build/app/outputs/bundle/release/app-release.aab`
+  - bundle antigo removido da area de trabalho e novo bundle copiado com o nome:
+    - `C:\Users\hp\Desktop\pontocerto-v1.0.59+1029-contador-fechamento-2026-04-02.aab`
+  - documento refinado de apresentacao do sistema gerado e copiado para a area de trabalho:
+    - `C:\Users\hp\Desktop\GUIA_COMPLETO_SISTEMA_PONTO_CERTO_2026-04-02.txt`
+  - nota curta da versao para Play Store gerada e copiada para a area de trabalho:
+    - `C:\Users\hp\Desktop\NOTA_PLAY_STORE_1.0.59_2026-04-02.txt`
+- 02/04/2026: Correcao de versionamento antes da entrega final:
+  - `pubspec.yaml` atualizado de `1.0.59+1029` para `1.0.60+1030`
+  - novo bundle Android regenerado com a versao corrigida
+  - arquivo final da area de trabalho substituido por:
+    - `C:\Users\hp\Desktop\pontocerto-v1.0.60+1030-contador-fechamento-2026-04-02.aab`
+  - nota da versao para Play Store atualizada para:
+    - `C:\Users\hp\Desktop\NOTA_PLAY_STORE_1.0.60_2026-04-02.txt`
+- 02/04/2026: Criada a base da pagina publica de vendas do sistema:
+  - nova tela [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart)
+  - rota publica `/vendas` registrada em [app_router.dart](C:/Users/hp/pontocerto/lib/core/router/app_router.dart), liberada sem exigir login
+  - a pagina foi escrita em tom comercial agressivo, mas ajustada para ficar coerente com o que o sistema realmente entrega hoje:
+    - painel
+    - tarefas
+    - ponto
+    - financeiro
+    - faturamento
+    - integracao entre operacao, financeiro, fiscal e contador
+  - em vez de imagens externas falsas, a pagina usa mockups realistas em estilo dashboard SaaS para representar as telas principais do sistema
+  - o modulo [platform_admin_page.dart](C:/Users/hp/pontocerto/lib/features/platform_admin/presentation/pages/platform_admin_page.dart) ganhou o bloco `Pagina de vendas`, exibindo e permitindo copiar o endereco web:
+    - `https://gestao-ponto-certo.com/#/vendas`
+  - validacao estatica local concluida com sucesso: `dart analyze` sem issues nos arquivos alterados
+- 03/04/2026: Rodada corretiva para preservar dados da empresa e destravar pagamento em massa:
+  - [finance_cleanup_service.dart](C:/Users/hp/pontocerto/lib/features/finance/presentation/services/finance_cleanup_service.dart) foi endurecido para preservar a base mestre da empresa durante limpezas operacionais:
+    - `company_settings` deixa de entrar na limpeza
+    - a regra registrada agora e: limpeza so pode atingir dados transacionais, nunca configuracao estrutural da empresa
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts) foi corrigido nas callables:
+    - `paymentsCreate`
+    - `paymentsMarkPaid`
+    - `paymentsCancel`
+  - essas callables passaram a usar o fallback por perfil salvo do usuario (`assertOperatorFromProfile`) em vez de depender apenas de custom claims completas, reduzindo o risco de erro `internal` / `failed-precondition` em ambiente real
+  - validacao estatica local concluida com sucesso em [finance_cleanup_service.dart](C:/Users/hp/pontocerto/lib/features/finance/presentation/services/finance_cleanup_service.dart)
+  - deploy de `functions` publicado com sucesso no projeto `pontocerto-e1dab`
+- 03/04/2026: Blindagem adicional de equipe + ajuste oficial do fluxo MEI:
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts) ganhou a callable `employeesGetBaseSnapshot`, que consulta direto a colecao `users` da empresa e retorna contagem real da base para conferencia operacional
+  - [employees_page.dart](C:/Users/hp/pontocerto/lib/features/employees/presentation/pages/employees_page.dart) ganhou o card `Conferencia direta da base`, permitindo ao owner/manager comparar o que a tela mostra com o que existe de fato no Firestore
+  - a finalidade desta rodada e reduzir duvida operacional quando a equipe some ou reaparece por stream/cache, sem depender de leitura indireta
+  - [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart) passou a apontar o DAS do MEI para o servico oficial `https://www.gov.br/pt-br/servicos/emitir-das-do-mei`, com linguagem ajustada para `Baixar e pagar DAS`
+  - [company_page.dart](C:/Users/hp/pontocerto/lib/features/company/presentation/pages/company_page.dart) tambem ganhou os atalhos oficiais de `Baixar e pagar DAS` e `Comprovantes` dentro do bloco do MEI
+  - objetivo desta parte fiscal: manter o app alinhado com o caminho oficial da Receita, sem atalho improvisado ou URL obscura para o usuario final
+- 03/04/2026: Encontrado e corrigido o ponto mais provavel para o sumico visual dos funcionarios:
+  - [employees_provider.dart](C:/Users/hp/pontocerto/lib/features/employees/presentation/employees_provider.dart) estava consultando a colecao `users` com `where('role', whereIn: ['employee', 'manager', 'accountant'])`
+  - o restante do sistema grava esses mesmos papeis em maiusculo (`EMPLOYEE`, `MANAGER`, `ACCOUNTANT`) em varios fluxos oficiais
+  - resultado pratico: o funcionario continuava na base, mas podia sumir da tela de equipe por filtro inconsistente
+  - a leitura foi corrigida para buscar por `companyId` e filtrar os papeis validos no cliente, preservando compatibilidade com dados antigos e atuais
+  - a pagina de vendas nao escreve em `users` e nao tem relacao direta com esse bug; o problema estava concentrado na leitura da equipe
+- 03/04/2026: Pagina de vendas refeita com foco em decisao e conversao, sem cara de apresentacao de sistema:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart) foi reescrita para seguir a estrutura comercial orientada pelo usuario:
+    - abertura direta de dor
+    - identificacao
+    - agitacao
+    - virada
+    - materializacao com mockups como apoio visual
+    - diferencial
+    - transformacao
+    - prova social
+    - planos
+    - reducao de risco
+    - faq
+    - cta final
+  - a nova pagina foi ajustada para vender controle, organizacao e previsibilidade, nao apenas modulo ou software
+  - os textos foram mantidos coerentes com o que o sistema entrega hoje, evitando promessa tecnicamente falsa
+- 03/04/2026: Ajuste de usabilidade na pagina de vendas para navegacao web mais natural:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart) ganhou suporte a atualizacao por gesto de puxar para baixo (`pull-to-refresh`) na propria pagina `/vendas`
+  - no desktop, a mesma pagina passou a aceitar atalhos de teclado para navegacao e atualizacao:
+    - `seta para cima` e `seta para baixo`
+    - `PageUp` e `PageDown`
+    - `Space`
+    - `Home` e `End`
+    - `F5`
+    - `Ctrl + R`
+  - a rolagem continua livre pelo mouse, sem travamento por blocos
+  - a atualizacao disparada por gesto ou teclado reposiciona a pagina no topo e reconstrui a view comercial, simulando uma renovacao rapida da pagina para uso web/mobile
+  - novo build web gerado com sucesso e publicado no Hosting:
+    - `https://pontocerto-e1dab.web.app/#/vendas`
+- 03/04/2026: Rodada de sincronizacao de contexto, folha em massa e padronizacao de PDFs:
+  - linguagem antiga de perfil foi sincronizada para o contexto atual da operacao:
+    - [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart)
+    - [fiscal_readiness_page.dart](C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_page.dart)
+    - o perfil `enterprise` deixa de aparecer como `Estrutura maior` e passa a usar `Empresa estruturada`
+  - [profitability_provider.dart](C:/Users/hp/pontocerto/lib/features/profitability/presentation/profitability_provider.dart) e [profitability_page.dart](C:/Users/hp/pontocerto/lib/features/profitability/presentation/pages/profitability_page.dart) foram alinhados ao modelo atual do sistema:
+    - a leitura deixa de depender de `projeto` como conceito principal
+    - a tela passa a tratar `cliente e frente operacional`, com agrupamento por tarefa, carteira ou ordem operacional quando existir
+  - o lancamento de pagamento em massa do modulo trabalhista foi endurecido:
+    - nova callable [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts) `paymentsCreateBulk`
+    - [finance_actions_service.dart](C:/Users/hp/pontocerto/lib/features/finance/presentation/services/finance_actions_service.dart) ganhou `createPaymentsBulk`
+    - [workforce_management_page.dart](C:/Users/hp/pontocerto/lib/features/workforce/presentation/pages/workforce_management_page.dart) passou a:
+      - ignorar pagamentos ja existentes na competencia
+      - processar o lote inteiro sem derrubar tudo no primeiro erro
+      - devolver contagem de criados, ignorados e falhas com a primeira mensagem util
+    - objetivo desta rodada: reduzir o erro generico `internal` no uso real do lote e melhorar a leitura operacional do retorno
+  - foi criado o helper unico [standard_document.dart](C:/Users/hp/pontocerto/lib/core/pdf/standard_document.dart) para padronizacao de documentos PDF com:
+    - cabecalho corporativo
+    - dados da empresa
+    - secoes padronizadas
+    - quadro de informacoes
+    - bloco de assinatura
+  - esse padrao passou a ser aplicado em:
+    - [tasks_page.dart](C:/Users/hp/pontocerto/lib/features/tasks/presentation/pages/tasks_page.dart)
+      - orcamento de servico
+      - relatorio de servico finalizado
+    - [service_proposals_page.dart](C:/Users/hp/pontocerto/lib/features/proposals/presentation/pages/service_proposals_page.dart)
+      - proposta de servicos
+      - contrato de prestacao de servicos
+    - [workforce_management_page.dart](C:/Users/hp/pontocerto/lib/features/workforce/presentation/pages/workforce_management_page.dart)
+      - contrato simples do colaborador
+      - holerite e documentos trabalhistas derivados
+  - linha visual adotada para os PDFs:
+    - cabecalho limpo
+    - informacoes principais em grade
+    - secoes claras
+    - assinatura organizada
+    - melhor adequacao para envio a cliente e arquivo interno
+  - validacoes concluidas com sucesso:
+    - `flutter analyze` sem issues nos arquivos alterados
+    - `npm run build` das functions sem erros
+  - publicacao concluida com sucesso:
+    - `functions + hosting` no projeto `pontocerto-e1dab`
+    - web ativa em `https://pontocerto-e1dab.web.app`
+- 03/04/2026: Migracao preventiva do runtime das functions para evitar surpresa futura:
+  - [functions/package.json](C:/Users/hp/pontocerto/functions/package.json) atualizado de `node: 20` para `node: 22`
+  - [firebase.json](C:/Users/hp/pontocerto/firebase.json) passou a fixar explicitamente `functions.runtime = nodejs22`
+  - dependencias das functions reinstaladas e lockfile atualizado para refletir a nova base de runtime
+  - validacao concluida com sucesso:
+    - `npm run build` das functions sem erros
+    - deploy de `functions` concluido com sucesso no projeto `pontocerto-e1dab`
+  - efeito pratico:
+    - o risco de deprecacao do runtime `Node.js 20` foi eliminado nesta rodada
+    - as functions agora estao publicadas em `Node.js 22`
+  - observacao tecnica importante:
+    - o aviso sobre `firebase-functions` desatualizado ainda aparece no deploy
+    - a major mais nova do SDK nao foi aplicada nesta rodada porque quebra varias assinaturas atuais do backend
+    - decisao tomada: migrar o runtime agora com seguranca e deixar a refatoracao de SDK como um ciclo tecnico separado, sem risco de regressao operacional
+- 03/04/2026: Regra permanente de verificacao e correcao preventiva de obsolescencia:
+  - passa a valer como regra operacional do projeto:
+    - sempre que qualquer runtime, dependencia, API, servico, padrao de plataforma ou integracao mostrar sinal de deprecacao, obsolescencia, retirada futura de suporte ou vulnerabilidade relevante, isso vira prioridade maxima
+    - a verificacao e a correcao preventiva devem acontecer antes de melhorias secundarias, ajustes visuais ou novas funcionalidades, salvo orientacao explicita em contrario
+    - toda rodada preventiva deve seguir este fluxo:
+      - identificar
+      - confirmar prazo e impacto
+      - corrigir
+      - validar
+      - publicar
+      - registrar
+- 03/04/2026: Mapeamento preventivo rapido de riscos futuros ainda abertos:
+  - app Flutter:
+    - `flutter pub outdated` mostrou varios pacotes presos em linhas antigas, com destaque para upgrades de maior impacto:
+      - `firebase_core` `3.x -> 4.x`
+      - `firebase_auth` `5.x -> 6.x`
+      - `cloud_firestore` `5.x -> 6.x`
+      - `cloud_functions` `5.x -> 6.x`
+      - `firebase_storage` `12.x -> 13.x`
+      - `flutter_riverpod` `2.x -> 3.x`
+      - `go_router` `16.x -> 17.x`
+      - `syncfusion_flutter_pdf` `27.x -> 33.x`
+    - leitura tecnica:
+      - nao ha bloqueio imediato hoje
+      - existe risco acumulado de drift tecnologico se isso ficar parado por muitas rodadas
+  - backend functions:
+    - runtime `nodejs22` ja corrigido nesta rodada
+    - o deploy ainda alerta `firebase-functions` fora da major mais nova
+    - a atualizacao desta dependencia segue pendente como ciclo tecnico proprio, porque quebra a API atual das callables/triggers
+  - seguranca de dependencias do backend:
+    - `npm audit` retornou `13 vulnerabilidades`, com `3 high`
+    - pontos que merecem prioridade tecnica posterior:
+      - `nodemailer` abaixo da correcao indicada pelo advisory
+      - dependencias transitivas como `node-forge`, `path-to-regexp` e `fast-xml-parser`
+    - parte desses riscos depende de cadeia transitiva do ecossistema Firebase/Admin e deve ser tratada junto com a rodada de upgrade controlado do backend
+  - base Android:
+    - `gradle-8.14` e stack Java/Kotlin atual nao exibiram alerta imediato nesta rodada
+    - nenhum risco critico de obsolescencia foi identificado agora no recorte Android local
+- 03/04/2026: Regra permanente de preservacao de dados e nao-destruicao:
+  - fica registrado como regra operacional do projeto:
+    - nunca apagar ou sobrescrever de forma destrutiva dados mestre ja cadastrados da empresa sem solicitacao explicita e validacao consciente
+    - qualquer correcao, migracao, refatoracao ou upgrade preventivo deve priorizar compatibilidade com dados existentes
+    - em escala, a mesma regra continua valendo: preservar base ja cadastrada e evitar regressao estrutural
+    - se uma mudanca tecnica tiver risco relevante de quebrar comportamento validado ou afetar dados existentes, a mudanca deve ser fatiada, validada e publicada de forma controlada, ou adiada ate haver seguranca tecnica suficiente
+- 03/04/2026: Fechamento do ciclo preventivo seguro apos a migracao para `nodejs22`:
+  - backend:
+    - [functions/package.json](C:/Users/hp/pontocerto/functions/package.json) teve ajuste seguro adicional de dependencia direta:
+      - `nodemailer` atualizado de `^8.0.1` para `^8.0.4`
+    - `npm install` executado com sucesso
+    - `npm run build` validado sem erros
+    - deploy de `functions` concluido com sucesso no projeto `pontocerto-e1dab`
+    - `npm audit` caiu de `13` para `12` vulnerabilidades totais, removendo o advisory direto resolvivel do `nodemailer`
+  - app Flutter:
+    - `flutter pub upgrade` executado apenas dentro das restricoes ja permitidas pelo `pubspec.yaml`
+    - upgrades seguros no lockfile, sem salto de major, incluindo exemplos como:
+      - `cupertino_icons`
+      - `pdf`
+      - `printing`
+      - `shared_preferences`
+      - `firebase_core_platform_interface`
+    - resultado:
+      - base de dependencias locais ficou menos defasada sem alterar contrato funcional do app
+  - validacao global do app:
+    - `flutter analyze` completo mostrou problemas antigos fora desta rodada preventiva, concentrados em arquivos nao mexidos agora, com destaque em [work_entries_page.dart](C:/Users/hp/pontocerto/lib/features/work_entries/presentation/pages/work_entries_page.dart)
+    - por seguranca, nenhum rebuild/deploy novo da web foi forcado nesta rodada apenas por causa do upgrade de lockfile
+  - pendencias tecnicas que continuam abertas por decisao consciente de nao quebrar nada validado:
+    - upgrade major de `firebase-functions`
+    - upgrades major do bloco Flutter/Firebase (`firebase_core`, `firebase_auth`, `cloud_firestore`, `cloud_functions`, `firebase_storage`)
+    - saneamento das vulnerabilidades transitivas atreladas ao ecossistema Firebase/Admin (`node-forge`, `path-to-regexp`, `fast-xml-parser` e relacionadas)
+  - decisao registrada:
+    - nesta rodada foi feito tudo que era seguro sem alto risco de regressao
+    - os upgrades de impacto estrutural ficam para ciclos tecnicos dedicados, com refatoracao controlada, nunca em massa e nunca com risco de perda de dados
+- 03/04/2026: Rodada adicional de estabilizacao da analise global sem risco de regressao:
+  - [work_entries_page.dart](C:/Users/hp/pontocerto/lib/features/work_entries/presentation/pages/work_entries_page.dart) foi corrigida para ficar compativel com o shell atual:
+    - uso de `AppBrandColors.border` no lugar de chave inexistente
+    - remocao da dependencia de `floatingActionButton` no `AppShellScaffold`
+    - CTA de novo apontamento movido para o corpo da pagina
+  - limpeza de avisos simples e seguros em:
+    - [clients_page.dart](C:/Users/hp/pontocerto/lib/features/clients/presentation/pages/clients_page.dart)
+    - [finance_employee_page.dart](C:/Users/hp/pontocerto/lib/features/finance/presentation/pages/finance_employee_page.dart)
+    - [recurring_billing_page.dart](C:/Users/hp/pontocerto/lib/features/recurring_billing/presentation/pages/recurring_billing_page.dart)
+    - [runtime_incidents_page.dart](C:/Users/hp/pontocerto/lib/features/runtime_incidents/presentation/pages/runtime_incidents_page.dart)
+    - [document_template_builder.dart](C:/Users/hp/pontocerto/lib/features/document_drafts/presentation/document_template_builder.dart)
+  - resultado da validacao global:
+    - `flutter analyze` nao apresenta mais erros de compilacao nem warnings estruturais desta rodada
+    - permaneceram apenas lints de baixo risco em:
+      - utilitarios web baseados em `dart:html`
+      - um ponto de `BuildContext` apos async em `document_drafts_page.dart`
+      - interpolacao simples em `runtime_incidents_page.dart`
+  - decisao tecnica:
+    - esses pontos residuais nao foram forcados nesta rodada para evitar refactor transversal sem necessidade imediata
+    - a base ficou pronta para seguir com proximos ciclos sem erros reais de analise travando o projeto
+- 03/04/2026: Fechamento completo da limpeza de analise e publicacao da web:
+  - os pontos residuais foram fechados de forma segura, sem alterar regra de negocio nem tocar na base cadastrada:
+    - [document_drafts_page.dart](C:/Users/hp/pontocerto/lib/features/document_drafts/presentation/pages/document_drafts_page.dart)
+    - [runtime_incidents_page.dart](C:/Users/hp/pontocerto/lib/features/runtime_incidents/presentation/pages/runtime_incidents_page.dart)
+    - [bytes_download_web.dart](C:/Users/hp/pontocerto/lib/core/utils/bytes_download_web.dart)
+    - [text_download_web.dart](C:/Users/hp/pontocerto/lib/core/utils/text_download_web.dart)
+  - criterio adotado:
+    - corrigir o que era seguro
+    - quando o uso web era intencional e isolado por import condicional, registrar a excecao de lint localmente em vez de forcar refatoracao transversal sem necessidade
+  - validacao global concluida:
+    - `flutter analyze` sem issues em todo o projeto
+  - publicacao concluida:
+    - novo `build web --release` gerado com sucesso
+    - hosting publicado em `https://pontocerto-e1dab.web.app`
+  - estado final desta rodada:
+    - backend em `nodejs22`
+    - app sem issues no `flutter analyze`
+    - regras permanentes registradas para:
+      - priorizacao de obsolescencia/deprecacao
+      - preservacao de dados cadastrados
+      - proibicao pratica de mudancas destrutivas sem validacao consciente
+- 03/04/2026: Modernizacao preventiva controlada do bloco FlutterFire no app:
+  - criterio mantido:
+    - priorizar o que tinha maior risco tecnico futuro sem quebrar comportamento validado
+    - nao tocar em base cadastrada, migracoes destrutivas ou refactors transversais sem necessidade
+  - [pubspec.yaml](C:/Users/hp/pontocerto/pubspec.yaml) foi atualizado no bloco Firebase:
+    - `firebase_core` de `^3.15.1` para `^4.6.0`
+    - `firebase_auth` de `^5.6.2` para `^6.3.0`
+    - `cloud_firestore` de `^5.6.11` para `^6.2.0`
+    - `cloud_functions` de `^5.5.0` para `^6.1.0`
+    - `firebase_storage` de `^12.4.10` para `^13.2.0`
+  - validacao executada:
+    - `flutter pub get` concluido com sucesso
+    - `flutter analyze` concluido sem issues apos o upgrade
+    - `flutter build web --release` concluido com sucesso
+  - publicacao:
+    - hosting atualizado em `https://pontocerto-e1dab.web.app`
+  - observacoes tecnicas:
+    - o build web exibiu apenas aviso de `wasm dry run` vindo da dependencia transitoria `image`, sem impacto no build atual
+    - apos esta rodada, os pacotes ainda atrasados no app ficaram restritos a blocos sem sinal de deprecacao imediata nesta validacao:
+      - `flutter_riverpod`
+      - `go_router`
+      - `package_info_plus`
+      - `syncfusion_flutter_pdf`
+      - `file_picker`
+    - decisao registrada:
+      - encerrar aqui a frente preventiva critica do app nesta rodada
+      - tratar majors restantes apenas em ciclos dedicados, quando houver ganho claro ou sinal concreto de obsolescencia
+- 03/04/2026: Modernizacao preventiva segura do SDK `firebase-functions` no backend:
+  - objetivo:
+    - remover o estado de pacote desatualizado das functions sem refatoracao massiva nem risco para regras de negocio ja validadas
+  - [functions/package.json](C:/Users/hp/pontocerto/functions/package.json):
+    - `firebase-functions` atualizado de `^5.1.1` para `^7.2.3`
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts):
+    - import principal ajustado de `firebase-functions` para `firebase-functions/v1`
+    - criterio:
+      - manter compatibilidade com os triggers e callables atuais em primeira geracao
+      - permitir uso da major atual do pacote sem converter toda a base para API v2 neste ciclo
+  - validacao:
+    - `npm install` concluido com sucesso
+    - `npm run build` concluido com sucesso apos o ajuste para `v1`
+    - deploy de `functions` concluido com sucesso no projeto `pontocerto-e1dab`
+  - resultado:
+    - o aviso de pacote antigo do `firebase-functions` saiu da frente nesta rodada
+    - backend permanece em `Node.js 22` e com comportamento preservado
+  - seguranca de dependencias:
+    - `npm audit fix` sem `force` foi executado com sucesso
+    - vulnerabilidades de producao caíram de `12` totais com `3 high` para `9 low`
+    - o residual atual depende de cadeia transitiva ligada a `firebase-admin` / Google libs
+    - para zerar o restante, o `npm` exige `audit fix --force` com downgrade/refactor quebrando compatibilidade, portanto isso nao foi aplicado
+  - decisao registrada:
+    - encerrar aqui a frente preventiva critica do backend nesta rodada
+    - nao executar `force` nem mudancas destrutivas/arriscadas apenas para perseguir zero warnings quando isso compromete a estabilidade validada
+- 03/04/2026: Consolidacao de prontidao para escala e regra permanente de prioridade critica:
+  - regra permanente reforcada:
+    - qualquer item critico de runtime, seguranca, obsolescencia, deprecacao, indisponibilidade, risco de perda de dados ou risco de regressao operacional passa a ser tratado como prioridade maxima
+    - a correcao preventiva desses itens vem antes de melhorias secundarias, visuais ou expansoes funcionais, salvo orientacao explicita em sentido contrario
+  - regra permanente de preservacao:
+    - preservar sempre os dados validados da empresa e as informacoes ja cadastradas
+    - nao executar mudancas destrutivas, migracoes agressivas, limpezas irreversiveis ou sobrescritas arriscadas sem necessidade comprovada e validacao consciente
+    - em escala, a mesma regra continua valendo: compatibilidade com a base existente vem antes de refatoracoes amplas
+  - pronto para escalar nesta rodada:
+    - backend publicado em `nodejs22`
+    - pacote `firebase-functions` atualizado e publicado sem quebrar triggers atuais
+    - bloco FlutterFire do app atualizado e validado
+    - `flutter analyze` limpo
+    - `build web --release` validado e hosting publicado
+    - vulnerabilidades `high` do backend removidas sem uso de `force`
+  - melhorias futuras registradas, sem bloqueio imediato:
+    - vulnerabilidades residuais `low` transitivas no backend ligadas a cadeia `firebase-admin` / Google libs
+    - upgrades major futuros de:
+      - `flutter_riverpod`
+      - `go_router`
+      - `package_info_plus`
+      - `syncfusion_flutter_pdf`
+      - `file_picker`
+    - eventual migracao gradual de functions para API `v2`, apenas em ciclo proprio e sem pressa
+    - revisoes continuas de performance em telas naturalmente mais pesadas, especialmente `Fiscal` e `Workforce`
+- 03/04/2026: Checklist operacional final de prontidao para escala controlada:
+  - estado tecnico atual considerado apto:
+    - backend, app e web validados nas frentes criticas desta rodada
+    - regras de preservacao de dados e prioridade critica registradas
+  - checklist de escala controlada:
+    - validar fluxo principal real com empresa:
+      - login
+      - painel
+      - tarefas
+      - financeiro
+      - faturamento
+      - fiscal
+    - validar fluxo real com contador:
+      - troca de empresa
+      - painel do contador
+      - fiscal da empresa vinculada
+      - impostos e guias oficiais
+    - validar fluxo real com funcionario:
+      - acesso
+      - ponto
+      - justificativas
+      - pagamentos
+    - confirmar no uso real:
+      - PDFs padronizados
+      - lancamento em massa
+      - leitura da equipe sem sumico de registros
+      - pagina de vendas publicada e coerente com o produto atual
+    - acompanhar operacao inicial com poucas empresas antes de ampliar:
+      - observar erros
+      - tempo de resposta
+      - comportamento de dados
+      - demandas reais de contador e empresa
+  - criterio de liberacao:
+    - escalar de forma progressiva
+    - nao abrir volume maior sem antes confirmar estabilidade nos fluxos reais mais usados
+- 03/04/2026: Recriacao completa da pagina de vendas `/vendas`:
+  - a pagina anterior foi descartada e refeita do zero em [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart)
+  - direcao aplicada:
+    - pagina web de conversao continua, sem cara de cards de app
+    - copy agressiva focada em dores de empresa e contador
+    - blocos grandes e separados por problema, nao por vitrine tecnica
+    - CTAs com espaco reservado para links de pagamento futuros
+  - estrutura entregue:
+    - hero de impacto
+    - dor da empresa
+    - virada da solucao
+    - modulos da empresa em linguagem comercial
+    - ambiente do contador
+    - prova social
+    - antes vs depois
+    - planos
+    - FAQ
+    - CTA final
+  - visual da prova do produto:
+    - onde a pagina fala de uma tela do sistema, foi criado um espelho visual com a mesma logica do layout real:
+      - menu lateral
+      - cabecalho
+      - resumo
+      - listas
+      - indicadores
+    - os blocos ficaram prontos para substituicao futura por print real sem refazer a pagina
+  - modulos cobertos comercialmente:
+    - painel
+    - relatorios
+    - rentabilidade
+    - tarefas
+    - ordens de servico
+    - clientes
+    - financeiro
+    - faturamento
+    - pagamentos
+    - dividas
+    - funcionarios
+    - ponto
+    - justificativas
+    - trabalhista
+    - propostas
+    - contratos
+    - documentos
+    - catalogo
+    - materiais
+    - assistente
+    - empresa
+    - configuracoes
+    - auditoria
+    - fiscal
+    - empresas do contador
+  - validacao:
+    - `flutter analyze lib/features/marketing/presentation/pages/sales_page.dart` sem issues
+    - `flutter build web --release` concluido com sucesso
+- 03/04/2026: URL limpa da pagina de vendas sem `#`:
+  - [main.dart](C:/Users/hp/pontocerto/lib/main.dart):
+    - `usePathUrlStrategy()` habilitado para o app web usar rotas limpas
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - endereco publico ajustado de `https://gestao-ponto-certo.com/#/vendas` para `https://gestao-ponto-certo.com/vendas`
+  - base tecnica:
+    - o Hosting ja estava preparado com `cleanUrls` e rewrite para `index.html`
+    - a mudanca restante era somente a estrategia de URL do Flutter web
+- 03/04/2026: Revisao da copy da pagina de vendas:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - revisao textual feita para corrigir formulacoes fracas ou pouco naturais
+    - ajustes focados em clareza comercial e portugues mais limpo, sem alterar a estrutura da pagina
+  - exemplos de melhoria:
+    - `bagunca da frente` para `bagunca do caminho`
+    - `jogo menos quebrado` para `base muito menos quebrada`
+    - `buraco de informacao` para `falta de informacao`
+    - ajuste de concordancia em `servicos e materiais`
+  - validacao:
+    - `flutter analyze lib/features/marketing/presentation/pages/sales_page.dart` sem issues
+- 03/04/2026: Novo modulo de ideias de melhoria e ajuste comercial dos acessos adicionais:
+  - [product_feedback_page.dart](C:/Users/hp/pontocerto/lib/features/product_feedback/presentation/pages/product_feedback_page.dart):
+    - novo modulo `Ideias`
+    - disponivel para todos os perfis com sessao ativa
+    - registra:
+      - titulo
+      - modulo
+      - prioridade percebida
+      - dor atual
+      - melhoria desejada
+      - informacoes do usuario
+      - nome, perfil e empresa de quem registrou
+    - lista historico recente da empresa e permite marcar status como:
+      - `novo`
+      - `planejado`
+      - `entregue`
+  - navegacao e acesso:
+    - [app_router.dart](C:/Users/hp/pontocerto/lib/core/router/app_router.dart): rota nova `/improvements`
+    - [app_shell.dart](C:/Users/hp/pontocerto/lib/core/navigation/app_shell.dart): item `Ideias` no menu
+    - [session.dart](C:/Users/hp/pontocerto/lib/core/auth/session.dart): rota liberada para contador e funcionario, mantendo owner e manager naturalmente cobertos
+  - seguranca de dados:
+    - [firestore.rules](C:/Users/hp/pontocerto/firestore.rules):
+      - nova colecao `product_feedback`
+      - leitura restrita a mesma empresa
+      - criacao vinculada ao usuario autenticado
+      - update permitido ao autor ou perfis de gestao, sem delete destrutivo
+  - pagina de vendas:
+    - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+      - botao final de copiar link removido
+      - bloco de governanca passou a citar o modulo de ideias e informacoes de uso
+      - texto do adicional de `R$ 19,90` esclarecido como acesso para funcionario, equipe de campo ou usuario interno que executa tarefas da empresa
+    - [platform_admin_page.dart](C:/Users/hp/pontocerto/lib/features/platform_admin/presentation/pages/platform_admin_page.dart):
+      - descricao comercial interna alinhada com essa mesma regra
+  - validacao:
+    - `flutter analyze` dos arquivos alterados sem issues
+- 03/04/2026: Ajuste final da pagina de vendas para divulgacao e filtros no modulo `Ideias`:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - legibilidade aumentada no celular via `textScaler` responsivo
+    - CTA principal e CTA final passaram a abrir `/cadastro-empresa`, eliminando placeholder interno
+    - textos internos de bastidor removidos da pagina
+    - planos reescritos sem observacoes internas
+    - blocos visuais do sistema ficaram com `InteractiveViewer` para zoom por gesto
+  - [web/index.html](C:/Users/hp/pontocerto/web/index.html):
+    - viewport ajustado para permitir zoom do navegador no mobile
+  - [product_feedback_page.dart](C:/Users/hp/pontocerto/lib/features/product_feedback/presentation/pages/product_feedback_page.dart):
+    - filtros adicionados por:
+      - status
+      - modulo
+      - prioridade
+  - validacao:
+    - `flutter analyze` sem issues
+    - `flutter build web --release` concluido com sucesso
+- 03/04/2026: Expansao comercial da `/vendas` para cobrir todos os modulos reais do sistema:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - blocos centrais reescritos para vender por dor operacional, financeira, comercial, fiscal e de contador
+    - todos os modulos do menu real do sistema passaram a aparecer de forma explicita na pagina:
+      - `Painel`, `Assistente`, `Ideias`, `Empresas do contador`, `Financeiro`, `Fiscal`, `Trabalhista`, `Funcionarios`, `Ponto`, `Justificativas`, `Tarefas`, `Ordens de servico`, `Faturamento`, `Rentabilidade`, `Clientes`, `Relatorios`, `Pagamentos`, `Dividas`, `Propostas`, `Contratos`, `Clausulas`, `Documentos`, `Catalogo`, `Plataforma`, `Observabilidade`, `Materiais`, `Empresa`, `Configuracoes`, `Auditoria`
+    - modulos agora agrupados como solucao para:
+      - leitura executiva e lucro
+      - operacao do dia a dia
+      - equipe e rotina trabalhista
+      - financeiro, cobranca e pendencias
+      - vendas, contratos e documentos
+      - fiscal e ambiente do contador
+      - governanca, auditoria e evolucao do produto
+      - escala segura com `Plataforma` e `Observabilidade`
+    - novo bloco visual de `Plataforma e Observabilidade` criado para reforcar a camada de operacao central do produto
+  - validacao:
+    - conferencia textual confirmou presenca explicita de todos os modulos do menu real na pagina
+    - `flutter analyze` e `flutter build web` travaram por tempo no ambiente local nesta rodada; falta repetir validacao pesada antes de publicar esta versao especifica
+- 03/04/2026: Alinhamento visual dos mockups da `/vendas` com o shell real do sistema:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - `_ShowcaseShell` deixou de usar lateral fixa antiga
+    - cada mockup agora recebe lista propria de modulos laterais coerente com o contexto real do sistema
+    - ajustes feitos para espelhar melhor o menu atual:
+      - `Painel`: `Painel`, `Assistente`, `Financeiro`, `Fiscal`, `Relatorios`, `Empresa`
+      - `Tarefas`: `Painel`, `Tarefas`, `Ordens de servico`, `Clientes`, `Catalogo`, `Materiais`
+      - `Financeiro`: `Painel`, `Financeiro`, `Faturamento`, `Pagamentos`, `Dividas`, `Relatorios`
+      - `Funcionarios`: `Funcionarios`, `Ponto`, `Justificativas`, `Trabalhista`, `Pagamentos`, `Auditoria`
+      - `Documentos`: `Propostas`, `Contratos`, `Clausulas`, `Documentos`, `Catalogo`, `Materiais`
+      - `Assistente`: `Assistente`, `Ideias`, `Empresa`, `Configuracoes`, `Auditoria`, `Observabilidade`
+      - `Observabilidade`: `Plataforma`, `Observabilidade`, `Auditoria`, `Configuracoes`, `Ideias`, `Empresa`
+      - `Fiscal`: `Empresas do contador`, `Fiscal`, `Financeiro`, `Trabalhista`, `Relatorios`, `Empresa`
+    - titulo interno de equipe ajustado para `Funcionarios`, refletindo o nome real do modulo
+- 03/04/2026: Reforco de conversao da `/vendas` com copy mais agressiva e mais aderente a dor real:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - hero reescrito para atacar cansaco, desorganizacao, gargalo do dono e atraso para o contador
+    - faixa inicial ganhou sinais de dor imediata:
+      - `tarefas que se perdem`
+      - `dinheiro sem leitura clara`
+      - `equipe dependente de voce`
+      - `contador cobrando o que nao veio`
+    - bloco de dor passou a citar dependencia de memoria e WhatsApp como sintoma de gestao quebrada
+    - bloco da virada foi endurecido para vender fluxo e clareza operacional, nao “tela”
+    - prova social ficou mais especifica em dor e transformacao, removendo referencia ao modulo inativo `Rentabilidade`
+    - comparacao antes/depois e CTA final ficaram mais diretos, com foco em consequencia real de continuar no improviso
+    - topbar simplificada para parecer mais landing page de conversao e menos navegacao de app
+    - FAQ reforcado com resposta explicita sobre utilidade para contador
+  - validacao:
+    - `Rentabilidade` removida da copy da pagina de vendas
+    - tentativa de `dart format` travou por tempo no ambiente local nesta rodada
+    - `flutter build web --release` concluido com sucesso
+    - `hosting` publicado com sucesso em `https://pontocerto-e1dab.web.app/vendas`
+- 03/04/2026: Refinamento visual final da `/vendas` para aproximar os mockups do shell real do sistema:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - `_ShowcaseShell` passou a usar lateral no estilo do `AppShell`, com:
+      - cartao superior de empresa ativa
+      - item ativo destacado
+      - icones coerentes com os modulos reais
+      - cabecalho interno mais proximo do painel do sistema
+    - mapeamento visual dos modulos criado em `_mockIconForModule`, espelhando a linguagem do menu real
+    - mockups ficaram mais proximos do ambiente verdadeiro, reduzindo sensacao de imagem generica
+  - validacao:
+    - `flutter build web --release` concluido com sucesso
+    - `hosting` publicado com sucesso em `https://pontocerto-e1dab.web.app/vendas`
+- 03/04/2026: Reforco do Assistente para monitoramento automatico de falhas:
+  - [assistant_page.dart](C:/Users/hp/pontocerto/lib/features/assistant/presentation/pages/assistant_page.dart):
+    - contexto do `RuntimeIncidentReporter` fixado para `Assistente Inteligente` / `/assistant`
+    - falhas de consulta do assistente passaram a ser registradas automaticamente em `runtime_incidents`
+    - respostas vazias ou sem texto util tambem passam a gerar alerta de monitoramento
+    - falha ao recarregar mensagens do thread no cliente tambem entra em observabilidade como warning
+    - interface do usuario nao ganhou botao de melhoria; o registro fica silencioso para analise posterior da empresa suprema
+    - status do chat agora informa quando uma falha ou alerta foi enviada para monitoramento
+  - validacao:
+    - `flutter build web --release` concluido com sucesso
+    - `hosting` publicado com sucesso em `https://pontocerto-e1dab.web.app`
+    - limpeza posterior do warning local no arquivo do assistente concluida
+- 04/04/2026: Registro preventivo de compatibilidade futura do build web:
+  - durante `flutter build web --release`, o Flutter exibiu aviso de `wasm dry run` ligado ao pacote `image`
+  - impacto atual:
+    - nao bloqueia build web atual
+    - nao bloqueia deploy atual
+    - nao afeta a versao publicada hoje
+  - acompanhamento futuro obrigatorio:
+    - monitorar atualizacoes do pacote `image`
+    - revisar compatibilidade com build web `WASM` em proxima rodada preventiva
+    - tratar como prioridade assim que deixar de ser apenas aviso e passar a afetar build/deploy real
+- 04/04/2026: Ajuste automatico da `/vendas` para navegacao no celular:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - hero passou a adaptar tamanhos de titulo, subtitulo e corpo conforme largura da tela
+    - CTAs do hero passam a ocupar largura total em telas pequenas
+    - `_SalesSystemFrame` ganhou versao compacta com paddings, titulos e cabecalho reduzidos no mobile
+    - `_ShowcaseShell` ganhou modo compacto:
+      - altura menor
+      - lateral mais estreita
+      - menos itens exibidos na lateral
+      - textos e badges reduzidos
+      - cabecalho interno simplificado para caber melhor em telas estreitas
+    - objetivo foi deixar a pagina mais legivel e menos estranha em navegadores de celular sem depender de zoom manual
+  - validacao:
+    - `flutter build web --release` concluido com sucesso
+    - `hosting` publicado com sucesso em `https://pontocerto-e1dab.web.app/vendas`
+- 04/04/2026: Limpeza comercial da `/vendas` para nao expor camadas internas da empresa suprema:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - bloco comercial `Plataforma e Observabilidade` removido da pagina de vendas
+    - mencoes de `Plataforma` e `Observabilidade` retiradas dos bullets do contador
+    - mockup de governanca deixou de citar `Observabilidade` e passou a focar apenas no que e comercialmente valido para empresa e contador
+    - objetivo foi manter a landing alinhada apenas com o que deve ser vendido ao publico
+  - validacao:
+    - `flutter build web --release` concluido com sucesso
+    - `hosting` publicado com sucesso em `https://pontocerto-e1dab.web.app/vendas`
+- 04/04/2026: Ajuste final de imagens da `/vendas` no celular:
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - mockups passaram a preservar o layout visual do desktop no mobile
+    - no celular, a imagem do sistema nao e mais comprimida/reorganizada internamente
+    - a visualizacao compacta agora usa quadro com rolagem horizontal interna para manter nomes e estrutura como no PC
+    - objetivo foi evitar textos em coluna/vertical e manter leitura fiel ao sistema real
+  - validacao:
+    - `flutter build web --release` concluido com sucesso
+    - `hosting` publicado com sucesso em `https://pontocerto-e1dab.web.app/vendas`
+- 04/04/2026: Correcao preventiva do erro `internal` em pagamentos e nova frente oficial do contador com Radar Receita Federal:
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts):
+    - identificado ponto estrutural que podia gerar `internal` em lancamento individual e em massa: transacoes do Firestore faziam escrita antes de leituras adicionais do resumo financeiro
+    - `applyRuntimeSummaryDelta` passou a aceitar o estado atual ja lido da secao financeira
+    - criado `readRuntimeSummarySection(...)` para garantir leitura do `company_runtime_summary` antes das escritas
+    - ajuste aplicado nos fluxos:
+      - `paymentsCreate`
+      - `paymentsCreateBulk`
+      - `paymentsMarkPaid`
+      - `paymentsConfirm`
+      - `paymentsContest`
+      - `paymentsCancel`
+      - `debtsCreate`
+      - `debtsSettle`
+      - `debtsCancel`
+    - objetivo foi eliminar a causa classica de falha transacional por `read after write`, preservando dados e sem alterar a estrutura ja validada
+  - [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart):
+    - novo bloco `Radar Receita Federal` no painel do contador
+    - foco em monitoramento oficial, sem scraping falso de e-CAC
+    - suporte visual para:
+      - pendencias
+      - parcelamentos
+      - pagamentos confirmados
+      - procuracao ativa
+      - preparo de e-CNPJ / certificado
+      - status de integracao autorizada
+      - ultima sincronizacao
+    - a interface orienta o caminho correto da automacao oficial:
+      - `Integra Contador / Serpro`
+      - procuracao oficial do e-CAC
+      - canais oficiais da Receita Federal
+  - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart):
+    - copy do bloco do contador atualizada para citar radar oficial da Receita quando houver integracao autorizada
+    - mantido criterio comercial de nao prometer captura automatica inexistente
+  - validacao:
+    - `npm run build` em `functions` concluido com sucesso
+    - `flutter build web --release` concluido com sucesso
+    - `firebase deploy --only "functions,hosting" --project pontocerto-e1dab` concluido com sucesso em `04/04/2026`
+    - no deploy desta rodada, o Firebase informou `Skipping the deploy of unchanged functions`, indicando que o backend publicado ja estava no mesmo estado atual detectado para as functions
+  - pendencia real para proximo ciclo oficial:
+    - para transformar o radar em consulta automatica com dados oficiais da Receita, o caminho correto e integracao autorizada com `Integra Contador / Serpro` e respectivas credenciais/procuracoes
+    - ate essa integracao existir de fato, o sistema deve continuar apenas orientando e consolidando o acompanhamento oficial, sem fingir automacao nao homologada
+- 04/04/2026: Financeiro conectado por origem e nova frente oficial do contador para NFS-e:
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts):
+    - pagamentos passaram a sincronizar uma movimentacao financeira propria em `finance_movements` com:
+      - `type: EXPENSE`
+      - categoria `payroll_expense`
+      - `sourceModule: payments`
+      - vinculo `financeMovementId` no documento do pagamento
+    - obrigacoes internas tambem passaram a sincronizar movimentacao financeira propria:
+      - `DEBT` como entrada pendente/recebida
+      - `ADVANCE` como saida/despesa pendente/quitada
+      - categoria e descricao separadas por origem
+      - `sourceModule: debts`
+    - cancelamentos limpam o vinculo financeiro correspondente para evitar saldo distorcido
+    - `financeMovementSummaryFields(...)` passou a ignorar movimentos originados de `payments` e `debts` no resumo operacional agregado, para nao duplicar contagem com os buckets especificos desses modulos
+    - objetivo consolidado:
+      - tudo registrado no financeiro
+      - tudo com descricao de origem
+      - sem duplicar saldo
+  - [finance_company_page.dart](C:/Users/hp/pontocerto/lib/features/finance/presentation/pages/finance_company_page.dart):
+    - fallback local do financeiro passou a desconsiderar movimentos gerados por `payments` e `debts` nas somas operacionais genericas, preservando a leitura correta do saldo e das obrigacoes
+  - [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart):
+    - leituras operacionais do painel passaram a excluir movimentos originados de `payments` e `debts` quando o objetivo e medir apenas operacao/faturamento do negocio
+    - novo bloco `Radar NFS-e do escritorio` para o contador com:
+      - API nacional
+      - certificado A1
+      - coleta automatica
+      - cobertura por municipios
+      - notas prestadas
+      - notas tomadas
+      - sincronizacao em nuvem
+      - preparo de backup local por agente desktop
+      - preparo para integracao com sistemas contabeis
+    - o modulo foi mantido honesto:
+      - ambiente nacional da NFS-e como via principal
+      - conectores municipais apenas quando necessarios
+      - certificado A1 nao deve ser tratado diretamente pelo navegador
+      - backup local automatico depende de agente instalado na maquina do contador
+  - validacao:
+    - `npm run build` em `functions` concluido com sucesso
+    - `flutter build web --release` concluido com sucesso em execucao fora do sandbox local
+    - `firebase deploy --only "functions,hosting" --project pontocerto-e1dab` concluido com sucesso em `04/04/2026`
+    - `hosting` publicado em `https://pontocerto-e1dab.web.app`
+  - acompanhamento futuro obrigatorio:
+    - definir integracao oficial real da NFS-e por cobertura do ambiente nacional e conectores municipais homologados
+    - se houver backup local automatico, isso exigira componente desktop do escritorio
+    - integracao com sistemas contabeis deve ser feita por conector por fornecedor ou exportacao padronizada
+- 04/04/2026: Conferencia final de funcionamento antes de fechar a rodada:
+  - validacao tecnica executada:
+    - `flutter analyze` completo do projeto concluido com `No issues found!`
+    - `npm run build` em `functions` concluido com sucesso
+  - ajuste residual feito:
+    - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart) teve limpeza de parametro morto em `_ShowcaseShell`, removendo o unico warning restante
+  - leitura final:
+    - nao ficou erro tecnico aberto detectado pela analise do app
+    - backend compilando normalmente
+    - pendencias restantes sao de evolucao oficial de integracoes externas, nao de falha estrutural detectada nesta rodada
+- 04/04/2026: Limpeza definitiva de codigo morto e modulos inativos:
+  - removido do app o legado que ja nao fazia parte do fluxo real:
+    - `profitability`
+    - `projects`
+    - `timesheet`
+  - arquivos apagados:
+    - [project_profitability.dart](C:/Users/hp/pontocerto/lib/features/profitability/domain/project_profitability.dart)
+    - [profitability_provider.dart](C:/Users/hp/pontocerto/lib/features/profitability/presentation/profitability_provider.dart)
+    - [profitability_page.dart](C:/Users/hp/pontocerto/lib/features/profitability/presentation/pages/profitability_page.dart)
+    - [project.dart](C:/Users/hp/pontocerto/lib/features/projects/domain/project.dart)
+    - [projects_provider.dart](C:/Users/hp/pontocerto/lib/features/projects/presentation/projects_provider.dart)
+    - [projects_page.dart](C:/Users/hp/pontocerto/lib/features/projects/presentation/pages/projects_page.dart)
+    - [timesheet_page.dart](C:/Users/hp/pontocerto/lib/features/timesheet/presentation/pages/timesheet_page.dart)
+  - rotas removidas:
+    - `/projects`
+    - `/timesheet`
+    - `/profitability`
+  - ajustes complementares:
+    - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts) deixou de orientar `projetos` e `timesheet` como modulos desativados; agora simplesmente nao entram mais como parte da versao ativa
+    - `Ideias` foi mantido no sistema e na pagina de vendas por decisao atual do produto
+  - validacao:
+    - `flutter analyze` completo concluido com `No issues found!`
+    - `npm run build` em `functions` concluido com sucesso
+    - `flutter build web --release` concluido com sucesso
+    - `firebase deploy --only "functions,hosting" --project pontocerto-e1dab` concluido com sucesso em `04/04/2026`
+  - observacao:
+    - referencias antigas em `docs/` foram preservadas como historico do projeto
+    - referencias encontradas em `node_modules` e gerados de build nao sao comportamento do sistema, apenas dependencias e artefatos
+- 04/04/2026: Reforco do prompt do Assistente para personalizacao por empresa, modulo e area de atuacao:
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts):
+    - criado `buildAssistantBusinessContextGuide(...)`
+    - o Assistente agora recebe instrucao explicita para:
+      - explicar todos os modulos e funcionalidades confirmadas do sistema
+      - responder conforme o cadastro da empresa atual
+      - considerar categoria do negocio, CNAE principal, descricao da atividade, porte e natureza quando isso existir no cadastro
+      - considerar papel, cargo, apelido e contexto do usuario quando isso existir no perfil
+      - nunca misturar orientacao entre empresas, usuarios ou areas diferentes
+      - se prontificar a buscar no proprio cadastro, modulos ativos e contexto atual tudo o que ajude este usuario, sem inventar dado nao recebido
+      - deixar claro quando faltar detalhe suficiente no cadastro para responder com seguranca
+    - `buildAssistantInstructions(...)` passou a incluir esse novo guia de personalizacao no prompt final
+  - objetivo:
+    - tornar o Assistente unico por usuario e por empresa
+    - alinhar resposta com a prestacao de servico real cadastrada da empresa
+    - reduzir respostas genericas, misturadas ou fora do contexto operacional do usuario
+  - validacao:
+    - `npm run build` em `functions` concluido com sucesso
+    - `firebase deploy --only "functions" --project pontocerto-e1dab` concluido com sucesso em `04/04/2026`
+- 04/04/2026: Regra do Assistente para perguntas fora da base, mas ligadas a operacao real da empresa:
+  - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts):
+    - o prompt do Assistente agora orienta que:
+      - se a pergunta sair do que esta no cadastro, mas continuar ligada a operacao real da empresa, ele pode complementar com conhecimento geral prudente do modelo
+      - quando estiver inferindo, ele deve deixar isso claro
+      - quando o tema exigir confirmacao oficial externa, como Receita, eSocial, prefeitura, NFS-e, banco ou obrigacao legal, ele deve tratar a validacao oficial como obrigatoria
+      - ele nunca deve afirmar que consultou a web ou fonte externa em tempo real sem ferramenta real de busca na chamada
+      - quando nao houver confirmacao externa real, ele deve responder com cautela e recomendar conferencia na fonte oficial competente
+  - objetivo:
+    - ampliar a ajuda operacional sem inventar navegacao externa inexistente
+    - manter seguranca e honestidade em temas oficiais ou sensiveis
+  - validacao:
+    - `npm run build` em `functions` concluido com sucesso
+    - `firebase deploy --only "functions" --project pontocerto-e1dab` concluido com sucesso em `04/04/2026`
+- 04/04/2026: Geracao do Android App Bundle da versao `1.0.61+1031`:
+  - [pubspec.yaml](C:/Users/hp/pontocerto/pubspec.yaml):
+    - versao incrementada de `1.0.60+1030` para `1.0.61+1031`
+  - [GeneratedPluginRegistrant.java](C:/Users/hp/pontocerto/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java):
+    - ajustado o registro de `cloud_functions` e `shared_preferences` com carregamento por reflexao
+    - objetivo: contornar falha de compilacao do Android nativo sem alterar comportamento funcional nem dados
+  - build:
+    - `flutter clean` concluido com sucesso
+    - `flutter build appbundle --release` concluido com sucesso em `04/04/2026`
+    - artefato gerado em [app-release.aab](C:/Users/hp/pontocerto/build/app/outputs/bundle/release/app-release.aab)
+    - copia enviada para `C:\Users\hp\Desktop\pontocerto-v1.0.61+1031-2026-04-04.aab`
+  - nota de versao sugerida:
+    - melhorias de estabilidade e organizacao operacional para empresas e contadores, com ajustes no financeiro, pagamentos, monitoramento do assistente, painel do contador e pagina de vendas
+- 04/04/2026: Estrutura comercial real com Asaas, liberacao por codigo e atalhos de assinatura no produto:
+  - backend publicado e preparado para operacao comercial real:
+    - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts) passou a centralizar:
+      - liberacao de empresa por codigo administrativo
+      - provisionamento real de cliente e assinatura no Asaas
+      - webhook `asaasWebhook` com validacao de URL e processamento de eventos de pagamento
+      - sincronizacao automatica do valor da assinatura quando a quantidade de acessos contratados muda
+      - cancelamento de assinatura da propria empresa com manutencao de acesso ate o fim do ciclo vigente
+    - a configuracao real do Asaas ficou dependente de:
+      - `ASAAS_API_KEY`
+      - `ASAAS_ENVIRONMENT=production`
+      - `ASAAS_WEBHOOK_TOKEN`
+  - governanca comercial do cadastro:
+    - cadastro de empresa agora nasce com estrutura de billing pronta e ativacao pendente
+    - empresa so entra no fluxo normal apos codigo de liberacao
+    - acesso passa a obedecer status comercial e status financeiro
+  - painel da plataforma:
+    - [platform_admin_page.dart](C:/Users/hp/pontocerto/lib/features/platform_admin/presentation/pages/platform_admin_page.dart) ganhou:
+      - emissao de codigo de liberacao
+      - provisionamento Asaas
+      - configuracao publica da landing de vendas
+    - landing publica deixou de depender de link fixo hardcoded no front e passou a aceitar configuracao publica por callable
+  - pagina de vendas:
+    - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart) passou a operar com:
+      - `Plano Solo` com checkout Asaas
+      - `Plano Equipe` com checkout Asaas
+      - `Acesso app Play Store para funcionario` apenas como oferta complementar pos-ativacao, sem checkout publico direto
+    - [public_sales_config_service.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/services/public_sales_config_service.dart) teve defaults atualizados para refletir o nome comercial correto do acesso adicional
+  - atalhos internos para a empresa:
+    - [company_page.dart](C:/Users/hp/pontocerto/lib/features/company/presentation/pages/company_page.dart) agora mostra:
+      - `Contratar acesso app Play Store para funcionario`
+      - `Cancelar plano`
+      - texto explicito de que a renovacao do plano principal e automatica todo mes ate cancelamento
+    - [employees_page.dart](C:/Users/hp/pontocerto/lib/features/employees/presentation/pages/employees_page.dart) recebeu o mesmo atalho direto dentro de `Funcionarios e acessos`, que e o ponto mais rapido para ampliar a equipe operacional
+    - [company_billing_service.dart](C:/Users/hp/pontocerto/lib/features/company/presentation/services/company_billing_service.dart) centraliza as callables de snapshot, contratacao adicional e cancelamento
+  - validacao executada nesta rodada:
+    - `npm run build` em `functions` concluido com sucesso
+    - `flutter analyze` dos arquivos alterados nao concluiu nesta maquina por timeout do ambiente, entao a validacao Flutter desta rodada ficou parcial
+  - condicao real para eu voltar a publicar e analisar daqui mesmo:
+    - `functions` e `hosting` ja podem ser publicados daqui com credenciais Firebase validas e permissao de execucao fora do sandbox
+    - a analise Flutter precisa de uma janela maior de execucao local; o bloqueio atual foi tempo limite, nao erro confirmado de codigo
+    - publicacao na Play Store continua dependendo de credencial externa oficial da Google Play:
+      - `Google Play Developer API` habilitada
+      - `service account JSON key` vinculada ao app no Play Console
+    - sem essa credencial, eu consigo gerar o `.aab`, mas nao enviar o release para a Play Store daqui com seguranca
+- 04/04/2026: Automacao de pos-venda do plano publico, limpeza do legado `functions.config` e ajustes finais de operacao:
+  - pagina de vendas e links:
+    - [sales_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart) segue com checkout publico real de `Solo` e `Equipe`
+    - o complemento `Acesso app Play Store para funcionario` foi mantido como oferta pos-ativacao, sem checkout publico direto
+  - automacao de onboarding pos-compra:
+    - [index.ts](C:/Users/hp/pontocerto/functions/src/index.ts) agora:
+      - identifica eventos publicos do Asaas sem `companyId` vinculado
+      - tenta inferir o plano publico comprado
+      - cria ou atualiza um onboarding em `sales_onboarding_requests`
+      - busca dados do cliente no Asaas
+      - envia email de boas-vindas com link seguro para cadastro da empresa
+      - expõe callables publicas para leitura e envio do formulario de onboarding
+      - expõe callable administrativa para gerar a cobranca de implantacao em boleto com vencimento de 30 dias
+    - [sales_onboarding_page.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_onboarding_page.dart) criou a pagina publica `/boas-vindas-empresa`
+      - o cliente preenche os dados da empresa
+      - informa email de login desejado
+      - envia documentos por upload
+    - [sales_onboarding_service.dart](C:/Users/hp/pontocerto/lib/features/marketing/presentation/services/sales_onboarding_service.dart) centraliza as chamadas publicas dessa etapa
+    - [app_router.dart](C:/Users/hp/pontocerto/lib/core/router/app_router.dart) liberou a rota publica de onboarding sem exigir sessao
+  - comportamento comercial adotado:
+    - assinatura recorrente continua sendo a cobranca mensal do plano
+    - implantacao fica tratada como cobranca separada, gerada depois da implementacao
+    - o boleto de implantacao foi preparado para vencer em 30 dias
+  - correcoes de operacao diaria:
+    - [justifications_page.dart](C:/Users/hp/pontocerto/lib/features/justifications/presentation/pages/justifications_page.dart) voltou a usar o shell com menu lateral e acao de nova justificativa para funcionario
+    - [material_catalog_page.dart](C:/Users/hp/pontocerto/lib/features/material_catalog/presentation/pages/material_catalog_page.dart) passou a permitir funcionario sugerir inclusoes e edicoes
+    - [material_catalog_provider.dart](C:/Users/hp/pontocerto/lib/features/material_catalog/presentation/material_catalog_provider.dart) ganhou pendencias de criacao e edicao para aprovacao da empresa
+    - [material_catalog_item.dart](C:/Users/hp/pontocerto/lib/features/material_catalog/domain/material_catalog_item.dart) passou a carregar esses estados
+  - limpeza de configuracao de deploy:
+    - o runtime config legado `asaas.*` foi removido do projeto Firebase
+    - o deploy deixou de mostrar o aviso de `functions.config()` nesta rodada
+    - `functions/.env.pontocerto-e1dab` foi recriado com as variaveis reais de ambiente exigidas pela base atual
+  - validacao e publicacao:
+    - `npm run build` em `functions` concluido com sucesso
+    - `flutter build web --release` concluido com sucesso
+    - `firebase deploy --only "functions,hosting" --project pontocerto-e1dab` concluido com sucesso em `04/04/2026`
+    - hosting publicado em `https://pontocerto-e1dab.web.app`
+- 05/04/2026: Limpeza da tela da plataforma e nova publicacao web/android:
+  - tela da plataforma:
+    - [platform_admin_page.dart](C:/Users/hp/pontocerto/lib/features/platform_admin/presentation/pages/platform_admin_page.dart) teve removido o bloco de detalhes soltos que exibia:
+      - cidade/UF
+      - telefone
+      - controle de acesso
+      - codigo atual/emitido/expira
+      - dados de gateway, webhook, periodo, checkout e valor mensal salvo
+    - a tela ficou somente com:
+      - chips de status no topo
+      - cards de metricas comerciais
+      - observacao da plataforma quando existir
+  - versao do app:
+    - [pubspec.yaml](C:/Users/hp/pontocerto/pubspec.yaml) atualizado para `1.0.68+1038`
+  - validacao e publicacao:
+    - `flutter build web --release` concluido com sucesso em `05/04/2026`
+    - `firebase deploy --only "functions,hosting" --project pontocerto-e1dab` concluido com sucesso em `05/04/2026`
+    - hosting publicado em `https://pontocerto-e1dab.web.app`
+    - `flutter build appbundle --release` concluido com sucesso em `05/04/2026`
+  - observacoes operacionais:
+    - `flutter analyze` e `dart format` nao fecharam nesta maquina nesta rodada por travamento/timeout do ambiente
+    - apesar disso, a compilacao web e a geracao do app bundle finalizaram com sucesso
+  - artefatos gerados:
+    - `build/app/outputs/bundle/release/app-release.aab`
+    - `C:\Users\hp\Desktop\pontocerto-v1.0.68+1038-remocao-detalhes-plataforma-2026-04-05.aab`
+    - `C:\Users\hp\Desktop\NOTA_PLAY_STORE_1.0.68_2026-04-05.txt`
+- 06/04/2026: Registro da pendência sobre o link de vendas pendente:
+  - centro de continuidade anotou que o link solicitado ainda não foi enviado
+  - nenhuma alteração em produção foi feita enquanto o material estiver pendente
+  - assim que o link e a especificação estiverem disponíveis, retomamos a configuração solicitada
+- 06/04/2026: Checagem do sistema para confirmar o estado atual:
+  - tentei rodar `flutter analyze` via `C:\Users\hp\flutter\flutter\bin\flutter.bat analyze` duas vezes, mas cada execução atingiu o timeout local (5 minutos)
+  - o timeout sugere que a análise completa precisa de um ambiente com mais tempo/disponibilidade; por enquanto mantemos o status como não verificado
+  - registro serve de base para retomar a checagem assim que for possível estender o tempo de execução ou usar um runner dedicado
+- 06/04/2026: Tentativa em etapas para concluir a análise:
+  - o comando `C:\Users\hp\flutter\flutter\bin\flutter.bat analyze lib` também atingiu timeout de 5 minutos
+  - repeti a mesma abordagem em blocos menores (`lib/features/marketing`, `lib/features/marketing/presentation` e até `lib/features/marketing/presentation/pages/sales_page.dart`) e cada execução foi interrompida após 5 minutos sem resultado
+  - `C:\Users\hp\flutter\flutter\bin\dart.bat analyze lib` igualmente ficou preso no limite de 2 minutos disponíveis
+  - com isso confirmamos que o ambiente local precisa de mais tempo ou uma janela dedicada para concluir a análise completa; neste momento o status segue como “pendente de confirmação”
+- 06/04/2026: Confirmação da regra de registro de solicitações:
+  - confirmei que todas as interações da manhã foram rastreadas neste arquivo
+  - defini que qualquer nova entrega ou pendência futura deve ser registrada aqui antes de mudança
+  - mantenho o status pendente até o cliente fornecer o link e os dados para avançar no ajuste
+- 06/04/2026: Atualização do card de licenças do app no sistema operacional:
+  - [lib/features/employees/presentation/pages/employees_page.dart](C:/Users/hp/pontocerto/lib/features/employees/presentation/pages/employees_page.dart) agora expõe o plano atual (MEI/Solo ou Empresa/Equipe), o valor mensal do plano e o número de licenças base já incluídas
+  - o texto complementar explica quanto custa cada licença extra do app Play Store e lembra que a compra só libera o cadastro do funcionário após o ajuste da equipe
+  - essa aba de "Plano e licenças do app" passa a oferecer informação clara de preço e licença diretamente no sistema, sem depender da landing
+- 06/04/2026: Tentativa de build web para publicar a atualização:
+  - executei `C:\Users\hp\flutter\flutter\bin\flutter.bat build web --release`, mas o comando atingiu o timeout local de 2 minutos na primeira tentativa e de 5 minutos na segunda, sem gerar o artefato
+  - o ambiente local continua limitando o tempo de compilação; preciso de uma janela dedicada ou de um runner com timeout estendido para completar esse build
+  - assim que dispuser desse ambiente prolongado, repito o build e sigo com o `firebase deploy --only hosting --project pontocerto-e1dab` para liberar a nova versão
+- 06/04/2026: Build concluído no runner dedicado:
+  - com permissão escalada consegui rodar `C:\Users\hp\flutter\flutter\bin\flutter.bat build web --release` em ~182 s e gerar `build/web`
+  - o processo exibiu avisos padrão do `flutter pub outdated` e um aviso de dry run WASM, mas finalizou com sucesso
+  - segue pendente o deploy porque `firebase deploy --only hosting --project pontocerto-e1dab` falhou; o comando exigiu reautenticação (credenciais expiraram) e não chegou a conectar com o hosting
+- 06/04/2026: Nova tentativa de deploy com token manual:
+  - tentei `firebase deploy --only hosting` com **token de CI removido deste ficheiro** (não commitar; usar `firebase login --reauth` localmente) e o CLI acusou credencial inválida e pediu `firebase login --reauth`
+  - também apareceu o aviso de criptografia de hosting (site sem nome) porque o deploy nunca chegou a resolver o target
+  - o próximo passo é atualizar as credenciais válidas: rode `firebase login --reauth` ou gere um token `firebase login:ci` (conforme a política interna) no mesmo workspace e me avise para reexecutar o deploy
+- 07/04/2026: Repetição com novo token CLI:
+  - tentativa com token guardado localmente (texto do token **removido** do Git por segurança) no arquivo fora do repositório; o CLI manteve credencial inválida
+  - o CLI ainda respondeu “credenciais inválidas” e manteve o erro de target de hosting não resolvido; o deploy não chegou a subir nenhum arquivo
+  - como o token continua rejeitado, a solução passa por rodar `firebase login --reauth` no workspace e só depois reexecutar o deploy (ou usar um serviço de conta autorizado)
+- 07/04/2026: Sistema agora expõe valores padrão do plano e das licenças:
+  - os cards “Plano e licenças do app” (tela `Funcionários e acessos`) e “Status comercial” (tela `Empresa`) passaram a usar fallback de R$ 97 para MEI/Solo, R$ 197 para Empresa/Equipe e R$ 19,90 para cada licença adicional, mesmo quando os dados comerciais ainda não trazem esses valores
+  - o texto destaca esses números no sistema (chip de “Valor do plano ...” e de “Cada acesso adicional ...”) para manter transparência sem depender da landing
+  - os novos valores estão anotados aqui para referência e podem ser ajustados quando a governança comercial liberar atualização oficial
+- 07/04/2026: Build web concluído e deploy travado por erro de API:
+  - o command `C:\Users\hp\flutter\flutter\bin\flutter.bat build web --release` foi executado no runner dedicado e gerou novamente `build/web`
+  - ao rodar `C:\Users\hp\AppData\Roaming\npm\firebase.cmd deploy --only hosting --project pontocerto-e1dab` o CLI tentou enviar mas recebeu “Failed to make request to https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/pontocerto-e1dab/versions”, ou seja, não concluiu ainda
+  - o erro indica que o servidor Firebase não aceitou a requisição; para seguir preciso que você confirme se há rede restrita ou se a conta ainda precisa de reautenticação/permissões e, se o deploy seguir travado, considerar gerar um token `firebase login:ci` válido para reutilizar
+- 07/04/2026: Adicionada rota diária dos links fiscais:
+  - a tela `Fiscal > Emissão fiscal real` agora mostra o card “Rotina fiscal diária”, com botões para agenda tributária, eSocial, e-CAC/Receita, FGTS digital, Integra Contador e o portal municipal/NFS-e
+  - cada botão abre o respectivo portal oficial, reforçando para o contador as tarefas do esocial, FGTS, receita federal, agenda tributária e Integra Contador
+  - o histórico descreve essa rodada para manter referência das rotas de links e dos passos anteriores de deploy/módulo fiscal
+- 07/04/2026: Ajuste do link do Integra Contador:
+  - atualizei o botão “Integra Contador” para abrir diretamente o portal de login (`https://integra.scservicos.app/`), evitando páginas intermediárias que só descrevem o serviço
+  - mantive o card no mesmo local e continuei registrando o fluxo completo desse módulo na continuidade
+- 07/04/2026: Correção da conferência da base na tela de funcionários:
+  - a callable `employeesGetBaseSnapshot` agora ignora o owner na contagem, alinhando o total retornado com o que a tela `Funcionários e acessos` mostra (managers/contadores/funcionários)
+  - isso evita o falso alerta “a leitura atual da tela não bate com a base”.
+- 07/04/2026: Ajuste adicional para perfis desconhecidos:
+  - ampliei o filtro para também incluir o papel `UNKNOWN` na base retornada, para que eventuais acessos sem papel definido sejam considerados na conferência
+  - isso cobre o caso em que a tela mostra 8 usuários (incluindo o perfil desconhecido) e a base mostrava 9
+- 07/04/2026: Normalização completa da base:
+  - reescrevi a callable `employeesGetBaseSnapshot` para usar `normalizarRole` e incluir apenas os papéis que a tela reconhece (`employee`, `manager`, `accountant`, `unknown`), evitando discrepâncias geradas por termos diferentes na base de dados
+  - essa abordagem reflete exatamente como `_isEmployeeRole` filtra os documentos, garantindo que o total reportado sempre bata com o que aparece na UI
+- 07/04/2026: Filtragem apenas por usuários ativos:
+  - a callable agora também exige `item.ativo` ao montar a lista, para que somente usuários ativos contribuam para a base retornada
+  - isso elimina a diferença de “9 funcionários na base vs. 8 na tela” quando existir alguém inativo cadastrado no Firestore
+- 07/04/2026: Deploy de functions tentou subir o ajuste:
+  - executei `firebase deploy --only functions --project pontocerto-e1dab` e o CLI falhou ao fazer a requisição para `cloudresourcemanager.googleapis.com`, retornando o erro “Failed to make request”
+  - essa falha indica que as credenciais precisam ser renovadas ou o ambiente deve ter acesso liberado; o mesmo comando deve ser reexecutado após `firebase login --reauth` ou uso de um token válido
+- 08/04/2026: Auditoria do sistema, histórico do assistente e pendências de publicação:
+  - histórico do assistente:
+    - a tela [assistant_page.dart](C:/Users/hp/pontocerto/lib/features/assistant/presentation/pages/assistant_page.dart) foi corrigida para consultar `assistant_threads` por `createdByUid == session.userId` antes do filtro local
+    - a regressão anterior limitava primeiro por empresa e podia esconder conversas do login atual quando outros usuários ocupavam os registros mais recentes
+    - também foi adicionado estado de erro visível quando a stream do histórico falhar
+  - validação local:
+    - executei `powershell -ExecutionPolicy Bypass -File scripts/check_core_consistency.ps1` com sucesso
+    - [ULTIMA_VALIDACAO_TECNICA.md](C:/Users/hp/pontocerto/docs/registro_continuidade/ULTIMA_VALIDACAO_TECNICA.md) foi regenerado na rodada
+    - `flutter analyze` e `dart format` continuam sem fechamento confiável nesta máquina; os comandos seguem presos até o timeout
+  - deploy/publicação:
+    - o projeto local continua apontando para `pontocerto-e1dab` em [firebase.json](C:/Users/hp/pontocerto/firebase.json) e [.firebaserc](C:/Users/hp/pontocerto/.firebaserc)
+    - a última publicação web/functions confirmada no histórico continua sendo a de `05/04/2026`
+    - as tentativas posteriores registradas em `06/04/2026` e `07/04/2026` falharam por reautenticação/token inválido ou falha de requisição para APIs do Firebase/Google
+    - portanto, alterações posteriores a essa data devem ser tratadas como `ainda não publicadas` até nova confirmação explícita de deploy bem-sucedido
+  - Android / Play Store:
+    - a versão atual local está em `1.0.69+1039` em [pubspec.yaml](C:/Users/hp/pontocerto/pubspec.yaml) e [android/local.properties](C:/Users/hp/pontocerto/android/local.properties)
+    - existe artefato local recente em `build/app/outputs/bundle/release/app-release.aab` com data `06/04/2026 15:06`
+    - porém o histórico documentado de release Android ainda está parado em `1.0.68+1038`
+    - não encontrei documento local comprovando publicação da `1.0.69+1039` na Play Store
+  - pendências objetivas após esta auditoria:
+    - validar no app se conversas antigas do login atual voltaram a aparecer no painel de histórico
+    - se o histórico ainda vier vazio para conversas antigas, investigar dados legados sem `createdByUid`; essa checagem depende de acesso ao Firestore/base real
+    - decidir se a versão `1.0.69+1039` será a próxima publicação Android; se sim, gerar/confirmar nota de versão e publicar o `app-release.aab` correspondente no Play Console
+- 08/04/2026: Build web destravado e publicação confirmada em produção:
+  - durante a verificação ponta a ponta com o CLI autenticado do Firebase, o `flutter build web --release` falhou primeiro por erro real de compilação em [fiscal_readiness_page.dart](C:/Users/hp/pontocerto/lib/features/fiscal/presentation/pages/fiscal_readiness_page.dart)
+  - a causa foi um `),` excedente dentro de um `Wrap` na região da linha `2954`, o que quebrava o parse do arquivo e cascata de erros posteriores
+  - após remover esse fechamento excedente:
+    - `npm run build` em [functions/package.json](C:/Users/hp/pontocerto/functions/package.json) concluiu com sucesso
+    - `flutter build web --release` concluiu com sucesso em `08/04/2026`
+    - `firebase deploy --only functions,hosting --project pontocerto-e1dab` concluiu com sucesso em `08/04/2026`
+  - produção confirmada:
+    - hosting publicado em `https://pontocerto-e1dab.web.app`
+    - o CLI listou o projeto atual `pontocerto-e1dab`, o site de hosting ativo e o conjunto de functions implantadas em `us-central1`
+  - observação:
+    - durante o deploy houve avisos transitórios de `Quota Exceeded` em algumas functions, mas o próprio Firebase reprocessou as atualizações e o deploy terminou como `Deploy complete!`
+- 08/04/2026: Pendência de confiabilidade operacional resolvida e domínio personalizado confirmado:
+  - foi criado o script [verify_release_reliability.ps1](C:/Users/hp/pontocerto/scripts/verify_release_reliability.ps1) para fechar a checagem confiável da release web sem depender do `flutter.bat`
+  - o script executa:
+    - build das `functions`
+    - build web pelo `flutter_tools.snapshot` via [build_flutter_direct.ps1](C:/Users/hp/pontocerto/scripts/build_flutter_direct.ps1)
+    - verificação HTTP do domínio principal e do `web.app`
+  - a execução do script concluiu com sucesso em `08/04/2026`
+  - resultado da verificação HTTP:
+    - `https://gestao-ponto-certo.com` respondeu `200`
+    - `https://pontocerto-e1dab.web.app` respondeu `200`
+    - ambos retornaram o título `Ponto Certo`
+  - verificação de links do sistema:
+    - os links públicos relevantes no código já usam o domínio personalizado `https://gestao-ponto-certo.com`
+    - exemplos confirmados:
+      - onboarding público
+      - convite do contador
+      - login do contador por convite
+      - página de vendas
+    - não foi necessário refazer links funcionais do sistema para `web.app`; as referências restantes a `web.app` estavam concentradas em documentação/histórico e na URL padrão do próprio Hosting
+- 08/04/2026: Ajuste fiscal na Home e publicação web:
+  - painel `Solo / MEI`:
+    - a tela [home_page.dart](C:/Users/hp/pontocerto/lib/features/home/presentation/pages/home_page.dart) recebeu botão direto para:
+      - `Declaracao anual MEI`
+      - `Imposto de renda PF`
+  - painel do contador:
+    - no bloco `Impostos e guias`, o contador agora tem atalhos diretos para:
+      - `DASN-SIMEI` no fluxo MEI
+      - `DEFIS` no fluxo empresa / Simples Nacional
+      - `IRPF` para pessoa física
+  - links usados:
+    - DASN-SIMEI: `https://www.gov.br/pt-br/servicos/declarar-receita-bruta-anual-para-o-mei`
+    - DEFIS: `https://www.gov.br/pt-br/servicos/declarar-apuracoes-e-informacoes-anuais-do-simples-nacional`
+    - IRPF: `https://www.gov.br/pt-br/servicos/declarar-meu-imposto-de-renda`
+  - validação:
+    - `powershell -ExecutionPolicy Bypass -File scripts/build_flutter_direct.ps1 -Target web` concluiu com sucesso
+  - publicação:
+    - `firebase deploy --only hosting --project pontocerto-e1dab` concluiu com sucesso em `08/04/2026`
+    - hosting atualizado em:
+      - `https://pontocerto-e1dab.web.app`
+      - `https://gestao-ponto-certo.com`
+  - Android:
+    - o `AAB` da Play Store permanece pendente por decisão operacional; a rodada foi limitada à web
+- 08/04/2026: Regra operacional reforçada para a pasta de continuidade:
+  - a pasta `docs/registro_continuidade` deve ser atualizada em toda entrega relevante antes de encerrar a rodada
+  - isso inclui, no mínimo, quando houver:
+    - correção de bug relevante
+    - mudança de fluxo
+    - build validado
+    - deploy/publicação
+    - mudança de status de pendência crítica
+  - objetivo:
+    - evitar defasagem entre o estado real do sistema e os registros operacionais
+    - manter `CONTINUIDADE_ATUAL.md`, `ESTADO_ATUAL_DO_SISTEMA.md` e `ULTIMA_VALIDACAO_TECNICA.md` como fonte viva do projeto
+- 10/04/2026: Regra oficial de memoria do projeto reafirmada:
+  - a pasta `docs/registro_continuidade` passa a ser tratada explicitamente como a memoria oficial do projeto
+  - antes de qualquer nova atualizacao, leitura inicial obrigatoria desta pasta, com foco em `CONTINUIDADE_ATUAL.md`
+  - toda nova atualizacao relevante deve ser registrada nesta pasta ao final da rodada
+  - a continuidade registrada aqui deve guiar a sequencia segura de trabalho nas proximas sessoes
+- 10/04/2026: Painel supremo passou a consolidar ideias de todos os usuarios:
+  - o backend de `platformListSalesPipeline` agora traz a trilha de ideias do produto para a empresa suprema, sem limitar a testadores
+  - a leitura considera `product_feedback`, `runtime_incidents` e `system_issues`, preservando a ligacao com observabilidade e pasta operacional
+  - o painel supremo ganhou uma secao propria `Ideias do produto`, separando origem por:
+    - `Testador`
+    - `Empresa`
+    - `Contador`
+    - `Funcionario`
+  - cada ideia agora pode ser vista na empresa suprema com:
+    - empresa de origem
+    - usuario/origem
+    - prioridade
+    - status da ideia
+    - status da pasta operacional
+    - resumo e direcionamento do assistente quando houver
+  - validacao concluida:
+    - `npm.cmd --prefix functions run build`
+    - `dart analyze lib/features/platform_admin/presentation/services/platform_admin_service.dart lib/features/platform_admin/presentation/pages/platform_admin_page.dart`
+- 10/04/2026: Trabalhista passou a ter pasta operacional de funcionarios cadastrados com edicao:
+  - o cadastro trabalhista agora reaproveita o mesmo formulario para `cadastrar` e `editar`
+  - salario, comissao, tipo de remuneracao, documento, email, admissao e dados operacionais podem ser corrigidos no proprio modulo `Trabalhista`
+  - foi criada a pasta `Pasta de funcionarios cadastrados` dentro do `Cadastro trabalhista`, com cards por colaborador e acao direta de `Editar`
+  - o salario voltou a ficar visivel nessa pasta via resumo de remuneracao do colaborador
+  - validacao concluida:
+    - `dart analyze lib/features/workforce/presentation/pages/workforce_management_operational_actions.dart lib/features/workforce/presentation/pages/workforce_management_workspace_sections.dart lib/features/employees/presentation/employees_provider.dart`
+- 10/04/2026: Lancamento de pagamentos voltou a aceitar contador e observabilidade ficou restrita a empresa suprema:
+  - as Functions `paymentsCreate` e `paymentsCreateBulk` passaram a aceitar `ACCOUNTANT`, removendo a recusa indevida do lancamento individual e em massa no `Trabalhista`
+  - a restricao de `Observabilidade` foi endurecida para a empresa suprema em:
+    - rota
+    - menu lateral
+    - atalhos da Home
+    - acao de abertura dentro de `Ideias`
+    - bloco de observabilidade dentro do `Assistente`
+  - validacao concluida:
+    - `npm.cmd --prefix functions run build`
+    - `dart analyze lib/core/auth/session.dart lib/core/navigation/app_shell.dart lib/core/router/app_router.dart lib/features/home/presentation/pages/home_page.dart lib/features/product_feedback/presentation/pages/product_feedback_page.dart`
+    - `dart analyze lib/features/assistant/presentation/pages/assistant_page.dart`
+
+- 20/04/2026 08:44: rodada comercial/publica de convites e landing fechada e publicada:
+  - convite trial da plataforma deixou de exigir email da empresa; agora o unico campo obrigatorio e o **email do contador**
+  - `platformIssueTrial90DayInvite` foi ajustada para aceitar `companyEmail` opcional e concentrar o disparo principal no email do contador
+  - o link principal retornado pelo fluxo passou a ser o link do contador
+  - a tela [platform_admin_page.dart](/C:/Users/hp/pontocerto/lib/features/platform_admin/presentation/pages/platform_admin_page.dart) foi alinhada a essa regra
+  - o service [platform_admin_service.dart](/C:/Users/hp/pontocerto/lib/features/platform_admin/presentation/services/platform_admin_service.dart) tambem foi ajustado para aceitar `companyEmail` opcional
+  - o parser [trial_invite_bulk_parser.dart](/C:/Users/hp/pontocerto/lib/core/utils/trial_invite_bulk_parser.dart) passou a aceitar linhas com apenas email/nome do contador, mantendo suporte a empresa + contador quando os dois dados existirem
+  - a copy do email do contador foi retrabalhada para prospeccao fria mais segura:
+    - saiu a linguagem de "foi indicado"
+    - entrou abertura institucional, formal e neutra, adequada para base captada por busca de escritorios
+    - o texto agora apresenta o sistema, explica a avaliacao/trial e fecha com orientacao para desconsiderar caso nao haja interesse
+  - a regra comercial publica foi consolidada:
+    - uso do contador: gratuito
+    - empresa cadastrada no sistema: **R$ 97,90/mes**
+    - cada acesso adicional no app Play Store: **R$ 19,90/mes**
+  - a landing [sales_page.dart](/C:/Users/hp/pontocerto/lib/features/marketing/presentation/pages/sales_page.dart) passou a refletir essa regra
+  - a pagina [accountant_partner_page.dart](/C:/Users/hp/pontocerto/lib/features/accountant_links/presentation/pages/accountant_partner_page.dart) foi simplificada para a mesma regra, sem faixas antigas de pacote
+  - o default/config-base em [functions/src/index.ts](/C:/Users/hp/pontocerto/functions/src/index.ts) e [public_sales_config_service.dart](/C:/Users/hp/pontocerto/lib/features/marketing/presentation/services/public_sales_config_service.dart) foi alinhado para evitar divergencia entre backend e frontend
+  - validacao/publicacao:
+    - `npm run build`: ok
+    - `flutter build web --release`: ok
+    - `firebase deploy --only "functions,hosting" --project pontocerto-e1dab`: ok
+    - hosting confirmado em `https://pontocerto-e1dab.web.app`

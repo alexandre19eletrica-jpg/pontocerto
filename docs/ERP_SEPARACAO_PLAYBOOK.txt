@@ -1,0 +1,556 @@
+ERP SEPARADO DO PONTO CERTO - PLAYBOOK OPERACIONAL
+Data: 2026-04-11
+
+Nome provisorio do novo produto
+- ContaFlux ERP
+
+Objetivo
+- Criar um ERP separado do Ponto Certo.
+- Subir em outro dominio.
+- Usar outro projeto Firebase.
+- Reaproveitar apenas a base util: contador, financeiro, fiscal, clientes e servicos.
+- Incluir fluxo de admissao digital de funcionario conduzido pelo contador.
+- Evitar carregar modulos de ponto, funcionarios, jornada e fluxos especificos do Ponto Certo.
+
+Decisao recomendada
+- Novo repositorio.
+- Novo projeto Firebase.
+- Nova identidade visual.
+- Nova navegacao.
+- Mesmo padrao tecnico que ja funciona hoje.
+
+Modulo MVP recomendado
+1. Login
+2. Home
+3. Clientes
+4. Servicos
+5. Financeiro
+6. Emissao fiscal
+7. Area do contador
+8. Admissoes digitais
+9. Relatorios
+10. Configuracoes da empresa
+
+Rotas sugeridas para o novo ERP
+- /inicio
+- /login-empresa
+- /login-contador
+- /home
+- /clientes
+- /servicos
+- /financeiro
+- /notas
+- /contador
+- /contador/admissoes
+- /contador/admissoes/nova
+- /contador/admissoes/{id}
+- /admissao/{token}
+- /relatorios
+- /configuracoes
+
+Fluxo ideal de emissao de nota
+1. Empresa cadastra servico uma vez.
+2. Empresa cadastra ou seleciona cliente.
+3. Em /notas escolhe o servico.
+4. Sistema preenche descricao fiscal, codigo de servico, CNAE, aliquota e observacoes padrao.
+5. Usuario informa valor e confirma.
+6. Nota fica salva com historico e status.
+7. Contador acompanha em /contador.
+
+Fluxo ideal de admissao digital do funcionario
+1. Empresa ou contador abre /contador/admissoes.
+2. Informa nome, e-mail, cargo, data de admissao e checklist documental.
+3. Sistema gera um convite com token unico e validade.
+4. Sistema envia e-mail ao funcionario com orientacoes e link seguro.
+5. Funcionario acessa /admissao/{token}.
+6. Funcionario preenche os dados pessoais e profissionais solicitados.
+7. Funcionario envia os documentos obrigatorios.
+8. Sistema salva tudo separado por empresa e por pedido de admissao.
+9. Contador revisa pendencias sem depender de WhatsApp ou visita presencial.
+10. Quando tudo estiver correto, a admissao vai para status pronta para fichar.
+
+Objetivo da admissao digital
+- eliminar conversas perdidas em WhatsApp
+- evitar documentos soltos e mistura de informacoes
+- padronizar o onboarding trabalhista
+- deixar cada empresa isolada no proprio ambiente
+- permitir rastreabilidade completa do envio e da revisao
+
+Tela de servicos: campos minimos
+- nome
+- descricao_comercial
+- descricao_fiscal_padrao
+- codigo_servico_municipal
+- cnae
+- aliquota_padrao
+- valor_padrao
+- iss_retido_padrao
+- observacoes_fiscais
+- ativo
+
+Tela de admissoes: campos minimos ao abrir o convite
+- nome do funcionario
+- email
+- telefone opcional
+- cargo
+- departamento opcional
+- salario base opcional
+- tipo de contrato
+- data de admissao prevista
+- responsavel interno da empresa
+- observacoes para o funcionario
+- checklist de documentos obrigatorios
+- validade do link
+
+Tela publica do funcionario: dados minimos
+- nome completo
+- cpf
+- rg
+- data de nascimento
+- estado civil
+- nome da mae
+- nome do pai opcional
+- telefone
+- email
+- endereco completo
+- dados bancarios opcionais
+- escolaridade opcional
+- contato de emergencia opcional
+- upload de documentos
+- aceite de declaracao de veracidade
+
+Documentos mais comuns para o checklist
+- rg
+- cpf
+- comprovante de endereco
+- carteira de trabalho
+- titulo de eleitor
+- certificado militar quando aplicavel
+- comprovante bancario
+- foto ou selfie opcional
+- certidao de nascimento ou casamento
+
+Status sugeridos para a admissao
+- draft
+- invited
+- in_progress
+- submitted
+- under_review
+- pending_employee
+- pending_company
+- approved_for_hiring
+- archived
+
+Estrutura inicial de pastas do novo projeto
+- lib/
+- lib/app/
+- lib/core/
+- lib/core/auth/
+- lib/core/router/
+- lib/core/firebase/
+- lib/core/theme/
+- lib/features/auth/
+- lib/features/home/
+- lib/features/clients/
+- lib/features/services/
+- lib/features/finance/
+- lib/features/invoices/
+- lib/features/accountant/
+- lib/features/hiring/
+- lib/features/reports/
+- lib/features/settings/
+- functions/
+- web/
+- docs/
+
+O que vale reaproveitar do Ponto Certo
+- sessao e auth como referencia
+- app_router como referencia estrutural
+- fiscal_readiness como base funcional
+- finance_entry e estruturas financeiras
+- accountant_* pages
+- reports
+- service_catalog como base para a tela de servicos
+- clients
+- componentes UI reutilizaveis
+- firestore.rules como referencia de RBAC
+
+O que nao deve ir para o ERP no primeiro corte
+- punch
+- work_entries
+- employees como modulo interno do Ponto Certo
+- justifications
+- tasks
+- service_orders, se nao for prioridade do MVP
+- marketing e paginas comerciais do Ponto Certo
+- fluxos de ativacao e onboarding especificos do produto atual
+
+Passo a passo recomendado
+
+Fase 1 - Criar novo repositorio
+1. Criar uma nova pasta fora deste projeto.
+2. Inicializar novo app Flutter web-first.
+3. Copiar somente os modulos que entram no MVP.
+4. Renomear pacote, titulo web e identidade visual.
+
+Comandos base
+flutter create contaflux_erp
+cd contaflux_erp
+git init
+
+Fase 2 - Criar o novo projeto Firebase
+Observacao importante
+- A maior parte da configuracao pode ser feita via CLI.
+- Custom domain normalmente exige etapa final no Firebase Hosting e configuracao DNS no provedor do dominio.
+- Login no Google, criacao do projeto no GCP em alguns ambientes e ajustes de Auth provider podem abrir navegador ou exigir console.
+
+Pre-requisitos de CLI
+- Node.js instalado
+- Firebase CLI instalada
+- FlutterFire CLI instalada
+
+Comandos de preparo
+npm install -g firebase-tools
+dart pub global activate flutterfire_cli
+firebase login
+
+Criar o projeto Firebase
+Opcao A - criar no console e depois conectar via CLI
+1. Criar o projeto no console com nome ContaFlux ERP.
+2. Definir um project id, exemplo: contaflux-erp-prod.
+3. Voltar para o terminal e conectar.
+
+Comandos
+firebase use --add
+
+Opcao B - tentar via CLI/GCloud
+Observacao
+- Isso depende de ter gcloud instalado e autenticado.
+- Se nao estiver, a opcao A e mais rapida e segura.
+
+Exemplo
+gcloud projects create contaflux-erp-prod --name="ContaFlux ERP"
+
+Habilitar servicos principais
+firebase projects:list
+firebase use contaflux-erp-prod
+
+Inicializar o Firebase no projeto novo
+firebase init hosting
+firebase init firestore
+firebase init storage
+firebase init functions
+
+Respostas recomendadas
+- Use existing project: contaflux-erp-prod
+- Hosting public dir: build/web
+- Single-page app: yes
+- Automatic builds with GitHub: no, por enquanto
+- Functions: JavaScript ou TypeScript, conforme preferencia
+- Runtime: nodejs22
+
+Fase 3 - Vincular Flutter com o novo Firebase
+No novo projeto Flutter:
+flutterfire configure --project=contaflux-erp-prod
+
+Se quiser web e android no primeiro corte:
+flutterfire configure --project=contaflux-erp-prod --platforms=web,android
+
+Arquivos gerados ou ajustados esperados
+- lib/firebase_options.dart
+- android/app/google-services.json
+- firebase.json
+- .firebaserc
+
+Fase 4 - Criar a base de rotas do ERP
+Arquivo sugerido
+- lib/core/router/app_router.dart
+
+Rotas do MVP
+- /inicio
+- /login-empresa
+- /login-contador
+- /home
+- /clientes
+- /servicos
+- /financeiro
+- /notas
+- /contador
+- /contador/admissoes
+- /contador/admissoes/nova
+- /contador/admissoes/{id}
+- /admissao/:token
+- /relatorios
+- /configuracoes
+
+Regra de permissao recomendada
+- owner: tudo
+- manager: clientes, servicos, financeiro, notas, relatorios
+- accountant: contador, notas, relatorios, leitura de clientes e financeiro conforme permissao
+- accountant: abertura, acompanhamento e revisao de admissoes
+- usuario convidado: acesso somente ao proprio link /admissao/:token
+
+Fase 5 - Modelagem inicial do Firestore
+Colecoes sugeridas
+- companies
+- company_settings
+- users
+- accountant_links
+- clients
+- service_catalog
+- finance_movements
+- invoices
+- invoice_events
+- fiscal_profiles
+- hiring_requests
+- hiring_documents
+- hiring_events
+- audit_logs
+
+Campos minimos por colecao
+
+companies
+- id
+- legalName
+- tradeName
+- cnpj
+- createdAt
+- status
+
+company_settings
+- companyId
+- fiscalProvider
+- fiscalEnvironment
+- defaultMunicipalServiceCode
+- defaultAliquot
+- accountantAccessMode
+
+clients
+- companyId
+- name
+- document
+- email
+- phone
+- address
+- city
+- state
+
+service_catalog
+- companyId
+- name
+- description
+- fiscalDescription
+- municipalServiceCode
+- cnae
+- aliquot
+- defaultPrice
+- active
+
+invoices
+- companyId
+- clientId
+- serviceId
+- serviceSnapshot
+- clientSnapshot
+- grossAmount
+- netAmount
+- status
+- provider
+- officialNumber
+- officialLink
+- createdAt
+- issuedAt
+
+hiring_requests
+- companyId
+- requestId
+- createdByUserId
+- accountantUserId
+- employeeName
+- employeeEmail
+- employeePhone
+- roleTitle
+- contractType
+- admissionDate
+- status
+- tokenHash
+- tokenExpiresAt
+- checklist
+- submittedAt
+- approvedAt
+
+hiring_documents
+- companyId
+- requestId
+- documentType
+- fileName
+- storagePath
+- uploadedBy
+- uploadedAt
+- status
+
+hiring_events
+- companyId
+- requestId
+- type
+- actorUserId
+- actorRole
+- message
+- createdAt
+
+Regra obrigatoria de isolamento
+- Toda admissao deve carregar companyId.
+- Toda consulta, upload e leitura devem ser filtrados por companyId.
+- O token publico de admissao deve apontar para apenas uma empresa e um pedido especifico.
+- Um funcionario convidado nunca pode listar dados de outros funcionarios.
+- O contador acessa apenas empresas vinculadas ao proprio usuario.
+- Nao pode existir compartilhamento de documentos entre empresas.
+
+Fase 6 - Hosting em dominio proprio
+Deploy web
+flutter build web
+firebase deploy --only hosting
+
+Dominio personalizado
+1. Criar o site no Firebase Hosting do projeto novo.
+2. Adicionar o dominio customizado no Hosting.
+3. Configurar DNS no registrador do dominio.
+4. Aguardar validacao SSL.
+
+Observacao
+- A parte de DNS nao e feita integralmente pela Firebase CLI.
+- O dominio pode exigir validacao manual no painel do registrador.
+
+Fase 7 - Separacao real do Ponto Certo
+Checklist para nao misturar produtos
+- novo nome
+- novo dominio
+- novo Firebase
+- novos usuarios administrativos
+- novas regras de acesso
+- nova base de dados
+- novo branding no web/index.html
+- novo package ou application id se virar app mobile
+
+Fase 8 - Admissao digital pelo contador
+Objetivo
+- Centralizar a coleta de dados e documentos admissionais no ERP.
+- Reduzir retrabalho, perda de contexto e troca de mensagens fora do sistema.
+
+Fluxo
+1. Contador ou empresa cria uma admissao em /contador/admissoes.
+2. Sistema gera token seguro com expiracao.
+3. Cloud Function envia e-mail com orientacoes e link exclusivo.
+4. Funcionario abre o link e preenche os dados.
+5. Funcionario sobe os documentos solicitados.
+6. Sistema grava arquivos em pasta segregada por empresa e pedido.
+7. Contador revisa, aprova ou devolve com pendencias.
+8. Empresa acompanha o status sem acessar dados de outras empresas.
+
+Rotas envolvidas
+- /contador/admissoes
+- /contador/admissoes/nova
+- /contador/admissoes/{id}
+- /admissao/{token}
+
+Cloud Functions recomendadas
+- createHiringRequest
+- sendHiringInviteEmail
+- validateHiringToken
+- submitHiringForm
+- reviewHiringRequest
+
+Storage path recomendado
+- companies/{companyId}/hiring/{requestId}/{documentType}/{fileName}
+
+Beneficio operacional
+- elimina mistura de documentos
+- elimina dependencia de conversa espalhada
+- reduz ida presencial ao escritorio so para entrega de papel
+- cria trilha auditavel por empresa
+- deixa o contador trabalhar com fila organizada de admissoes
+
+Ordem pratica de execucao
+1. Definir nome final do ERP.
+2. Criar repositorio novo.
+3. Criar projeto Firebase novo.
+4. Rodar flutterfire configure.
+5. Copiar core minimo e modulos do MVP.
+6. Ajustar rotas e RBAC.
+7. Criar collections e rules.
+8. Implementar fluxo de admissao digital.
+9. Subir web em dominio temporario do Firebase.
+10. Validar fluxo de login, clientes, servicos, financeiro, notas e admissoes.
+11. Conectar dominio proprio.
+
+Nome final: sugestoes melhores que "ContaFlux ERP"
+- FiscalFlow
+- NotaBase
+- Fluxo Fiscal
+- Atlas ERP
+- Orbe Fiscal
+
+Recomendacao final
+- Se o objetivo e realmente separar do Ponto Certo, faca isso em outro repositorio e outro Firebase.
+- Reaproveite codigo por copia controlada no primeiro momento.
+- So depois, se valer a pena, extraia bibliotecas compartilhadas.
+
+Modelo comercial inicial
+- Estrategia recomendada: plano unico.
+- Mesmos recursos para todos.
+- Diferenca de preco apenas pelo porte do cliente.
+
+Preco sugerido para lancamento
+- MEI: R$ 59 por mes
+- Empresa: R$ 99 por mes
+
+Regra comercial
+- O plano e o mesmo.
+- Nao separar por modulo.
+- Nao separar por quantidade de recursos no inicio.
+- Diferenciar apenas entre MEI e Empresa por capacidade de pagamento e faturamento.
+
+Justificativa da estrategia
+- simplifica a venda
+- simplifica o site
+- simplifica o suporte
+- facilita indicacao por contadores
+- reduz friccao comercial
+- aumenta chance de ganhar base mais rapido
+
+Posicionamento comercial sugerido
+- Um unico plano para organizar financeiro, servicos, notas e contador em um so lugar.
+- R$ 59 por mes para MEI.
+- R$ 99 por mes para empresa.
+- Mesmos recursos, com valor ajustado ao porte do negocio.
+
+Texto curto para usar no site
+- Plano unico, simples e direto.
+- MEI paga R$ 59 por mes.
+- Empresa paga R$ 99 por mes.
+- Todos usam os mesmos recursos: financeiro, servicos, emissao de notas, painel do contador e admissao digital.
+
+Estrutura de parceria com contadores
+- O contador parceiro indica empresas para entrar no sistema.
+- O cliente entra no plano unico conforme porte.
+- O contador recebe beneficio comercial ou operacional.
+
+Modelos simples de parceria
+- acesso gratuito ao painel do contador
+- implantacao assistida para a carteira indicada
+- desconto por volume de empresas ativas
+- comissao recorrente por cliente ativo
+
+Recomendacao para o inicio
+- nao criar muitos formatos de parceria agora
+- escolher uma regra simples e facil de operar
+- exemplo: contador parceiro com painel gratuito e beneficio por volume de clientes ativos
+
+Observacao de precificacao
+- Esses valores fazem mais sentido para entrada de mercado e ganho de base.
+- Quando o produto estiver validado, pode existir reajuste para novas entradas sem mexer na base inicial.
+
+Posso fazer via CLI?
+- Sim, eu consigo conduzir quase toda a configuracao tecnica por CLI.
+- O que pode exigir etapa manual: login do Google, criacao do projeto no console se voce preferir, ativacao de alguns providers, dominio personalizado e DNS.
+- O restante eu consigo preparar, ajustar e publicar pelo terminal.

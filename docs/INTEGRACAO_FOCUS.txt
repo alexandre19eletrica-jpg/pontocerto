@@ -1,0 +1,132 @@
+INTEGRACAO FOCUS
+Data base: 22/04/2026
+Projeto: Ponto Certo
+
+1. OBJETIVO
+
+Este arquivo separa a integracao Focus da restante da documentacao.
+Ele serve para explicar de forma direta:
+
+- como a Focus entra no sistema
+- quais fluxos fiscais usam a Focus
+- quais funcoes e arquivos sustentam essa integracao
+- quais cuidados operacionais ja foram consolidados
+
+2. ESCOPO ATUAL
+
+A Focus e a integracao fiscal principal do projeto para:
+
+- sincronizacao do emitente
+- emissao de NFS-e
+- cancelamento de NFS-e
+- consulta de status oficial
+- provisao automatica da empresa no fluxo fiscal
+
+O projeto suporta dois cenarios:
+
+- Focus municipal
+- Focus NFSe Nacional
+
+3. ESTADO OPERACIONAL ATUAL
+
+Estado consolidado hoje:
+
+- o fluxo Focus / NFSe Nacional esta operacional no caso validado
+- o caso Simples Nacional com ISS retido foi ajustado e validado
+- o sistema distingue melhor quando deve ou nao enviar aliquota
+- o resumo fiscal passou a refletir apenas notas oficiais ativas no valor bruto
+
+Regras recentes importantes:
+
+- se voltar erro E0621, conferir primeiro o envio de pAliq
+- se voltar erro E0314, conferir codigo municipal indevido no payload nacional
+- nota cancelada nao pode continuar entrando como emitida no agregado fiscal
+
+4. CONFIGURACAO BASE
+
+No backend, a configuracao principal da plataforma parte de:
+
+- FOCUS_API_TOKEN
+- FOCUS_DEFAULT_ENVIRONMENT
+
+No setup fiscal da empresa, a integracao depende de campos como:
+
+- provider
+- environment
+- apiToken
+- focusNfseApi / nfseApiMode / focusEmissionMode
+
+5. BACKEND PRINCIPAL
+
+Arquivo central:
+
+- functions/src/index.ts
+
+Pontos tecnicos principais:
+
+- obterConfigFocusPlatform
+- providerIsFocus
+- resolveFocusMunicipalityCode
+- buildFocusCompanyPayload
+- syncFocusCompany
+- buildFocusInvoicePayload
+- buildFocusNationalInvoicePayload
+- issueWithFocus
+- cancelWithFocus
+- queryWithFocus
+- buildFocusProvisioningStatus
+- autoProvisionFocusCompanyIfReady
+
+Callables centrais:
+
+- fiscalSyncFocusCompany
+- platformSyncCompanyFocus
+
+6. FLUXO RESUMIDO
+
+Fluxo tecnico da empresa:
+
+1. a empresa entra no setup fiscal
+2. o provider e configurado para Focus
+3. o backend valida readiness e dados obrigatorios
+4. a empresa pode ser sincronizada com a Focus
+5. a emissao oficial usa payload municipal ou nacional conforme a modalidade
+6. o retorno oficial atualiza status, numero oficial e portal
+7. cancelamento e consulta de status voltam pela mesma camada
+
+7. REGRAS FISCAIS IMPORTANTES
+
+No nacional:
+
+- pAliq deve ser enviado quando o caso real exigir
+- codigo tributario municipal nao deve ser inferido automaticamente quando indevido
+- alguns grupos exigem CNO de obra
+- o codigo nacional do servico precisa respeitar o subitem correto
+
+No operacional:
+
+- notas em processamento podem exigir conciliacao posterior
+- notas canceladas devem sair da soma financeira e dos indicadores operacionais
+- valor bruto fiscal deve considerar apenas notas oficialmente emitidas e ativas
+
+8. ARQUIVOS RELACIONADOS
+
+Documentacao:
+
+- docs/FISCAL_READINESS.md
+- docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md
+- docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md
+- docs/registro_continuidade/MAPA_FISCAL_REAL_BACKEND_2026-03-22.md
+- docs/registro_continuidade/CONTINUIDADE_ATUAL.md
+
+Frontend fiscal:
+
+- lib/features/fiscal/presentation/pages/fiscal_readiness_page.dart
+- lib/features/fiscal/presentation/pages/fiscal_readiness_operational_actions.dart
+- lib/features/fiscal/presentation/pages/fiscal_readiness_invoice_sections.dart
+
+9. RESUMO EXECUTIVO
+
+A Focus e hoje a espinha dorsal da emissao fiscal oficial no Ponto Certo.
+O backend ja separa sincronizacao da empresa, emissao, cancelamento e consulta.
+O ponto mais sensivel continua sendo a coerencia entre readiness, payload nacional/municipal e retorno oficial da nota.

@@ -1,0 +1,79 @@
+﻿{
+    "lastGeneratedAt":  "2026-03-22T22:02:20.8499303-03:00",
+    "generator":  "scripts/save_continuity.ps1",
+    "keepSnapshots":  20,
+    "recentFiles":  [
+                        {
+                            "path":  "docs/registro_continuidade/README.md",
+                            "lastWriteTime":  "2026-03-22T22:02:10.5755825-03:00"
+                        },
+                        {
+                            "path":  "lib/features/service_catalog/presentation/pages/service_catalog_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9404504-03:00"
+                        },
+                        {
+                            "path":  "lib/features/finance/presentation/pages/finance_employee_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9404504-03:00"
+                        },
+                        {
+                            "path":  "lib/features/proposals/presentation/pages/service_proposals_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9404504-03:00"
+                        },
+                        {
+                            "path":  "lib/features/proposals/presentation/pages/contract_clauses_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9404504-03:00"
+                        },
+                        {
+                            "path":  "lib/features/employees/presentation/pages/employees_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9334380-03:00"
+                        },
+                        {
+                            "path":  "lib/features/justifications/presentation/pages/justifications_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9334380-03:00"
+                        },
+                        {
+                            "path":  "lib/features/material_catalog/presentation/pages/material_catalog_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9334380-03:00"
+                        },
+                        {
+                            "path":  "lib/features/punch/presentation/pages/punch_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9334380-03:00"
+                        },
+                        {
+                            "path":  "lib/features/payments/presentation/pages/payments_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9334380-03:00"
+                        },
+                        {
+                            "path":  "lib/features/clients/presentation/pages/clients_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9308300-03:00"
+                        },
+                        {
+                            "path":  "lib/features/debts/presentation/pages/debts_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:32:09.9308300-03:00"
+                        },
+                        {
+                            "path":  "docs/registro_continuidade/ESTADO_ATUAL_DO_SISTEMA.md",
+                            "lastWriteTime":  "2026-03-22T21:04:35.7386374-03:00"
+                        },
+                        {
+                            "path":  "lib/features/reports/presentation/pages/reports_page.dart",
+                            "lastWriteTime":  "2026-03-22T21:03:57.6221829-03:00"
+                        },
+                        {
+                            "path":  "docs/registro_continuidade/ULTIMA_VALIDACAO_TECNICA.md",
+                            "lastWriteTime":  "2026-03-22T21:01:54.3864439-03:00"
+                        },
+                        {
+                            "path":  "lib/features/tasks/presentation/pages/tasks_page.dart",
+                            "lastWriteTime":  "2026-03-22T20:52:01.1413682-03:00"
+                        },
+                        {
+                            "path":  "lib/features/tasks/presentation/tasks_provider.dart",
+                            "lastWriteTime":  "2026-03-22T20:43:56.9115777-03:00"
+                        },
+                        {
+                            "path":  "docs/registro_continuidade/CHECKLIST_TECNICO_PROXIMA_FASE.md",
+                            "lastWriteTime":  "2026-03-22T20:21:21.5924975-03:00"
+                        }
+                    ]
+}

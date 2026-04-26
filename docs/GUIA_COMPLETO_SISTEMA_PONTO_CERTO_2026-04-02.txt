@@ -1,0 +1,746 @@
+PONTO CERTO
+GUIA COMPLETO DO SISTEMA
+Versao de referencia: 1.0.78+1048
+Data base atualizada: 22/04/2026
+
+1. VISAO GERAL
+
+O Ponto Certo e um sistema de gestao empresarial com operacao adaptativa para tres perfis principais:
+
+- Empresa: controla operacao, equipe, financeiro, fiscal, faturamento, documentos e configuracoes.
+- Funcionario: registra ponto, acompanha tarefas, pagamentos, dividas e justificativas.
+- Contador: opera empresas vinculadas com foco em fiscal, faturamento, relatorios e fechamento mensal.
+
+O sistema foi desenhado para funcionar como uma base unica de operacao. A mesma empresa pode usar gestao operacional, financeiro, faturamento, trabalhista, assistente e fiscal sem precisar trocar de sistema no meio do fluxo.
+
+2. COMO O SISTEMA ESTA ORGANIZADO
+
+Entrada e acesso:
+- Inicio: apresenta o produto e os caminhos de entrada.
+- Login da empresa: acesso administrativo da empresa.
+- Login do funcionario: acesso operacional do colaborador.
+- Login do contador: acesso fiscal e financeiro para empresas vinculadas.
+- Cadastro do escritorio contabil: cria a entrada principal do fluxo publico.
+- Cadastro da empresa: passa a acontecer depois, dentro do ambiente do escritorio ou da propria empresa quando aplicavel.
+
+Camada principal:
+- Painel: tela inicial adaptada por perfil.
+- Menu lateral: organiza os modulos disponiveis conforme o papel do usuario.
+
+3. PERFIS E REGRAS PRINCIPAIS
+
+3.1 Empresa
+
+O perfil da empresa enxerga a gestao completa. Esse usuario cuida do negocio, da equipe, do financeiro, do fiscal e das configuracoes.
+
+Principais responsabilidades:
+- cadastrar e manter dados da empresa
+- controlar equipe e acessos
+- criar tarefas e ordens de servico
+- acompanhar faturamento, recebimentos, pagamentos e dividas
+- preparar emissao fiscal
+- configurar relacoes com contador e assistente
+
+3.2 Funcionario
+
+O perfil de funcionario e enxuto e operacional. Ele foi feito para o dia a dia de quem executa o trabalho.
+
+Principais responsabilidades:
+- registrar ponto
+- ver tarefas atribuidas
+- acompanhar pagamentos
+- acompanhar dividas e adiantamentos
+- justificar ocorrencias
+
+Observacao importante:
+- na web, o acesso de funcionario e bloqueado; o fluxo dele e pensado para celular
+- antes de usar o app por completo, o funcionario precisa aceitar o termo de uso do proprio celular
+
+3.3 Contador
+
+O perfil do contador foi estruturado para ficar mais proximo da rotina real de escritorio contabil. Ele nao entra para cuidar da operacao da equipe; entra para fechar empresa, revisar fiscal, acompanhar faturamento, conferir relatorios e manter obrigacoes em dia.
+
+Principais responsabilidades:
+- trocar de contexto entre empresas vinculadas
+- revisar base fiscal da empresa atual
+- operar faturamento e emissao conforme liberacao
+- acompanhar rotina anual e fechamento da competencia
+- usar canais oficiais da Receita, eSocial e FGTS Digital quando aplicavel
+
+4. TELAS DE ENTRADA
+
+4.1 Inicio
+
+Objetivo:
+- apresentar o sistema e direcionar o usuario para o tipo correto de acesso
+
+Uso esperado:
+1. abrir o sistema
+2. escolher se vai entrar como empresa, funcionario ou contador
+3. seguir para o login correto
+
+4.2 Login da empresa
+
+Objetivo:
+- levar a empresa para o painel administrativo
+
+Uso esperado:
+1. informar credenciais
+2. entrar no painel da empresa
+3. seguir para operacao, financeiro, fiscal ou equipe
+
+4.3 Login do funcionario
+
+Objetivo:
+- levar o colaborador para o fluxo operacional do dia a dia
+
+Uso esperado:
+1. entrar pelo celular
+2. aceitar o termo de uso do aparelho quando necessario
+3. registrar ponto, acompanhar tarefas e consultar seus dados
+
+4.4 Login do contador
+
+Objetivo:
+- permitir acesso profissional do escritorio contabil
+
+Uso esperado:
+1. entrar como contador
+2. abrir empresas vinculadas
+3. escolher a empresa de trabalho atual
+4. operar fiscal, faturamento, relatorios e rotina mensal
+
+Observacao operacional atual:
+- a entrada publica principal foi reposicionada para `escritorio primeiro, empresa depois`
+
+4.5 Cadastro do escritorio contabil
+
+Objetivo:
+- criar a entrada principal do fluxo comercial publico
+
+Pontos importantes:
+- o escritorio entra primeiro no onboarding publico
+- o cadastro da empresa pode ser feito depois pelo proprio escritorio
+- a copy publica deve priorizar escritorio contabil como protagonista do convite
+
+4.6 Cadastro da empresa
+
+Objetivo:
+- criar uma nova empresa no sistema
+
+Pontos importantes:
+- o cadastro comeca pelo CNPJ
+- a base tenta aproveitar dados para preencher a empresa
+- o sistema classifica visualmente a empresa como MEI ou Empresa
+
+Observacao fiscal atual:
+- o resumo fiscal deve considerar no valor bruto apenas notas oficialmente emitidas e ativas
+- notas canceladas, rascunhos e erros de emissao podem ser limpas em lote quando nao houver financeiro vinculado
+
+5. PAINEL INICIAL
+
+5.1 Painel da empresa
+
+Objetivo:
+- mostrar o retrato rapido da operacao
+
+O que a tela entrega:
+- leitura de entradas e saidas
+- situacao operacional resumida
+- atalhos para os modulos mais usados
+- experiencia adaptativa para MEI ou empresa maior
+
+Como usar:
+1. abrir o painel
+2. ler os indicadores principais
+3. entrar no modulo que precisa de acao imediata
+
+5.2 Painel do contador
+
+Objetivo:
+- centralizar o fechamento da empresa atual sem misturar com a rotina interna da equipe
+
+Blocos principais:
+- Acessos do contador
+- Impostos e guias
+- Rotina anual do escritorio
+- Fechamento da competencia atual
+- Controle do escritorio
+- Leitura fiscal da empresa
+
+Como usar:
+1. abrir a empresa atual do contador
+2. revisar os indicadores de faturamento e situacao fiscal
+3. usar os atalhos oficiais de impostos e guias
+4. seguir a rotina anual conforme o regime da empresa
+5. marcar o que ja foi fechado na competencia atual
+6. verificar o que esta em dia, o que pede acao e o que depende de conferencia externa
+
+Diferenciais atuais do painel do contador:
+- adapta o fluxo para MEI, Simples Nacional ou demais regimes
+- mostra rotina com PGDAS-D, DEFIS, DCTFWeb, DASN-SIMEI, eSocial e FGTS Digital quando aplicavel
+- persiste o fechamento mensal em company_settings.accountantMonthlyControl
+- usa apenas canais oficiais para Receita e Gov.br, sem simular automacao inexistente
+
+6. MODULOS PRINCIPAIS DA EMPRESA
+
+6.1 Assistente
+
+Objetivo:
+- apoiar a empresa com orientacao e textos dentro do proprio sistema
+
+O que faz:
+- conversa por historico
+- ajuda a interpretar o contexto da empresa
+- serve como canal unico de apoio operacional e textual
+
+Uso esperado:
+1. abrir o assistente
+2. fazer a pergunta operacional, comercial ou organizacional
+3. receber orientacao dentro do contexto da empresa
+
+6.2 Empresas do contador
+
+Objetivo:
+- mostrar todas as empresas vinculadas ao contador
+
+O que faz:
+- lista empresas ativas para o escritorio
+- permite trocar o contexto da empresa atual
+
+Uso esperado:
+1. abrir Empresas do contador
+2. escolher a empresa correta
+3. entrar no fluxo fiscal e financeiro daquela empresa
+
+6.3 Financeiro
+
+Objetivo:
+- consolidar a leitura financeira da empresa ou do funcionario, conforme o perfil
+
+No lado da empresa:
+- separa faturamento do periodo
+- separa contas a receber
+- separa contas a pagar
+- mostra saldo atual e saldo projetado
+- considera receitas previstas, recebidas, despesas e folha
+
+No lado do funcionario:
+- apresenta a leitura financeira pessoal dentro do contexto permitido
+
+Uso esperado:
+1. abrir Financeiro
+2. verificar entradas, saidas e saldo
+3. identificar o que esta previsto e o que ja foi pago ou recebido
+4. agir em faturamento, pagamentos ou dividas conforme necessario
+
+6.4 Fiscal
+
+Objetivo:
+- preparar e operar a base fiscal da empresa
+
+O que faz:
+- revisa configuracao fiscal da empresa
+- organiza dados cadastrais para emissao
+- prepara integracao real quando houver provedor
+- trabalha com competencia
+- apoia emissao fiscal e leitura preparatoria
+- gera materiais de conferencia para contador
+
+Uso esperado:
+1. abrir Fiscal
+2. revisar a configuracao da empresa
+3. conferir regime, inscricoes e dados de emissao
+4. abrir faturamento e base de servicos quando necessario
+5. seguir para emissao ou revisao da competencia
+
+No contexto do contador:
+- a tela fiscal passa a priorizar a configuracao real da empresa vinculada
+- evita usar dados pessoais do contador como se fossem dados da empresa
+
+6.5 Trabalhista
+
+Objetivo:
+- cuidar da parte de folha, contratos e documentos da equipe
+
+Estrutura principal:
+- aba de folha
+- aba de contratos
+
+O que faz:
+- acompanha equipe ativa
+- organiza pagamentos por competencia
+- cruza apontamentos, tarefas e pagamentos
+- ajuda na conferencia trabalhista
+- produz documentos e resumos para a rotina de RH e contador
+
+Uso esperado:
+1. abrir Trabalhistico
+2. escolher competencia e funcionario
+3. revisar folha e apontamentos
+4. gerar documentos e conferencias
+5. fechar a rotina do periodo
+
+6.6 Funcionarios
+
+Objetivo:
+- concentrar cadastros, acessos e papeis da equipe
+
+O que faz:
+- lista funcionarios operacionais
+- lista contadores vinculados
+- mostra resumo da equipe
+- permite ativar e desativar acessos
+- organiza cargo, dados e perfil
+
+Uso esperado:
+1. abrir Funcionarios
+2. revisar a equipe ativa
+3. cadastrar, editar ou desativar usuarios
+4. conferir contadores vinculados
+
+6.7 Ponto
+
+Objetivo:
+- registrar e acompanhar jornada
+
+O que faz:
+- registra entrada e saida
+- pode exigir GPS e camera, conforme configuracao
+- mostra resumo por funcionario
+- mostra dias trabalhados
+
+Uso esperado para empresa:
+1. abrir Ponto
+2. selecionar funcionario
+3. revisar registros e dias trabalhados
+
+Uso esperado para funcionario:
+1. abrir Ponto
+2. bater entrada e saida
+3. consultar historico do proprio trabalho
+
+6.8 Justificativas
+
+Objetivo:
+- tratar pedidos e ocorrencias que precisam de explicacao
+
+O que faz:
+- organiza pendentes, aprovadas e rejeitadas
+- aceita anexos quando a empresa permitir
+
+Uso esperado:
+1. funcionario envia justificativa
+2. empresa revisa
+3. sistema registra o status
+
+6.9 Tarefas
+
+Objetivo:
+- controlar execucao do trabalho e a distribuicao operacional
+
+O que faz:
+- cria tarefas
+- define responsavel
+- organiza status
+- detalha materiais, servicos, anexos e valores
+- permite ver detalhes da tarefa e seus itens
+
+Uso esperado:
+1. abrir Tarefas
+2. criar ou revisar demanda
+3. atribuir responsavel
+4. acompanhar status e anexos
+5. fechar como concluida
+
+6.10 Ordens de servico
+
+Objetivo:
+- organizar ordens formais ligadas a execucao
+
+Uso esperado:
+1. abrir Ordens de servico
+2. consultar ordens criadas
+3. alinhar com tarefas e operacao
+
+6.11 Faturamento
+
+Objetivo:
+- controlar cobrancas recorrentes e base de receita
+
+O que faz:
+- acompanha cobrancas
+- ajuda a transformar operacao em receita
+- se conecta com leitura financeira e fiscal
+
+Uso esperado:
+1. abrir Faturamento
+2. revisar cobrancas do periodo
+3. confirmar base de faturamento
+4. seguir para recebimento ou emissao fiscal
+
+6.12 Rentabilidade
+
+Objetivo:
+- mostrar a qualidade economica da operacao
+
+O que faz:
+- cruza receitas, custos e estrutura operacional
+- ajuda a entender o retorno do trabalho
+
+Uso esperado:
+1. abrir Rentabilidade
+2. ver resultado por periodo
+3. identificar gargalos de margem
+
+6.13 Clientes
+
+Objetivo:
+- concentrar os dados das empresas ou pessoas atendidas
+
+O que faz:
+- organiza a carteira
+- apoia faturamento, propostas, contratos e fiscal
+
+Uso esperado:
+1. abrir Clientes
+2. cadastrar ou revisar cliente
+3. usar o cadastro em proposta, contrato ou nota
+
+6.14 Relatorios
+
+Objetivo:
+- entregar leitura consolidada da operacao
+
+O que faz:
+- organiza relatorios por equipe, tarefas, pagamentos, dividas e fiscal
+- permite leitura por competencia
+- usa resumos materializados para acelerar indicadores executivos
+
+Uso esperado:
+1. abrir Relatorios
+2. escolher funcionario, usuario ou competencia quando necessario
+3. analisar desempenho operacional e financeiro
+
+6.15 Pagamentos
+
+Objetivo:
+- controlar pagamentos feitos ou pendentes
+
+O que faz:
+- mostra panorama por status
+- liga pagamentos a funcionario e competencia
+- ajuda na conferencia da folha e operacao
+
+Uso esperado:
+1. abrir Pagamentos
+2. revisar pagamentos pendentes, contestados e pagos
+3. agir na competencia atual
+
+6.16 Dividas e adiantamentos
+
+Objetivo:
+- organizar valores que a empresa deve receber ou descontar do funcionario
+
+O que faz:
+- controla dividas
+- controla adiantamentos
+- permite filtros
+- possui permissao especifica para edicao e pagamento
+
+Uso esperado:
+1. abrir Dividas
+2. revisar registros por funcionario
+3. criar, editar ou liquidar conforme regra de permissao
+
+6.17 Propostas
+
+Objetivo:
+- iniciar negociações comerciais formais
+
+O que faz:
+- gera proposta de servico
+- permite anexar clausulas
+- prepara conversao para contrato
+
+Uso esperado:
+1. abrir Propostas
+2. criar proposta
+3. vincular servicos e clausulas
+4. enviar para fechamento
+
+6.18 Contratos
+
+Objetivo:
+- acompanhar contratos ativos e convertidos de propostas
+
+O que faz:
+- separa propostas de contratos
+- ajuda na fase comercial e contratual
+
+Uso esperado:
+1. abrir Contratos
+2. revisar contratos em vigor
+3. conferir clausulas e valores
+
+6.19 Clausulas
+
+Objetivo:
+- manter a base contratual organizada
+
+O que faz:
+- centraliza regras de uso
+- separa clausulas para clientes e para funcionarios
+- gera PDF de resumo e PDF completo
+
+Uso esperado:
+1. abrir Clausulas
+2. revisar texto contratual
+3. usar nos fluxos de proposta e contrato
+
+6.20 Documentos
+
+Objetivo:
+- gerar e organizar rascunhos assistidos
+
+O que faz:
+- biblioteca de rascunhos
+- contratos, propostas, orcamentos e outros modelos
+- edicao de documentos gerados
+
+Uso esperado:
+1. abrir Documentos
+2. criar novo rascunho
+3. editar o texto
+4. gerar documento final
+
+6.21 Catalogo de servicos
+
+Objetivo:
+- manter a base padrao dos servicos da empresa
+
+O que faz:
+- lista servicos ativos
+- controla exclusoes e edicoes pendentes
+- importa planilha e PDF
+
+Uso esperado:
+1. abrir Catalogo
+2. cadastrar ou editar servico
+3. usar o servico em tarefa, proposta ou faturamento
+
+6.22 Materiais
+
+Objetivo:
+- organizar o banco de materiais padrao
+
+O que faz:
+- centraliza itens usados na operacao
+- reaproveita materiais nas tarefas
+
+Uso esperado:
+1. abrir Materiais
+2. cadastrar ou revisar item
+3. reaproveitar no fluxo operacional
+
+6.23 Empresa
+
+Objetivo:
+- concentrar os dados mestres e as governancas da empresa
+
+Blocos relevantes:
+- atalhos
+- perfil operacional
+- DAS do MEI
+- status comercial
+- governanca do contador
+- governanca do assistente
+- dados cadastrais
+
+O que faz:
+- guarda dados da empresa
+- controla configuracao do contador
+- define permissoes de emissao, financeiro e contratos
+- define regras do assistente
+- atualiza cadastro e identidade operacional
+
+Uso esperado:
+1. abrir Empresa
+2. revisar perfil operacional
+3. atualizar dados cadastrais
+4. configurar contador e assistente
+5. ajustar status comercial
+
+6.24 Configuracoes
+
+Objetivo:
+- definir regras de funcionamento do sistema
+
+O que faz:
+- ativa ou desativa exigencias operacionais
+- controla ponto com GPS e camera
+- regula sugestao de divida
+- regula anexos em justificativas
+- controla atualizacao do aplicativo
+- abre governanca da plataforma e observabilidade
+
+Uso esperado:
+1. abrir Configuracoes
+2. revisar regras operacionais
+3. ajustar politica de uso
+4. definir comportamento do app
+
+6.25 Auditoria
+
+Objetivo:
+- registrar trilha de operacao
+
+O que faz:
+- mostra eventos de auditoria
+- ajuda a revisar o que foi alterado no sistema
+
+Uso esperado:
+1. abrir Auditoria
+2. revisar acoes importantes
+3. usar para governanca e conferencia
+
+6.26 Plataforma
+
+Objetivo:
+- operar a camada central da plataforma
+
+Uso esperado:
+- reservado para acesso supremo
+- gestao da plataforma, planos e operacao central
+
+6.27 Observabilidade
+
+Objetivo:
+- acompanhar incidentes e saude operacional
+
+Uso esperado:
+- reservado para acesso supremo
+- acompanhar erros, incidentes e leitura global do ambiente
+
+7. EXPERIENCIA DO FUNCIONARIO
+
+7.1 O que o funcionario faz no sistema
+
+Fluxo normal:
+1. entra no app pelo celular
+2. aceita o termo de uso do aparelho
+3. abre Ponto para registrar a jornada
+4. abre Tarefas para ver o que precisa executar
+5. abre Pagamentos para acompanhar repasses
+6. abre Dividas para ver descontos e adiantamentos
+7. abre Justificativas quando precisa explicar alguma ocorrencia
+
+7.2 O que o funcionario nao faz
+
+- nao opera fiscal
+- nao opera configuracao da empresa
+- nao assume governanca do contador
+- nao acessa a camada suprema da plataforma
+
+8. EXPERIENCIA DO CONTADOR
+
+8.1 O que o contador faz no sistema
+
+Fluxo normal:
+1. entra como contador
+2. abre Empresas do contador
+3. escolhe a empresa de trabalho
+4. volta ao Painel do contador
+5. revisa Impostos e guias
+6. segue a Rotina anual do escritorio
+7. marca o Fechamento da competencia atual
+8. usa Controle do escritorio para ver o que esta em dia e o que pede acao
+9. entra em Fiscal, Faturamento e Relatorios conforme a etapa de fechamento
+
+8.2 O que faz o ambiente do contador ser mais real
+
+- troca de empresa vinculada sem sair do sistema
+- leitura de regime e obrigacoes por tipo de empresa
+- atalho oficial para canais reais do governo
+- controle persistente por competencia
+- separacao entre operacao interna da empresa e rotina de escritorio contabil
+
+9. EXPERIENCIA DO GESTOR DA EMPRESA
+
+Fluxo normal:
+1. entra no painel da empresa
+2. acompanha a operacao no Painel
+3. organiza equipe em Funcionarios e Trabalhistico
+4. distribui trabalho em Tarefas e Ordens de servico
+5. fecha receita em Faturamento e Financeiro
+6. prepara base fiscal em Fiscal
+7. acompanha resultado em Relatorios e Rentabilidade
+8. ajusta regras em Empresa e Configuracoes
+
+10. RESUMO DOS MODULOS POR PERFIL
+
+Empresa:
+- Painel
+- Assistente
+- Financeiro
+- Fiscal
+- Trabalhista
+- Funcionarios
+- Ponto
+- Justificativas
+- Tarefas
+- Ordens de servico
+- Faturamento
+- Rentabilidade
+- Clientes
+- Relatorios
+- Pagamentos
+- Dividas
+- Propostas
+- Contratos
+- Clausulas
+- Documentos
+- Catalogo
+- Materiais
+- Empresa
+- Configuracoes
+- Auditoria
+- Plataforma e Observabilidade quando houver acesso supremo
+
+Funcionario:
+- Painel
+- Ponto
+- Tarefas
+- Pagamentos
+- Dividas
+- Justificativas
+- leitura restrita dos modulos permitidos pelo perfil
+
+Contador:
+- Painel do contador
+- Empresas do contador
+- Assistente
+- Faturamento
+- Fiscal
+- Relatorios
+- acessos condicionados pelas permissoes da empresa
+
+11. DIFERENCIAIS DO SISTEMA
+
+- mesma base para operacao, financeiro, fiscal e contador
+- experiencia adaptativa por perfil e tipo de empresa
+- contador com rotina anual e fechamento por competencia
+- assistente integrado ao contexto da empresa
+- governanca de contador e assistente dentro da propria empresa
+- uso de canais oficiais para obrigacoes reais
+- base preparada para escala com resumos materializados em indicadores executivos
+
+12. COMO EXPLICAR O SISTEMA DE FORMA SIMPLES
+
+Explicacao curta:
+O Ponto Certo e um sistema unico para empresa, equipe e contador trabalharem na mesma operacao sem quebrar o fluxo entre tarefa, faturamento, fiscal, financeiro e fechamento mensal.
+
+Explicacao comercial:
+A empresa usa o sistema para tocar a operacao e o financeiro. O funcionario usa o app para o dia a dia. O contador entra no mesmo ambiente com uma camada propria de escritorio, troca entre empresas e acompanha obrigacoes reais do ano e da competencia atual.
+
+Fim do documento.

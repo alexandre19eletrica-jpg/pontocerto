@@ -1,0 +1,91 @@
+MATRIZ DE ACESSO DO PONTO CERTO
+
+1. MODULOS MULTIEMPRESA
+
+Estes modulos pertencem a cada empresa do sistema e funcionam dentro do companyId da empresa logada:
+
+- Painel
+- Assistente
+- Empresa
+- Clientes
+- Tarefas
+- Ordens de servico
+- Faturamento
+- Financeiro
+- Fiscal
+- Relatorios
+- Propostas
+- Contratos
+- Documentos
+- Trabalhista
+- Banco de servicos
+- Banco de materiais
+
+2. MODULOS SUPREMOS DA PLATAFORMA
+
+Estes modulos sao exclusivos da empresa suprema dona do sistema:
+
+- Plataforma
+- Observabilidade
+- governanca comercial global
+- administracao global das empresas cadastradas
+- acompanhamento de incidentes e correcoes seguras da plataforma
+
+3. REGRA POR TIPO DE EMPRESA
+
+MEI:
+- continua com os modulos gerais do sistema
+- pode usar financeiro, faturamento, fiscal, contador, assistente e demais modulos
+- so deve deixar de ver o que realmente nao se aplicar a sua operacao
+- possui bloco exclusivo do DAS do MEI
+
+EMPRESA:
+- continua com os modulos gerais do sistema
+- nao deve ver bloco do DAS do MEI
+
+4. REGRA POR PERFIL
+
+OWNER:
+- acesso total aos modulos da propria empresa
+- se pertencer a empresa suprema, tambem acessa os modulos supremos
+
+MANAGER:
+- operacao ampliada da propria empresa
+- sem acesso aos modulos supremos
+
+ACCOUNTANT:
+- painel proprio e enxuto
+- empresas do contador
+- perfil fiscal
+- cadastrar empresa
+- assistente
+- ideias
+- faturamento
+- fiscal
+- contratos e documentos em leitura
+- sem financeiro amplo
+- sem relatorios
+- sem trabalhista
+- sem plataforma e observabilidade direta
+
+EMPLOYEE:
+- acesso operacional conforme regras da propria empresa
+
+5. REGRA COMERCIAL DA PLATAFORMA
+
+Planos comerciais padrao:
+- Solo
+- Equipe
+
+O porte da empresa continua separado do plano:
+- MEI
+- pequena prestadora
+- crescimento
+- media operacao
+- estrutura maior
+
+6. PRINCIPIO GERAL
+
+O sistema e multiempresa.
+Os modulos operacionais pertencem a cada empresa.
+Os modulos supremos pertencem somente a empresa dona da plataforma.

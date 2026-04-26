@@ -1,0 +1,1 @@
+Nova versao com melhorias importantes para empresas e contadores, incluindo evolucao do ambiente do contador com rotina anual, fechamento da competencia, controles operacionais mais claros e ajustes gerais de estabilidade, desempenho e experiencia de uso.

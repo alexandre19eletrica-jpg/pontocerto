@@ -1,0 +1,1239 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function effectiveCompanyId() {
+      return request.auth.token.companyId != null
+        ? request.auth.token.companyId
+        : userDoc().data.companyId;
+    }
+
+    function effectiveEmployeeId() {
+      return request.auth.token.employeeId != null
+        ? request.auth.token.employeeId
+        : userDoc().data.employeeId;
+    }
+
+    function tokenRoleLower() {
+      return request.auth.token.role != null
+        ? request.auth.token.role.lower()
+        : '';
+    }
+
+    function docRoleLower() {
+      return userDoc().data.role != null
+        ? userDoc().data.role.lower()
+        : '';
+    }
+
+    function isOwner() {
+      return tokenRoleLower() == 'owner' ||
+        tokenRoleLower() == 'dono' ||
+        tokenRoleLower() == 'company' ||
+        tokenRoleLower() == 'empresa' ||
+        docRoleLower() == 'owner' ||
+        docRoleLower() == 'dono' ||
+        docRoleLower() == 'company' ||
+        docRoleLower() == 'empresa';
+    }
+
+    function isManager() {
+      return tokenRoleLower() == 'manager' ||
+        tokenRoleLower() == 'gerente' ||
+        docRoleLower() == 'manager' ||
+        docRoleLower() == 'gerente';
+    }
+
+    function isAccountant() {
+      return tokenRoleLower() == 'accountant' ||
+        tokenRoleLower() == 'contador' ||
+        docRoleLower() == 'accountant' ||
+        docRoleLower() == 'contador';
+    }
+
+    function isEmployee() {
+      return tokenRoleLower() == 'employee' ||
+        tokenRoleLower() == 'funcionario' ||
+        docRoleLower() == 'employee' ||
+        docRoleLower() == 'funcionario';
+    }
+
+    function sameCompany(resource) {
+      return resource.data.companyId == effectiveCompanyId() ||
+        resource.data.companyId == userDoc().data.companyId ||
+        accountantLinkedCompany(resource.data.companyId);
+    }
+
+    function sameCompanyData(data) {
+      return data.companyId == effectiveCompanyId() ||
+        data.companyId == userDoc().data.companyId ||
+        accountantLinkedCompany(data.companyId);
+    }
+
+    function accountantLinkedCompany(companyId) {
+      return isAccountant() && (
+        companyId == effectiveCompanyId() ||
+        companyId == userDoc().data.currentCompanyId ||
+        companyId == userDoc().data.companyId ||
+        exists(/databases/$(database)/documents/accountant_links/$(companyId + '_' + request.auth.uid)) ||
+        (
+          exists(/databases/$(database)/documents/accountant_links/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/accountant_links/$(request.auth.uid)).data.companyId == companyId
+        )
+      );
+    }
+
+    function isOwnEmployee(employeeId) {
+      return employeeId == effectiveEmployeeId() ||
+        employeeId == userDoc().data.employeeId ||
+        employeeId == request.auth.uid ||
+        (effectiveEmployeeId() == null && employeeId == request.auth.uid);
+    }
+
+    function documentRequestVisibleToEmployee(data) {
+      return data.currentResponsibleEmployeeIds is list &&
+        (
+          data.currentResponsibleEmployeeIds.hasAny([effectiveEmployeeId()]) ||
+          data.currentResponsibleEmployeeIds.hasAny([userDoc().data.employeeId]) ||
+          data.currentResponsibleEmployeeIds.hasAny([request.auth.uid])
+        );
+    }
+
+    function canReadByRole(resource) {
+      return (isOwner() || isManager()) && sameCompany(resource) ||
+        (isEmployee() && isOwnEmployee(resource.data.employeeId));
+    }
+
+    function accountantCanReadFinance(companyId) {
+      return isAccountant() &&
+        accountantPermissions(companyId).allowFinanceRead != false;
+    }
+
+    function accountantCanEditFiscalSettings(companyId) {
+      return accountantLinkedCompany(companyId);
+    }
+
+    function assistantSettings(companyId) {
+      return exists(/databases/$(database)/documents/company_settings/$(companyId)) &&
+          companySettingsDoc(companyId).data.assistantSettings is map
+        ? companySettingsDoc(companyId).data.assistantSettings
+        : {};
+    }
+
+    function canUseAssistant(companyId) {
+      return signedIn() &&
+        (
+          companyId == effectiveCompanyId() ||
+          accountantLinkedCompany(companyId)
+        ) &&
+        assistantSettings(companyId).enabled != false &&
+        (
+          isOwner() ||
+          (isManager() && assistantSettings(companyId).allowManagerAccess != false) ||
+          (isAccountant() && assistantSettings(companyId).allowAccountantAccess != false) ||
+          (isEmployee() && assistantSettings(companyId).allowEmployeeAccess != false)
+        );
+    }
+
+    function nonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function companySettingsDoc(companyId) {
+      return get(/databases/$(database)/documents/company_settings/$(companyId));
+    }
+
+    function assistantThreadDoc(threadId) {
+      return get(/databases/$(database)/documents/assistant_threads/$(threadId));
+    }
+
+    function closedPayrollCompetences(companyId) {
+      return exists(/databases/$(database)/documents/company_settings/$(companyId)) &&
+          companySettingsDoc(companyId).data.closedPayrollCompetences is list
+        ? companySettingsDoc(companyId).data.closedPayrollCompetences
+        : [];
+    }
+
+    function paymentCompetenceFromData(data) {
+      return data.competencia is string ? data.competencia : '';
+    }
+
+    function payrollCompetenceOpen(companyId, competence) {
+      return !(closedPayrollCompetences(companyId).hasAny([competence]));
+    }
+
+    function financeManagerPermissions(companyId) {
+      return exists(/databases/$(database)/documents/company_settings/$(companyId)) &&
+          companySettingsDoc(companyId).data.financeManagerPermissions is map
+        ? companySettingsDoc(companyId).data.financeManagerPermissions
+        : {};
+    }
+
+    function canManagePayments(companyId) {
+      return isOwner() ||
+        (isManager() &&
+          financeManagerPermissions(companyId).allowCreatePayments == true);
+    }
+
+    function canManageDebts(companyId) {
+      return isOwner() ||
+        (isManager() &&
+          financeManagerPermissions(companyId).allowManageDebts == true);
+    }
+
+    function canManageCompanyFinanceMovements(companyId) {
+      return isOwner() ||
+        (isManager() &&
+          financeManagerPermissions(companyId).allowManageCompanyMovements == true);
+    }
+
+    function canRunFinanceCleanup(companyId) {
+      return isOwner() ||
+        (isManager() &&
+          financeManagerPermissions(companyId).allowFinanceCleanup == true);
+    }
+
+    function workforceManagerPermissions(companyId) {
+      return exists(/databases/$(database)/documents/company_settings/$(companyId)) &&
+          companySettingsDoc(companyId).data.workforceManagerPermissions is map
+        ? companySettingsDoc(companyId).data.workforceManagerPermissions
+        : {};
+    }
+
+    function accountantPermissions(companyId) {
+      return exists(/databases/$(database)/documents/company_settings/$(companyId)) &&
+          companySettingsDoc(companyId).data.accountantPermissions is map
+        ? companySettingsDoc(companyId).data.accountantPermissions
+        : {};
+    }
+
+    function canManagePayrollDocuments(companyId) {
+      return isOwner() ||
+        (isManager() &&
+          workforceManagerPermissions(companyId).allowPayrollDocuments == true);
+    }
+
+    function canManagePayrollClosures(companyId) {
+      return isOwner() ||
+        (isManager() &&
+          workforceManagerPermissions(companyId).allowPayrollClosures == true);
+    }
+
+    function canManageServiceInvoices(companyId) {
+      return isOwner() ||
+        accountantLinkedCompany(companyId) ||
+        (isManager() &&
+          workforceManagerPermissions(companyId).allowServiceInvoices == true);
+    }
+
+    function canManageWorkforceContracts(companyId) {
+      return isOwner() ||
+        (isManager() &&
+          workforceManagerPermissions(companyId).allowContracts == true);
+    }
+
+    function protectedCompanySettingsKeys() {
+      return [
+        'financeMode',
+        'financeFeatures',
+        'financeManagerPermissions',
+        'financeRequireOwnerApprovalForCleanup',
+        'companyOperationalProfile',
+        'fiscalMode',
+        'fiscalFeatures',
+        'fiscalRealIntegration',
+        'fiscalCertificate',
+        'fiscalHomologationChecklist',
+        'accountantPermissions',
+        'assistantSettings',
+        'assistantUsage',
+        'commercialSettings',
+        'payrollDocumentSequence',
+        'payrollDocumentSequences',
+        'workforceMode',
+        'workforceFeatures',
+        'workforceManagerPermissions'
+      ];
+    }
+
+    function hasActiveDeviceConsent(employeeId, companyId) {
+      return exists(/databases/$(database)/documents/device_consents/$(employeeId)) &&
+        get(/databases/$(database)/documents/device_consents/$(employeeId)).data.employeeId == employeeId &&
+        get(/databases/$(database)/documents/device_consents/$(employeeId)).data.companyId == companyId &&
+        get(/databases/$(database)/documents/device_consents/$(employeeId)).data.accepted == true;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() &&
+        (
+          uid == request.auth.uid ||
+          ((isOwner() || isManager()) && sameCompany(resource)) ||
+          (isAccountant() && sameCompany(resource))
+        );
+
+      allow create: if signedIn() &&
+        (
+          uid == request.auth.uid ||
+          ((isOwner() || isManager()) && sameCompanyData(request.resource.data))
+        );
+
+      allow update: if signedIn() &&
+        (
+          (
+            uid == request.auth.uid &&
+            request.resource.data.companyId == resource.data.companyId &&
+            request.resource.data.role == resource.data.role
+          ) ||
+          ((isOwner() || isManager()) && sameCompany(resource) && sameCompanyData(request.resource.data))
+        );
+
+      allow delete: if signedIn() &&
+        ((isOwner() || isManager()) && sameCompany(resource));
+    }
+
+    match /employees/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create: if signedIn() && (isOwner() || isManager()) && sameCompanyData(request.resource.data);
+      allow update: if signedIn() && (isOwner() || isManager()) && sameCompany(resource) && sameCompanyData(request.resource.data);
+      allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+    }
+
+    match /work_entries/{docId} {
+      allow read: if signedIn() && canReadByRole(resource);
+      allow create: if signedIn() && (isOwner() || isManager()) && sameCompanyData(request.resource.data);
+      allow update: if signedIn() && (isOwner() || isManager()) && sameCompany(resource) && sameCompanyData(request.resource.data);
+      allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+    }
+
+    match /punches/{docId} {
+      allow read: if signedIn() && canReadByRole(resource);
+
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        nonEmptyString(request.resource.data.obraOuCliente) &&
+        (
+          isOwner() ||
+          isManager() ||
+          (
+            isEmployee() &&
+            isOwnEmployee(request.resource.data.employeeId) &&
+            (
+              request.auth.uid != request.resource.data.employeeId ||
+              hasActiveDeviceConsent(request.resource.data.employeeId, request.resource.data.companyId)
+            )
+          )
+        );
+
+      allow update: if signedIn() && (isOwner() || isManager()) && sameCompany(resource) && sameCompanyData(request.resource.data);
+      allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+    }
+
+    match /worked_days/{docId} {
+      allow read: if signedIn() && canReadByRole(resource);
+
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (
+          isOwner() ||
+          isManager() ||
+          (isEmployee() && (isOwnEmployee(request.resource.data.employeeId) || request.resource.data.employeeId == request.auth.uid))
+        );
+
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (
+          isOwner() ||
+          isManager() ||
+          (
+            isEmployee() &&
+            (isOwnEmployee(resource.data.employeeId) || resource.data.employeeId == request.auth.uid) &&
+            (isOwnEmployee(request.resource.data.employeeId) || request.resource.data.employeeId == request.auth.uid)
+          )
+        );
+
+      allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+    }
+
+    match /tasks/{docId} {
+      allow read: if signedIn() &&
+        (
+          ((isOwner() || isManager()) && sameCompany(resource)) ||
+          (isEmployee() && resource.data.autorId == request.auth.uid)
+        );
+
+      allow create: if signedIn() && sameCompanyData(request.resource.data) &&
+        (
+          (isOwner() || isManager()) ||
+          (isEmployee() && request.resource.data.autorId == request.auth.uid)
+        );
+
+      allow update: if signedIn() && sameCompany(resource) && sameCompanyData(request.resource.data) &&
+        (
+          (isOwner() || isManager()) ||
+          (isEmployee() && resource.data.autorId == request.auth.uid && request.resource.data.autorId == request.auth.uid)
+        );
+
+      allow delete: if signedIn() && sameCompany(resource) &&
+        (
+          (isOwner() || isManager()) ||
+          (isEmployee() && resource.data.autorId == request.auth.uid)
+        );
+    }
+
+    match /projects/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        (isOwner() || isManager());
+    }
+
+    match /service_orders/{docId} {
+      allow read: if signedIn() &&
+        (
+          ((isOwner() || isManager()) && sameCompany(resource)) ||
+          (isEmployee() && isOwnEmployee(resource.data.assignedEmployeeId))
+        );
+
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (
+          (isOwner() || isManager()) ||
+          (
+            isEmployee() &&
+            isOwnEmployee(resource.data.assignedEmployeeId) &&
+            isOwnEmployee(request.resource.data.assignedEmployeeId)
+          )
+        );
+
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        (isOwner() || isManager());
+    }
+
+    match /recurring_billings/{docId} {
+      allow read: if signedIn() &&
+        sameCompany(resource) &&
+        (
+          isOwner() ||
+          isManager() ||
+          accountantCanReadFinance(resource.data.companyId)
+        );
+
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        (isOwner() || isManager());
+    }
+
+    match /generated_documents/{docId} {
+      allow read: if signedIn() &&
+        sameCompany(resource) &&
+        (
+          isOwner() ||
+          isManager() ||
+          isAccountant()
+        );
+
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        (isOwner() || isManager());
+    }
+
+    match /document_requests/{docId} {
+      allow read: if signedIn() &&
+        sameCompany(resource) &&
+        (
+          isOwner() ||
+          isManager() ||
+          isAccountant() ||
+          (isEmployee() && documentRequestVisibleToEmployee(resource.data))
+        );
+
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (
+          isOwner() ||
+          isManager() ||
+          isAccountant()
+        );
+
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (
+          isOwner() ||
+          isManager() ||
+          isAccountant() ||
+          (
+            isEmployee() &&
+            documentRequestVisibleToEmployee(resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'attachments',
+              'status',
+              'updatedAt',
+            ])
+          )
+        );
+
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        (
+          isOwner() ||
+          isManager() ||
+          isAccountant()
+        );
+    }
+
+    match /accountant_links/{docId} {
+      allow read: if signedIn() &&
+        (
+          ((isOwner() || isManager()) && sameCompany(resource)) ||
+          (isAccountant() && resource.data.accountantUserId == request.auth.uid)
+        );
+
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        (isOwner() || isManager());
+    }
+
+    match /service_proposals/{docId} {
+      allow read: if signedIn() &&
+        resource.data.companyId == effectiveCompanyId() &&
+        (
+          isOwner() ||
+          isManager() ||
+          (
+            isAccountant() &&
+            accountantPermissions(resource.data.companyId).allowContractsRead != false
+          )
+        );
+      allow create: if signedIn() &&
+        request.resource.data.companyId == effectiveCompanyId() &&
+        (isOwner() || isManager());
+      allow update: if signedIn() &&
+        resource.data.companyId == effectiveCompanyId() &&
+        request.resource.data.companyId == effectiveCompanyId() &&
+        (isOwner() || isManager());
+      allow delete: if signedIn() &&
+        resource.data.companyId == effectiveCompanyId() &&
+        (isOwner() || isManager());
+    }
+
+    match /service_catalog/{docId} {
+      allow read: if signedIn() &&
+        resource.data.companyId == effectiveCompanyId();
+      allow create: if signedIn() &&
+        request.resource.data.companyId == effectiveCompanyId();
+      allow update: if signedIn() &&
+        resource.data.companyId == effectiveCompanyId() &&
+        request.resource.data.companyId == effectiveCompanyId();
+      allow delete: if signedIn() &&
+        resource.data.companyId == effectiveCompanyId();
+    }
+
+    match /debts/{docId} {
+      allow read: if signedIn() &&
+        (
+          canReadByRole(resource) ||
+          (sameCompany(resource) && accountantCanReadFinance(resource.data.companyId))
+        );
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (
+          canManageDebts(request.resource.data.companyId) ||
+          (
+            isEmployee() &&
+            isOwnEmployee(request.resource.data.employeeId) &&
+            request.resource.data.createdByUserId == request.auth.uid
+          )
+        );
+
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (
+          canManageDebts(resource.data.companyId) ||
+          (
+            isEmployee() &&
+            isOwnEmployee(resource.data.employeeId) &&
+            isOwnEmployee(request.resource.data.employeeId) &&
+            request.resource.data.employeeId == resource.data.employeeId &&
+            request.resource.data.companyId == resource.data.companyId &&
+            (
+              (
+                (resource.data.status == 'aberto' || resource.data.status == 'OPEN') &&
+                resource.data.allowEmployeeEdit == true &&
+                request.resource.data.allowEmployeeEdit == resource.data.allowEmployeeEdit &&
+                request.resource.data.allowEmployeeSettle == resource.data.allowEmployeeSettle &&
+                request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                  'editRequestPending',
+                  'editRequestBy',
+                  'editRequestAt',
+                  'editRequestPayload',
+                  'updatedAt'
+                ]) &&
+                request.resource.data.editRequestPending == true &&
+                request.resource.data.editRequestBy == request.auth.uid
+              ) ||
+              (
+                (resource.data.status == 'aberto' || resource.data.status == 'OPEN') &&
+                resource.data.allowEmployeeEdit == request.resource.data.allowEmployeeEdit &&
+                resource.data.allowEmployeeSettle == true &&
+                request.resource.data.allowEmployeeSettle == resource.data.allowEmployeeSettle &&
+                request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                  'status',
+                  'settledAt',
+                  'updatedAt'
+                ]) &&
+                (
+                  request.resource.data.status == 'SETTLED' ||
+                  request.resource.data.status == 'baixado'
+                )
+              )
+            )
+          )
+        );
+
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        canManageDebts(resource.data.companyId);
+    }
+
+    match /payments/{docId} {
+      allow read: if signedIn() &&
+        (
+          canReadByRole(resource) ||
+          (sameCompany(resource) && accountantCanReadFinance(resource.data.companyId))
+        );
+      allow create: if signedIn() &&
+        canManagePayments(request.resource.data.companyId) &&
+        sameCompanyData(request.resource.data) &&
+        nonEmptyString(paymentCompetenceFromData(request.resource.data)) &&
+        payrollCompetenceOpen(
+          request.resource.data.companyId,
+          paymentCompetenceFromData(request.resource.data)
+        );
+
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        nonEmptyString(paymentCompetenceFromData(resource.data)) &&
+        nonEmptyString(paymentCompetenceFromData(request.resource.data)) &&
+        payrollCompetenceOpen(
+          resource.data.companyId,
+          paymentCompetenceFromData(resource.data)
+        ) &&
+        payrollCompetenceOpen(
+          request.resource.data.companyId,
+          paymentCompetenceFromData(request.resource.data)
+        ) &&
+        (
+          canManagePayments(resource.data.companyId) ||
+          (
+            isEmployee() &&
+            isOwnEmployee(resource.data.employeeId) &&
+            request.resource.data.employeeId == resource.data.employeeId &&
+            request.resource.data.companyId == resource.data.companyId &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'motivoContestacao', 'contestReason', 'contestedAt', 'confirmationAt', 'updatedAt']) &&
+            (
+              request.resource.data.status == 'confirmado' ||
+              request.resource.data.status == 'contestado' ||
+              request.resource.data.status == 'CONFIRMED' ||
+              request.resource.data.status == 'CONTESTED'
+            )
+          )
+        );
+
+      allow delete: if signedIn() &&
+        canManagePayments(resource.data.companyId) &&
+        sameCompany(resource) &&
+        nonEmptyString(paymentCompetenceFromData(resource.data)) &&
+        payrollCompetenceOpen(
+          resource.data.companyId,
+          paymentCompetenceFromData(resource.data)
+        );
+    }
+
+    match /audit_logs/{docId} {
+      allow read: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+      allow create: if signedIn() &&
+        (isOwner() || isManager()) &&
+        sameCompanyData(request.resource.data) &&
+        request.resource.data.actorUserId == request.auth.uid;
+      allow update: if false;
+      allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+    }
+
+    match /runtime_incidents/{docId} {
+      allow read: if signedIn() &&
+        (
+          (isOwner() || isManager()) ||
+          isAccountant()
+        ) &&
+        sameCompany(resource);
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        request.resource.data.reporterUserId == request.auth.uid;
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (
+          isOwner() ||
+          isManager() ||
+          resource.data.reporterUserId == request.auth.uid
+        );
+      allow delete: if false;
+    }
+
+    match /system_issues/{docId} {
+      allow read: if signedIn() &&
+        (
+          (isOwner() || isManager()) ||
+          isAccountant()
+        ) &&
+        sameCompany(resource);
+      allow create: if false;
+      allow update: if signedIn() &&
+        (isOwner() || isManager()) &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /reports/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create, update: if false;
+      allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+    }
+
+    match /product_feedback/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        request.resource.data.userId == resource.data.userId &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isOwner() ||
+          isManager() ||
+          isAccountant()
+        );
+      allow delete: if false;
+    }
+
+    match /period_closes/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (
+          (
+            request.resource.data.module == 'workforce' &&
+            canManagePayrollClosures(request.resource.data.companyId)
+          ) ||
+          (
+            request.resource.data.module == 'finance_cleanup' &&
+            canRunFinanceCleanup(request.resource.data.companyId)
+          ) ||
+          (
+            request.resource.data.module == 'finance_settings_change' &&
+            (isOwner() || isManager())
+          ) ||
+          (
+            request.resource.data.module == 'workforce_settings_change' &&
+            (isOwner() || isManager())
+          ) ||
+          (
+            request.resource.data.module == 'fiscal_settings_change' &&
+            (isOwner() || isManager())
+          )
+        );
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (
+          (
+            resource.data.module == 'workforce' &&
+            request.resource.data.module == 'workforce' &&
+            (
+              (
+                request.resource.data.status == resource.data.status &&
+                canManagePayrollClosures(resource.data.companyId)
+              ) ||
+              (
+                resource.data.status == 'PENDING_APPROVAL' &&
+                (
+                  request.resource.data.status == 'APPROVED' ||
+                  request.resource.data.status == 'REJECTED'
+                ) &&
+                isOwner()
+              )
+            )
+          ) ||
+          (
+            resource.data.module == 'finance_cleanup' &&
+            request.resource.data.module == 'finance_cleanup' &&
+            (
+              (
+                request.resource.data.status == resource.data.status &&
+                canRunFinanceCleanup(resource.data.companyId)
+              ) ||
+              (
+                resource.data.status == 'PENDING_APPROVAL' &&
+                (
+                  request.resource.data.status == 'APPROVED' ||
+                  request.resource.data.status == 'REJECTED'
+                ) &&
+                isOwner()
+              )
+            )
+          ) ||
+          (
+            resource.data.module == 'finance_settings_change' &&
+            request.resource.data.module == 'finance_settings_change' &&
+            (
+              (
+                request.resource.data.status == resource.data.status &&
+                (isOwner() || isManager())
+              ) ||
+              (
+                resource.data.status == 'PENDING_APPROVAL' &&
+                (
+                  request.resource.data.status == 'APPROVED' ||
+                  request.resource.data.status == 'REJECTED'
+                ) &&
+                isOwner()
+              )
+            )
+          ) ||
+          (
+            resource.data.module == 'workforce_settings_change' &&
+            request.resource.data.module == 'workforce_settings_change' &&
+            (
+              (
+                request.resource.data.status == resource.data.status &&
+                (isOwner() || isManager())
+              ) ||
+              (
+                resource.data.status == 'PENDING_APPROVAL' &&
+                (
+                  request.resource.data.status == 'APPROVED' ||
+                  request.resource.data.status == 'REJECTED'
+                ) &&
+                isOwner()
+              )
+            )
+          ) ||
+          (
+            resource.data.module == 'fiscal_settings_change' &&
+            request.resource.data.module == 'fiscal_settings_change' &&
+            (
+              (
+                request.resource.data.status == resource.data.status &&
+                (isOwner() || isManager())
+              ) ||
+              (
+                resource.data.status == 'PENDING_APPROVAL' &&
+                (
+                  request.resource.data.status == 'APPROVED' ||
+                  request.resource.data.status == 'REJECTED'
+                ) &&
+                isOwner()
+              )
+            )
+          )
+        );
+      allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+    }
+
+    match /notifications/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create, update: if false;
+      allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+    }
+
+    match /finance_movements/{docId} {
+      allow read: if signedIn() &&
+        sameCompany(resource) &&
+        (
+          accountantCanReadFinance(resource.data.companyId) ||
+          canManageCompanyFinanceMovements(resource.data.companyId) ||
+          resource.data.ownerUserId == request.auth.uid ||
+          resource.data.ownerUserId == '__COMPANY__'
+        );
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (
+          request.resource.data.ownerUserId == request.auth.uid ||
+          (
+            canManageCompanyFinanceMovements(request.resource.data.companyId) &&
+            request.resource.data.ownerUserId == '__COMPANY__'
+          )
+        );
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (
+          (
+            resource.data.ownerUserId == request.auth.uid &&
+            request.resource.data.ownerUserId == request.auth.uid
+          ) ||
+          (
+            canManageCompanyFinanceMovements(resource.data.companyId) &&
+            resource.data.ownerUserId == '__COMPANY__' &&
+            request.resource.data.ownerUserId == '__COMPANY__'
+          )
+        );
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        (
+          canManageCompanyFinanceMovements(resource.data.companyId) ||
+          resource.data.ownerUserId == request.auth.uid ||
+          resource.data.ownerUserId == '__COMPANY__'
+        );
+    }
+
+    match /company_settings/{docId} {
+      allow read: if signedIn() &&
+        (
+          docId == effectiveCompanyId() ||
+          resource.data.companyId == effectiveCompanyId() ||
+          accountantLinkedCompany(docId) ||
+          accountantLinkedCompany(resource.data.companyId)
+        );
+      allow create: if signedIn() &&
+        (isOwner() || isManager()) &&
+        request.resource.data.companyId == effectiveCompanyId();
+      allow update: if signedIn() &&
+        (
+          docId == effectiveCompanyId() ||
+          resource.data.companyId == effectiveCompanyId() ||
+          accountantLinkedCompany(docId) ||
+          accountantLinkedCompany(resource.data.companyId)
+        ) &&
+        (
+          request.resource.data.companyId == effectiveCompanyId() ||
+          accountantLinkedCompany(request.resource.data.companyId)
+        ) &&
+        (
+          isOwner() ||
+          (
+            isManager() &&
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+              protectedCompanySettingsKeys()
+            )
+          ) ||
+          (
+            accountantCanEditFiscalSettings(resource.data.companyId) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'companyId',
+              'companyData',
+              'fiscalMode',
+              'fiscalFeatures',
+              'fiscalRealIntegration',
+              'fiscalCertificate',
+              'fiscalHomologationChecklist',
+              'updatedAt',
+            ])
+          )
+        );
+      allow delete: if signedIn() &&
+        (isOwner() || isManager()) &&
+        resource.data.companyId == effectiveCompanyId();
+    }
+
+    match /assistant_threads/{docId} {
+      allow read: if signedIn() &&
+        sameCompany(resource) &&
+        canUseAssistant(resource.data.companyId);
+      allow create, update, delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if signedIn() &&
+          canUseAssistant(assistantThreadDoc(docId).data.companyId);
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /assistant_secure/{docId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /payroll_documents/{docId} {
+      allow read: if signedIn() &&
+        (
+          ((isOwner() || isManager()) && sameCompany(resource)) ||
+          (isEmployee() && isOwnEmployee(resource.data.employeeId))
+        );
+      allow create: if signedIn() &&
+        (
+          (
+            request.resource.data.docGroup == 'contract' &&
+            canManageWorkforceContracts(request.resource.data.companyId)
+          ) ||
+          (
+            request.resource.data.docGroup != 'contract' &&
+            canManagePayrollDocuments(request.resource.data.companyId)
+          )
+        ) &&
+        sameCompanyData(request.resource.data);
+      allow update: if signedIn() &&
+        (
+          (
+            resource.data.docGroup == 'contract' &&
+            request.resource.data.docGroup == 'contract' &&
+            canManageWorkforceContracts(resource.data.companyId)
+          ) ||
+          (
+            resource.data.docGroup != 'contract' &&
+            request.resource.data.docGroup != 'contract' &&
+            canManagePayrollDocuments(resource.data.companyId)
+          )
+        ) &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data);
+      allow delete: if signedIn() &&
+        (
+          (
+            resource.data.docGroup == 'contract' &&
+            canManageWorkforceContracts(resource.data.companyId)
+          ) ||
+          (
+            resource.data.docGroup != 'contract' &&
+            canManagePayrollDocuments(resource.data.companyId)
+          )
+        ) &&
+        sameCompany(resource);
+    }
+
+    match /payroll_closures/{docId} {
+      allow read: if signedIn() &&
+        (isOwner() || isManager()) &&
+        sameCompany(resource);
+      allow create: if signedIn() &&
+        canManagePayrollClosures(request.resource.data.companyId) &&
+        sameCompanyData(request.resource.data);
+      allow update: if signedIn() &&
+        canManagePayrollClosures(resource.data.companyId) &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data);
+      allow delete: if signedIn() &&
+        canManagePayrollClosures(resource.data.companyId) &&
+        sameCompany(resource);
+    }
+
+    match /fiscal_competence_checks/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create, update: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        (isOwner() || isManager());
+      allow delete: if signedIn() && sameCompany(resource) && (isOwner() || isManager());
+    }
+
+    match /service_invoices/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create: if signedIn() &&
+        canManageServiceInvoices(request.resource.data.companyId) &&
+        sameCompanyData(request.resource.data);
+      allow update: if signedIn() &&
+        canManageServiceInvoices(resource.data.companyId) &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data);
+      allow delete: if signedIn() &&
+        canManageServiceInvoices(resource.data.companyId) &&
+        sameCompany(resource);
+    }
+
+    match /invoice_customers/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create: if signedIn() &&
+        canManageServiceInvoices(request.resource.data.companyId) &&
+        sameCompanyData(request.resource.data);
+      allow update: if signedIn() &&
+        canManageServiceInvoices(resource.data.companyId) &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data);
+      allow delete: if signedIn() &&
+        canManageServiceInvoices(resource.data.companyId) &&
+        sameCompany(resource);
+    }
+
+    match /fiscal_secure/{docId} {
+      allow read: if signedIn() &&
+        isOwner() &&
+        docId == effectiveCompanyId();
+      allow create, update: if signedIn() &&
+        isOwner() &&
+        request.resource.data.companyId == effectiveCompanyId() &&
+        docId == effectiveCompanyId();
+      allow delete: if false;
+    }
+
+    // Catalogo de modelos fiscais: dono/gerente/contador gerem o que a empresa emite;
+    // a emissao oficial (Focus) continua nas Cloud Functions, nao nas regras.
+    match /fiscal_service_catalog/{docId} {
+      allow read: if signedIn() && (
+        sameCompany(resource) ||
+        accountantLinkedCompany(resource.data.companyId)
+      );
+      allow create: if signedIn() &&
+        (
+          accountantLinkedCompany(request.resource.data.companyId) ||
+          ((isOwner() || isManager()) && sameCompanyData(request.resource.data)) ||
+          (isEmployee() && request.resource.data.active == false)
+        );
+
+      allow update: if signedIn() &&
+        (
+          (
+            accountantLinkedCompany(resource.data.companyId) &&
+            accountantLinkedCompany(request.resource.data.companyId)
+          ) ||
+          ((isOwner() || isManager()) && sameCompany(resource) && sameCompanyData(request.resource.data)) ||
+          (
+            isEmployee() &&
+            resource.data.active == false &&
+            request.resource.data.active == false
+          )
+        );
+      allow delete: if signedIn() &&
+        (
+          accountantLinkedCompany(resource.data.companyId) ||
+          ((isOwner() || isManager()) && sameCompany(resource)) ||
+          (isEmployee() && resource.data.active == false)
+        );
+    }
+
+    match /registry_cache/{docId} {
+      allow read: if signedIn() && (isOwner() || isManager());
+      allow create, update, delete: if false;
+    }
+
+    match /app_updates/{docId} {
+      allow read: if signedIn() && sameCompany(resource);
+      allow create: if signedIn() &&
+        isOwner() &&
+        sameCompanyData(request.resource.data);
+      allow update: if signedIn() &&
+        isOwner() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data);
+      allow delete: if signedIn() &&
+        (isOwner() || isManager()) &&
+        sameCompany(resource);
+    }
+
+    match /justifications/{docId} {
+      allow read: if signedIn() &&
+        (
+          ((isOwner() || isManager()) && sameCompany(resource)) ||
+          (isEmployee() && isOwnEmployee(resource.data.employeeId))
+        );
+
+      allow create: if signedIn() &&
+        sameCompanyData(request.resource.data) &&
+        nonEmptyString(request.resource.data.comprovanteUrl) &&
+        (
+          (isEmployee() && (isOwnEmployee(request.resource.data.employeeId) || request.resource.data.employeeId == request.auth.uid)) ||
+          ((isOwner() || isManager()) && isOwnEmployee(request.resource.data.employeeId))
+        );
+
+      allow update: if signedIn() &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        (
+          (isOwner() || isManager()) ||
+          (
+            isEmployee() &&
+            (isOwnEmployee(resource.data.employeeId) || resource.data.employeeId == request.auth.uid) &&
+            (isOwnEmployee(request.resource.data.employeeId) || request.resource.data.employeeId == request.auth.uid)
+          )
+        );
+
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        (isOwner() || isManager());
+    }
+
+    match /device_consents/{employeeId} {
+      allow read: if signedIn() &&
+        (
+          ((isOwner() || isManager()) && sameCompany(resource)) ||
+          (isEmployee() && employeeId == request.auth.uid && sameCompany(resource))
+        );
+
+      allow create: if signedIn() &&
+        isEmployee() &&
+        employeeId == request.auth.uid &&
+        sameCompanyData(request.resource.data) &&
+        request.resource.data.employeeId == request.auth.uid &&
+        nonEmptyString(request.resource.data.termsVersion) &&
+        nonEmptyString(request.resource.data.acceptedStatement);
+
+      allow update: if signedIn() &&
+        isEmployee() &&
+        employeeId == request.auth.uid &&
+        sameCompany(resource) &&
+        sameCompanyData(request.resource.data) &&
+        request.resource.data.employeeId == request.auth.uid &&
+        nonEmptyString(request.resource.data.termsVersion) &&
+        nonEmptyString(request.resource.data.acceptedStatement);
+
+      allow delete: if signedIn() &&
+        sameCompany(resource) &&
+        (isOwner() || isManager());
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,31 @@
+---
+description: Regra de geração de produção e terminal — um único bloco de comandos completo, sem múltiplas opções.
+alwaysApply: true
+---
+
+# Comandos de produção e terminal (regra geral)
+
+- Para **cada** pedido (publicar, actualizar, build, Git, Firebase), a resposta com comandos tem de ser **um bloco completo e sequencial** (em PowerShell: `cd` + passos com `;` numa única cadeia), **e mais nada** a escolher.
+- **Não** listar variante A / B, “se falhar tente C”, “opcional: …”, “ou então” com segundo conjunto de comandos, salvo o utilizador dizer **explicitamente** que está bloqueado e enviar a mensagem de erro.
+- Se for **obrigatório** distinguir (ex.: publicar **web** vs **Android**), fazer **uma** pergunta mínima e, na mensagem **seguinte**, **só** o bloco desse alvo.
+- Ajuste de **caminho** da pasta: só trocar `C:\Users\hp\pontocerto` se a raiz do repositório for outra, **sem** oferecer script alternativo.
+- Ajuste de **Git remoto** / push: o utilizador fornece o URL real do repositório (uma vez). O assistente dá **um** `set-url` + `push` (ou `add`+`push` se não existir `origin` — aí **uma** excepção, um bloco, sem duplicar com “se já tiveres origin” a menos que o diálogo o exija).
+
+# Blocos canónicos (Ponto Certo)
+
+**Publicar web (Firebase — inclui actualização de links e UI Web):**
+```powershell
+cd C:\Users\hp\pontocerto; flutter pub get; flutter build web --release --no-wasm-dry-run; firebase deploy --only hosting --project pontocerto-e1dab
+```
+
+**Build Android (AAB) e cópia para a área de trabalho:**
+```powershell
+cd C:\Users\hp\pontocerto; flutter pub get; flutter build appbundle --release; Copy-Item -Path "C:\Users\hp\pontocerto\build\app\outputs\bundle\release\app-release.aab" -Destination "$env:USERPROFILE\Desktop\app-release.aab" -Force
+```
+
+**Primeiro envio de código após o repositório vazio no GitHub (remoto e branch `master` local já com commits) — o URL abaixo é o padrão do projecto; se mudar, substituir o URL, não acrescentar variantes.**
+```powershell
+cd C:\Users\hp\pontocerto; git remote set-url origin https://github.com/alexandre19eletrica-jpg/pontocerto.git; git push -u origin master
+```
+
+Se `git` indicar **fatal: 'origin' does not exist** (raro), **substituir** a linha `set-url` por `git remote add origin https://github.com/alexandre19eletrica-jpg/pontocerto.git` nesse **mesmo** bloco (uma única versão, não duas juntas na mesma resposta salvo erro reportado).

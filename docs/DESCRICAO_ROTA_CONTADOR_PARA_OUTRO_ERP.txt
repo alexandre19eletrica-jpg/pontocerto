@@ -1,0 +1,529 @@
+DESCRICAO DA ROTA DO CONTADOR PARA LEVAR AO OUTRO ERP
+
+Objetivo
+
+Este documento descreve o ambiente do contador que existe hoje no Ponto Certo, com foco no que ja esta implementado e funcionando no frontend, no fluxo de acesso, nos dados gravados e nas integracoes de backend que sustentam a operacao. A ideia e servir como base de implementacao no outro ERP sem perder comportamento, regras de acesso e estrutura minima.
+
+Resumo executivo
+
+O "contador" no sistema nao e um usuario comum da empresa e tambem nao e equipe operacional. Ele entra por login proprio, tem menu proprio, um conjunto limitado de rotas e trabalha em cima de uma carteira de empresas vinculadas. O contador pode:
+
+- entrar por login dedicado
+- acessar um painel proprio
+- trocar rapidamente a empresa ativa da carteira
+- operar faturamento, fiscal, relatorios, assistente e ideias
+- cadastrar nova empresa ja vinculando o escritorio
+- manter um perfil fiscal centralizado do escritorio
+- abrir uma pagina comercial de parceria
+- visualizar a pasta de implantacao de cada empresa vinculada
+
+O contador nao recebe acesso total ao ERP. O acesso e controlado por papel e por rota permitida.
+
+1. Rotas reais do ambiente do contador
+
+As rotas principais do contador sao estas:
+
+- /login-contador
+- /home
+- /accountant-companies
+- /accountant-fiscal-profile
+- /accountant-register-company
+- /accountant-partner
+- /billing
+- /fiscal
+- /reports
+- /assistant
+- /improvements
+
+Observacao importante:
+
+No codigo atual, o papel contador so pode abrir estas rotas. Isso esta centralizado em lib/core/auth/session.dart na funcao canAccessRoute.
+
+2. Controle de acesso
+
+Regras atuais:
+
+- o usuario precisa ter role ACCOUNTANT ou contador
+- se tentar entrar em rota fora da lista permitida, o sistema redireciona para /home?denied=1
+- o contador entra por /login-contador e nao usa o login padrao da empresa
+- depois do login, o sistema procura os vinculos em accountant_links para definir qual empresa entra como contexto inicial
+- se a empresa vinculada estiver bloqueada comercialmente, o login e negado
+
+Comportamento pratico:
+
+- o contador e autenticado no Firebase Auth
+- depois disso o sistema carrega o documento users/{uid}
+- valida se role e ACCOUNTANT
+- carrega accountant_links ativos do contador
+- escolhe a primeira empresa vinculada para companyId da sessao
+- cria a sessao no app com userId, companyId, role e nome
+
+3. Estrutura de sessao do contador
+
+A sessao usada pelo app tem:
+
+- userId
+- companyId
+- role
+- nome
+
+Para o contador isso e importante porque ele sempre opera com uma empresa ativa por vez, mesmo tendo carteira com varias empresas.
+
+4. Menu lateral do contador
+
+No shell principal, o contador enxerga somente os itens autorizados para o papel dele. Os itens visiveis no menu do contador hoje sao:
+
+- Painel
+- Assistente
+- Ideias
+- Empresas do contador
+- Perfil fiscal
+- Cadastrar empresa
+- Seja nosso parceiro
+- Faturamento
+- Fiscal
+- Relatorios
+
+Se o usuario tiver acesso supremo de plataforma, pode ainda ver observabilidade, mas isso nao faz parte do fluxo normal do contador.
+
+5. Login do contador
+
+Pagina:
+
+- lib/features/auth/presentation/pages/login_contador_page.dart
+
+O que a tela faz:
+
+- recebe email e senha
+- aceita prefill por query string:
+  - email
+  - empresa
+- mostra o codigo da empresa vinculada na tela quando recebido por link
+- faz signInWithEmailAndPassword
+- sincroniza claims
+- valida o papel do usuario
+- valida se existe empresa liberada para acesso
+- grava a sessao local do app
+- redireciona para /home
+
+Recuperacao de senha:
+
+- chama a Cloud Function publicRequestPasswordResetEmail
+
+Comportamento esperado ao migrar:
+
+- o outro ERP precisa manter um login separado para contador
+- precisa existir validacao de papel
+- precisa existir busca da primeira empresa vinculada apos login
+- precisa existir bloqueio por empresa quando o acesso comercial nao estiver liberado
+
+6. Painel do contador na Home
+
+Pagina:
+
+- lib/features/home/presentation/pages/home_page.dart
+
+Quando a sessao e de contador, a home muda completamente e vira "Painel do contador".
+
+Cabecalho:
+
+- titulo: Painel do contador
+- subtitulo: foco em faturamento, fiscal, relatorios e empresas vinculadas
+- chips: Foco fiscal e Empresas vinculadas
+
+Indicadores principais:
+
+- A receber
+- Recebido
+- Contestacoes
+- Fiscal (Pronto ou Revisar, conforme base fiscal da empresa ativa)
+
+Bloco "Acessos do contador":
+
+- abrir faturamento
+- abrir fiscal
+- abrir relatorios
+- abrir assistente
+- abrir ideias
+- abrir empresas do contador
+- abrir perfil fiscal
+- abrir cadastrar empresa
+
+Blocos operacionais e fiscais da home:
+
+- Impostos e guias
+- Radar Receita Federal
+- Radar NFS-e do escritorio
+- Rotina anual do escritorio
+
+Esses blocos orientam o contador para fluxo real e oficial, sem guardar senha pessoal de gov.br/e-CAC e sem scraping. A home usa bastante leitura de configuracao fiscal/comercial da empresa ativa.
+
+7. Pagina "Empresas do contador"
+
+Pagina:
+
+- lib/features/accountant_links/presentation/pages/accountant_companies_page.dart
+
+Objetivo:
+
+Ser a carteira operacional do contador.
+
+O que a tela mostra:
+
+- resumo da carteira
+- quantidade de empresas vinculadas
+- empresa atual da sessao
+- CTA para cadastrar nova empresa
+- status do perfil fiscal centralizado do escritorio
+- lista de empresas vinculadas
+
+Dados usados:
+
+- provider accountantCompanyLinksProvider
+- provider accountantFiscalProfileProvider
+
+Comportamentos principais:
+
+- lista somente vinculos ativos
+- remove duplicidades visuais de empresas
+- ordena com prioridade para a empresa atualmente ativa
+- permite trocar rapidamente a empresa da sessao
+- ao trocar a empresa, chama sessionProvider.notifier.trocarEmpresa(companyId: ...)
+- redireciona para /home
+
+Cada card de empresa mostra:
+
+- nome da empresa
+- codigo visual da empresa
+- CNPJ formatado
+- se e a empresa atual ou nao
+- leitura fiscal resumida daquela empresa
+- botao "Abrir empresa"
+- botao "Ver pasta"
+
+Botao "Ver pasta":
+
+- le company_settings/{companyId}/implementation_records/current
+- mostra em dialog:
+  - empresa
+  - plano
+  - modo de implantacao
+  - solicitante
+  - contador
+  - cobranca de implantacao
+  - link de boleto, se existir
+  - arquivos enviados
+
+Esse ponto e importante no outro ERP porque nao e so uma lista de empresas. Existe tambem consulta da pasta operacional de implantacao.
+
+8. Leitura fiscal dentro da carteira
+
+Dentro de cada empresa da carteira existe um painel chamado "Leitura fiscal da empresa para o contador".
+
+Esse painel le campos de company_settings/{companyId}, principalmente:
+
+- companyData
+- fiscalRouting
+- fiscalRealIntegration
+- fiscalCertificate
+- focusProvisioning
+- fiscalHomologationChecklist
+- focusCompanyId
+
+O sistema classifica a rota fiscal da empresa como:
+
+- Focus NFSe Nacional
+- Focus municipal
+- Revisao manual
+- Rota em definicao
+
+O painel divide a leitura em dois blocos:
+
+- o que a Focus ja valida ou resolve
+- o que ainda depende de rotina contabil ou municipal
+
+Na pratica, isso evita que o contador misture o que ja foi resolvido por integracao com o que ainda precisa de conferencia manual.
+
+9. Perfil fiscal centralizado do contador
+
+Pagina:
+
+- lib/features/accountant_links/presentation/pages/accountant_fiscal_profile_page.dart
+
+Objetivo:
+
+Cadastrar uma vez a base oficial do escritorio contabil e reaproveitar em toda a carteira.
+
+Onde grava:
+
+- users/{uid}.accountantFiscalProfile
+
+Campos gravados:
+
+- officeName
+- officeDocument
+- officeEmail
+- officePhone
+- integraContadorActive
+- apiCredentialsConfigured
+- ecnpjCertificateReady
+- serviceScopesReady
+- contractReference
+- apiCredentialLabel
+- certificateLabel
+- serviceScopesSummary
+- notes
+- appliesToLinkedCompanies = true
+- updatedAt
+
+Regra minima de salvamento:
+
+- officeName obrigatorio
+- officeEmail obrigatorio
+
+Indicadores visuais da pagina:
+
+- Integra Contador ativo ou pendente
+- Credenciais oficiais prontas ou pendentes
+- e-CNPJ pronto ou pendente
+- Escopos liberados ou pendentes
+- aplicado a empresas vinculadas
+
+Conceito funcional:
+
+- dados do escritorio ficam centralizados
+- procuracoes e autorizacoes continuam por empresa
+- senha pessoal de gov.br e senha de e-CAC nao devem ser armazenadas
+
+Regra de prontidao:
+
+O provider considera o perfil "ready" quando estes 4 booleanos estao true:
+
+- integraContadorActive
+- apiCredentialsConfigured
+- ecnpjCertificateReady
+- serviceScopesReady
+
+10. Cadastro de empresa pelo contador
+
+Pagina:
+
+- /accountant-register-company
+- reaproveita lib/features/auth/presentation/pages/cadastro_empresa_page.dart com accountantMode = true
+
+Objetivo:
+
+Permitir que o contador cadastre uma nova empresa no sistema e ja fique vinculado automaticamente a ela.
+
+O fluxo atual faz:
+
+- coleta dados da empresa e do responsavel
+- consulta o CNPJ para pre-preencher dados
+- classifica empresa como MEI/SOLO ou EMPRESA/EQUIPE
+- exige inscricao estadual quando nao for servico
+- exige inscricao municipal quando for servico
+- em modo contador mostra o contador atual como responsavel pelo fluxo
+- opcionalmente cria trial de 30 dias
+
+Function principal usada pelo modo contador:
+
+- accountantRegisterCompanyTrial30d
+
+O backend dessa function faz:
+
+- valida que o usuario autenticado e contador
+- valida dados obrigatorios
+- busca ou usa snapshot de consulta CNPJ
+- impede cadastro duplicado por CNPJ
+- cria usuario owner da empresa
+- cria companyId novo
+- monta companyData
+- grava company_settings/{companyId}
+- grava users/{ownerUid}
+- aplica custom claims do owner
+- configura comercial como trialing
+- chama ensureAccountantAccessForCompany para vincular o contador
+- envia email de primeiro acesso para a empresa
+- grava auditoria
+- retorna empresa liberada
+
+Ponto central da migracao:
+
+O cadastro pelo contador nao pode ser apenas "criar cliente". Ele tambem precisa:
+
+- criar a empresa no ERP
+- criar o owner da empresa
+- criar o vinculo formal contador x empresa
+- liberar trial/comercial quando aplicavel
+- manter o contador como contexto valido imediatamente apos o cadastro
+
+11. Vinculo formal contador x empresa
+
+Colecao usada:
+
+- accountant_links
+
+Estrutura do vinculo:
+
+- companyId
+- companyName
+- companyDocument
+- companyDisplayCode
+- accountantUserId
+- accountantName
+- accountantEmail
+- linkedByUserId
+- linkedByName
+- status
+- createdAt
+- updatedAt
+
+Status real usado hoje:
+
+- active
+- inactive
+
+Esse vinculo e a base da carteira do contador. Sem ele, o contador nao aparece ligado a empresa e nao consegue trocar contexto corretamente.
+
+12. Criacao/garantia de acesso do contador no backend
+
+Trecho central:
+
+- ensureAccountantAccessForCompany em functions/src/index.ts
+
+Esse processo:
+
+- garante que exista usuario contador com email correto
+- grava/atualiza users/{uid} com role ACCOUNTANT
+- aplica custom claims
+- grava ou atualiza accountant_links/{companyId}_{accountantUid}
+- gera password reset link
+- envia email de acesso inicial do contador com link para /login-contador
+
+Isso precisa ser replicado no outro ERP se o novo sistema tambem trabalhar com login dedicado de contador.
+
+13. Pagina "Seja nosso parceiro"
+
+Pagina:
+
+- lib/features/accountant_links/presentation/pages/accountant_partner_page.dart
+
+Objetivo:
+
+Material comercial dentro do ambiente do contador.
+
+O que mostra:
+
+- proposta de valor do sistema para a empresa
+- beneficios para a empresa
+- beneficios para o contador
+- cards de precificacao para indicar ao cliente
+- contato para fechar parceria
+
+Dependencias:
+
+- PublicSalesConfigService
+- Cloud Function accountantGetPartnerContact
+
+Essa rota nao e operacional/fiscal. Ela e comercial.
+
+14. Regras de negocio importantes para nao perder na migracao
+
+- contador e um papel separado de owner, manager e employee
+- contador nao deve ser tratado como equipe operacional
+- contador trabalha com empresa ativa por contexto
+- contador pode ter varias empresas vinculadas
+- o sistema precisa permitir troca rapida de empresa
+- o perfil fiscal do escritorio e centralizado no usuario contador
+- procuracao e autorizacao continuam sendo por empresa
+- a pasta de implantacao da empresa fica acessivel ao contador vinculado
+- o ambiente do contador e focado em faturamento, fiscal, relatorios e governanca
+- senha pessoal de gov.br/e-CAC nao pode ser salva
+
+15. Dependencias de dados no Firestore
+
+Colecoes/documentos relevantes:
+
+- users/{uid}
+- accountant_links/{companyId}_{accountantUid}
+- company_settings/{companyId}
+- company_settings/{companyId}/implementation_records/current
+- device_consents/{uid} (nao e do contador, mas aparece no roteamento global)
+
+Campos importantes em users do contador:
+
+- role = ACCOUNTANT
+- companyId
+- nome
+- email
+- accountantFiscalProfile
+
+Campos importantes em company_settings da empresa ativa:
+
+- companyData
+- commercialSettings
+- fiscalRouting
+- fiscalRealIntegration
+- fiscalCertificate
+- focusProvisioning
+- fiscalHomologationChecklist
+- focusCompanyId
+
+16. Dependencias de backend/Functions
+
+Functions ligadas diretamente ou indiretamente ao ambiente do contador:
+
+- publicRequestPasswordResetEmail
+- accountantGetPartnerContact
+- accountantRegisterCompanyTrial30d
+- ensureAccountantAccessForCompany
+- lookupBrazilCnpjForSignup
+- syncCompanyProfile
+
+17. O que precisa existir no outro ERP para ficar equivalente
+
+Implementacao minima recomendada:
+
+1. papel ACCOUNTANT separado dos outros perfis
+2. login exclusivo do contador
+3. tabela/colecao de vinculo contador x empresa
+4. sessao com empresa ativa
+5. troca de empresa ativa sem novo login
+6. home do contador com atalhos proprios
+7. pagina de carteira de empresas
+8. perfil fiscal centralizado do escritorio
+9. fluxo de cadastro de nova empresa pelo contador
+10. leitura de prontidao fiscal da empresa ativa
+11. visualizacao da pasta de implantacao/documentos da empresa
+
+18. Checklist de migracao para o outro ERP
+
+- criar entidade de usuario contador
+- criar entidade de vinculo contador_empresa
+- permitir N empresas por contador
+- manter 1 empresa ativa por sessao
+- criar menu e painel exclusivos do contador
+- criar pagina de carteira com botao "Abrir empresa"
+- criar perfil fiscal centralizado do escritorio
+- criar cadastro de empresa em modo contador
+- criar leitura de status fiscal por empresa
+- criar tela/consulta da pasta de implantacao
+- criar envio de email de acesso inicial do contador
+- criar reset de senha do contador
+
+19. Conclusao pratica
+
+Para levar "a rota do contador" para o outro ERP, o correto nao e copiar apenas a tela. O que precisa ser levado e o conjunto completo:
+
+- papel de acesso
+- login dedicado
+- carteira de empresas
+- troca de contexto
+- perfil fiscal centralizado
+- cadastro de empresa com vinculo automatico
+- leitura fiscal por empresa
+- pasta de implantacao
+- atalhos operacionais da home
+- backend que cria e mantem o vinculo contador x empresa
+
+Se isso for implementado desse jeito, o outro ERP vai reproduzir o comportamento que hoje esta funcionando no Ponto Certo.

@@ -1,0 +1,108 @@
+Explicacao da automacao e emissao de notas pela Focus
+
+1. Objetivo do fluxo
+O sistema prepara a NFS-e para pessoas leigas.
+O usuario nao precisa calcular manualmente a aliquota do ISS na nota.
+Ele escolhe o servico fiscal ja cadastrado, e a nota puxa automaticamente a aliquota salva nesse servico.
+Ja a marcacao de ISS retido e INSS retido continua manual, porque isso depende da contratacao concreta e da obrigacao do tomador.
+
+2. Como a automacao funciona hoje
+2.1. Cadastro do servico fiscal
+Quando um servico fiscal e cadastrado, o sistema usa:
+- codigo do servico
+- CNAE
+- descricao do servico
+
+Com isso, ele sugere uma aliquota inicial de ISS.
+Essa aliquota fica salva dentro do servico fiscal da empresa.
+
+Cada servico fiscal salvo guarda:
+- codigo do servico
+- codigo municipal
+- CNAE
+- municipio de incidencia
+- aliquota de ISS
+- regime tributario
+- natureza da operacao
+- fonte da aliquota
+- data da ultima revisao
+
+2.2. Emissao da nota
+Ao abrir a nota e selecionar um servico fiscal salvo:
+- o sistema preenche a aliquota de ISS automaticamente
+- usa a aliquota salva no servico fiscal
+- se o servico antigo nao tiver aliquota salva, o sistema preenche a sugestao automatica
+
+Importante:
+- marcar ISS retido nao altera a aliquota
+- marcar INSS retido nao altera a aliquota
+- a retencao so muda o calculo de quem recolhe e os valores retidos
+
+3. Como o calculo fiscal e feito
+O sistema calcula:
+- base tributavel = valor do servico - deducoes
+- valor do ISS = base tributavel x aliquota
+
+Se ISS retido estiver marcado:
+- o ISS e tratado como retido pelo tomador
+- isso impacta o liquido da nota
+
+Se INSS retido estiver marcado:
+- o usuario precisa informar o valor do INSS
+- esse valor entra como retencao no calculo
+
+4. Como a Focus entra no processo
+A Focus e usada como provedora de emissao.
+O sistema monta o payload da nota e envia para a Focus com os campos fiscais ja preparados.
+
+No envio, o sistema informa, conforme o tipo de emissao e integracao:
+- aliquota
+- item_lista_servico / codigo do servico
+- codigo_tributario_municipio
+- iss_retido
+- valor_iss_retido
+- valor_inss
+- outras_retencoes
+- natureza_operacao
+
+Depois da emissao, o sistema consulta e salva:
+- status da nota
+- numero oficial
+- link/portal oficial quando disponivel
+
+5. O que e automatico e o que e manual
+Automatico:
+- preenchimento da aliquota pelo servico fiscal salvo
+- reaproveitamento da aliquota na nota
+- calculo do ISS pela base e aliquota
+- envio dos dados fiscais para a Focus
+- conciliacao de status da nota
+
+Manual:
+- marcar ISS retido ou nao
+- marcar INSS retido ou nao
+- informar valor de INSS quando houver retencao
+- revisar natureza da operacao quando necessario
+
+6. Limite importante
+A Focus nao esta sendo usada como uma base oficial nacional de aliquotas por municipio.
+Hoje ela e a integradora de emissao.
+A base da aliquota no sistema vem do servico fiscal salvo e da parametrizacao fiscal interna.
+
+Isso significa:
+- a nota fica automatica para o usuario
+- mas a validacao da aliquota correta continua dependendo da configuracao fiscal do servico
+
+7. Forma segura de uso no sistema
+Para reduzir erro fiscal:
+- cada empresa deve ter seus servicos fiscais cadastrados corretamente
+- cada servico deve manter sua aliquota salva e revisada
+- a nota deve sempre puxar a aliquota do servico fiscal
+- a retencao deve ser marcada manualmente quando o cliente exigir ou quando houver obrigacao legal
+
+8. Resumo simples
+O usuario escolhe o servico fiscal.
+O sistema puxa a aliquota automaticamente.
+O usuario so marca se ISS ou INSS ficaram retidos.
+O sistema calcula os valores e envia a nota para a Focus.
+Depois, consulta o status e grava o retorno da emissao.

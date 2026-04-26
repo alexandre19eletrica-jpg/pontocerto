@@ -1,0 +1,1 @@
+Nova versao com ajustes no fluxo comercial para priorizar o cadastro do escritorio de contabilidade, mantendo o cadastro da empresa como etapa posterior dentro do ambiente do contador. Tambem houve melhorias na gestao de cobranca, liberacao de acesso da empresa e estabilidade geral do sistema.

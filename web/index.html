@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Ponto Certo: ponto, tarefas, justificativas e operacao da empresa no navegador e no celular.">
+  <meta name="theme-color" content="#032A72">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Ponto Certo">
+  <meta name="application-name" content="Ponto Certo">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png?v=20260401a">
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" href="favicon.ico?v=20260401b"/>
+  <link rel="icon" type="image/png" href="favicon.png?v=20260401a"/>
+
+  <title>Ponto Certo</title>
+  <link rel="manifest" href="manifest.json?v=20260401a">
+  <meta name="pontocerto-build-version" content="20260424a">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overscroll-behavior-y: auto;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x pan-y pinch-zoom;
+      background: #f8fafc;
+    }
+
+    flutter-view,
+    flt-glass-pane,
+    flt-scene-host,
+    flt-semantics-host,
+    flt-semantics,
+    flt-text-editing-host,
+    flt-platform-view,
+    canvas {
+      touch-action: pan-x pan-y pinch-zoom !important;
+    }
+
+    #pull-refresh-indicator {
+      position: fixed;
+      top: env(safe-area-inset-top, 0);
+      left: 50%;
+      transform: translate(-50%, -120%);
+      z-index: 9999;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(3, 42, 114, 0.94);
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+      transition: transform 0.18s ease-out, opacity 0.18s ease-out;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #pull-refresh-indicator.visible {
+      transform: translate(-50%, 12px);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="pull-refresh-indicator">Solte para atualizar</div>
+  <script>
+    (function () {
+      const startZoneMaxY = 120;
+      const refreshDistance = 110;
+      const indicator = document.getElementById('pull-refresh-indicator');
+      let startY = null;
+      let tracking = false;
+      let refreshing = false;
+
+      function resetIndicator() {
+        indicator.classList.remove('visible');
+        indicator.textContent = 'Solte para atualizar';
+      }
+
+      document.addEventListener('touchstart', function (event) {
+        if (refreshing || event.touches.length !== 1) {
+          tracking = false;
+          return;
+        }
+
+        const touch = event.touches[0];
+        const target = event.target;
+        const tagName = target && target.tagName ? target.tagName.toLowerCase() : '';
+        if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+          tracking = false;
+          return;
+        }
+
+        tracking = touch.clientY <= startZoneMaxY;
+        startY = tracking ? touch.clientY : null;
+      }, { passive: true });
+
+      document.addEventListener('touchmove', function (event) {
+        if (!tracking || startY === null || refreshing || event.touches.length !== 1) {
+          return;
+        }
+
+        const currentY = event.touches[0].clientY;
+        const delta = currentY - startY;
+        if (delta <= 24) {
+          resetIndicator();
+          return;
+        }
+
+        indicator.classList.add('visible');
+        indicator.textContent = delta >= refreshDistance
+            ? 'Solte para atualizar'
+            : 'Puxe para atualizar';
+      }, { passive: true });
+
+      document.addEventListener('touchend', function (event) {
+        if (!tracking || startY === null || refreshing) {
+          resetIndicator();
+          tracking = false;
+          startY = null;
+          return;
+        }
+
+        const touch = event.changedTouches[0];
+        const delta = touch.clientY - startY;
+        if (delta >= refreshDistance) {
+          refreshing = true;
+          indicator.classList.add('visible');
+          indicator.textContent = 'Atualizando...';
+          window.location.reload();
+          return;
+        }
+
+        resetIndicator();
+        tracking = false;
+        startY = null;
+      }, { passive: true });
+
+      document.addEventListener('touchcancel', function () {
+        refreshing = false;
+        tracking = false;
+        startY = null;
+        resetIndicator();
+      }, { passive: true });
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

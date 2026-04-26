@@ -1,0 +1,1 @@
+Melhorias no resumo fiscal para considerar apenas notas aprovadas e ativas no valor bruto, nova limpeza em lote de notas canceladas, rascunhos e erros de emissao, e ajustes gerais de estabilidade.

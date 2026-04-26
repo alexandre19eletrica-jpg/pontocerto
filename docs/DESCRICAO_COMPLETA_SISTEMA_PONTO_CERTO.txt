@@ -1,0 +1,416 @@
+PONTO CERTO
+Descricao Completa Do Sistema
+Atualizado em 29/03/2026
+
+Visao geral
+
+O Ponto Certo e um sistema ERP cloud voltado para empresas de prestacao de servicos.
+Ele foi evoluido para operar com foco em organizacao operacional, financeiro, fiscal,
+documentos, equipe, contador e assistente inteligente, sempre com isolamento por empresa.
+
+Diretriz do sistema
+
+- nao mexer no que esta funcionando, apenas evoluir ao redor
+- preservar fluxos validados
+- manter compatibilidade com web e aplicativo
+- tratar cada empresa como tenant isolado
+- permitir escala SaaS com governanca central da plataforma
+
+Perfis de acesso
+
+1. Owner
+- dono da empresa
+- acesso total aos modulos da propria empresa
+- pode operar fiscal, financeiro, equipe, documentos, configuracoes e assistente
+
+2. Manager
+- gerente
+- acesso operacional ampliado conforme permissoes configuradas
+- pode atuar em tarefas, equipe, financeiro e rotinas internas conforme liberacao
+
+3. Employee
+- funcionario
+- acesso ao que for proprio da rotina operacional
+- uso focado em trabalho, ponto, justificativas e dados relacionados ao proprio perfil
+
+4. Accountant
+- contador
+- acesso focado em fiscal, financeiro e contratos conforme regras da empresa
+- nao mistura papel de contador com equipe operacional
+
+5. Empresa suprema da plataforma
+- empresa dona do sistema
+- acesso supremo a plataforma, observabilidade e governanca global
+- somente ela pode ver e operar recursos sensiveis de plataforma
+
+Modulos do sistema
+
+1. Assistente
+Nome da tela: Assistente
+Funcao:
+- chat inteligente para orientar o uso do sistema
+- responde em portugues do Brasil
+- usa contexto real do Ponto Certo
+- orienta por modulo, tela e fluxo real
+- para empresas comuns: ajuda operacional e funcional
+- para a empresa suprema: tambem pode apoiar monitoramento operacional
+
+Funcoes:
+- orientar como usar modulos
+- indicar proximo passo
+- responder com base no sistema real
+- usar nomes reais das telas em portugues
+- respeitar permissoes e isolamento por empresa
+
+2. Empresa
+Nome da tela: Empresa
+Funcao:
+- central de cadastro e configuracao da empresa
+
+Funcoes:
+- dados da empresa
+- configuracao fiscal
+- configuracao da OpenAI da empresa
+- dados comerciais e operacionais
+- controle do contador vinculado
+- configuracoes do assistente
+
+3. Clientes
+Nome da tela: Clientes
+Funcao:
+- cadastro e manutencao de clientes e tomadores
+
+Funcoes:
+- nome
+- CPF ou CNPJ
+- endereco
+- cidade
+- dados usados em tarefas, faturamento e fiscal
+
+4. Tarefas
+Nome da tela: Tarefas
+Funcao:
+- controle operacional do dia a dia
+
+Funcoes:
+- criar tarefa
+- preencher Nome
+- preencher Descricao
+- vincular Cliente
+- preencher CPF ou CNPJ do cliente
+- definir Data da execucao
+- direcionar para funcionario
+- acompanhar lista de pendencias
+
+5. Ordens de servico
+Nome da tela: Ordens de servico
+Funcao:
+- controle formal da execucao do servico
+
+Funcoes:
+- abrir ordem de servico
+- acompanhar andamento
+- finalizar
+- excluir com confirmacao
+- registrar informacoes operacionais do atendimento
+
+6. Faturamento
+Nome da tela: Faturamento
+Funcao:
+- controle de faturamento recorrente
+
+Funcoes:
+- criar perfis recorrentes
+- gerar cobrancas internas
+- refletir no financeiro
+- acompanhar perfis ativos
+- editar recorrencias
+- excluir perfil recorrente sem apagar historico financeiro
+
+7. Financeiro
+Nome da tela: Financeiro
+Funcao:
+- controle financeiro da empresa
+
+Funcoes:
+- entradas
+- saidas
+- movimentos financeiros
+- dividas
+- pagamentos
+- vencimentos
+- cobrancas geradas por faturamento
+
+8. Fiscal
+Nome da tela: Fiscal
+Funcao:
+- modulo fiscal real da empresa
+
+Funcoes:
+- readiness fiscal
+- configuracao de emissao real
+- sincronizacao com Focus
+- emissao de NFS-e
+- cancelamento de NFS-e
+- acompanhamento de status fiscal
+- suporte ao caso validado de Hidrolandia-GO via NFSe Nacional
+
+9. Funcionarios
+Nome da tela: Funcionarios
+Funcao:
+- gestao de pessoas e acessos
+
+Funcoes:
+- cadastro de funcionarios
+- acesso de equipe operacional
+- controle de contadores vinculados
+- separacao entre time operacional e contador
+
+10. Trabalhista
+Nome da tela: Trabalhista
+Funcao:
+- documentos e rotinas trabalhistas internas
+
+Funcoes:
+- folha
+- fechamento mensal
+- documentos da folha
+- geracao de PDF
+- contrato simples de funcionario
+- recibo
+- holerite
+- comprovante de renda
+- registro de assinatura manual ou digital com dados do ato
+- numeracao interna padronizada:
+  - CTR-000001
+  - HOL-000001
+  - REC-000001
+  - REN-000001
+
+11. Documentos
+Nome da tela: Documentos
+Funcao:
+- biblioteca de rascunhos editaveis
+
+Funcoes:
+- contrato de colaborador
+- contrato de prestacao
+- proposta comercial
+- orcamento
+- rascunho editavel salvo
+
+Observacao:
+- este modulo gera rascunho editavel
+- nao e o fluxo principal de PDF final pronto
+
+12. Propostas
+Nome da tela: Propostas
+Funcao:
+- propostas comerciais e contratos comerciais
+
+Funcoes:
+- criar proposta
+- abrir PDF
+- compartilhar PDF
+- contratos ligados ao fluxo comercial
+
+13. Contratos
+Nome da tela: Contratos
+Funcao:
+- acompanhamento de contratos comerciais existentes no sistema
+
+Funcoes:
+- cadastro
+- leitura
+- ligacao com propostas
+
+14. Clausulas contratuais
+Nome da tela: Clausulas contratuais
+Funcao:
+- base contratual da empresa
+
+Funcoes:
+- armazenar texto base
+- apoiar contratos e documentos
+
+15. Catalogo de servicos
+Nome da tela: Catalogo de servicos
+Funcao:
+- base de servicos usados no sistema
+
+Funcoes:
+- cadastro de servicos
+- apoio ao fiscal
+- apoio a proposta e operacao
+
+16. Materiais
+Nome da tela: Materiais
+Funcao:
+- cadastro de materiais internos
+
+Funcoes:
+- base de materiais
+- apoio operacional
+
+17. Relatorios
+Nome da tela: Relatorios
+Funcao:
+- visao gerencial e operacional
+
+Funcoes:
+- consolidacao de dados
+- leitura por indicadores internos
+
+18. Pagamentos
+Nome da tela: Pagamentos
+Funcao:
+- gestao de pagamentos
+
+Funcoes:
+- criar
+- confirmar
+- contestar
+- cancelar
+
+19. Dividas
+Nome da tela: Dividas
+Funcao:
+- controle de obrigacoes financeiras
+
+Funcoes:
+- criar divida
+- quitar
+- cancelar
+
+20. Ponto
+Nome da tela: Ponto
+Funcao:
+- controle de registro de jornada
+
+Funcoes:
+- marcacao
+- historico
+
+21. Justificativas
+Nome da tela: Justificativas
+Funcao:
+- registrar justificativas operacionais do funcionario
+
+Funcoes:
+- criar justificativa
+- acompanhar analise
+
+22. Configuracoes
+Nome da tela: Configuracoes
+Funcao:
+- configuracoes gerais do sistema e atalhos administrativos
+
+23. Plataforma
+Nome da tela: Plataforma
+Funcao:
+- painel supremo da empresa dona do sistema
+
+Funcoes:
+- listar empresas
+- abrir detalhes da empresa
+- bloquear
+- liberar
+- aprovar
+- alterar plano
+- alterar preco base
+- alterar preco por app extra
+- definir usuarios contratados
+- acompanhar dados comerciais
+
+24. Observabilidade
+Nome da tela: Observabilidade
+Funcao:
+- monitoramento de incidentes e erros do sistema
+
+Funcoes:
+- listar incidentes
+- listar problemas confirmados
+- analisar incidente
+- executar correcao segura quando elegivel
+- salvar como problema
+- monitorar recorrencia
+- exportar snapshot
+- copiar Markdown
+- copiar JSON
+- baixar Markdown
+- baixar JSON
+
+Como a observabilidade funciona
+
+- erros do app sao registrados em runtime_incidents
+- problemas confirmados ficam em system_issues
+- acoes administrativas e trilha ficam em audit logs
+- o sistema agora agrupa repeticao do mesmo erro por fingerprint
+- registra:
+  - rota
+  - URL
+  - plataforma
+  - versao do app
+  - tipo do erro
+  - ocorrencias
+  - firstSeenAt
+  - lastSeenAt
+
+Governanca SaaS
+
+O sistema foi preparado para operar como plataforma multiempresa.
+
+Funcionalidades de governanca:
+- plano por empresa
+- status comercial
+- aprovacao
+- bloqueio e liberacao
+- controle de acessos contratados
+- valor base do sistema
+- valor por app extra
+- calculo mensal sugerido
+
+Contador
+
+O sistema possui perfil de contador.
+
+Funcoes do contador:
+- fiscal
+- financeiro
+- contratos conforme permissao
+- leitura apropriada ao papel contabil
+
+Importante:
+- contador nao deve ser tratado como equipe operacional
+
+Assistente inteligente
+
+Regras principais:
+- sempre em portugues do Brasil
+- sem inventar funcionalidades
+- sem falar de modulos desativados como se estivessem ativos
+- usar nomes reais das telas
+- responder conforme permissao do usuario
+- para empresa suprema, tambem considerar observabilidade e incidentes
+
+Modulos desativados nesta versao
+
+- Projetos
+- Timesheet
+
+Esses modulos nao devem ser tratados como ativos nesta versao do sistema.
+
+Resumo final
+
+O Ponto Certo hoje e um ERP de servicos com foco em:
+- operacao
+- equipe
+- financeiro
+- fiscal real
+- documentos
+- contador
+- assistente inteligente
+- observabilidade
+- governanca SaaS multiempresa
+
+Tudo deve continuar evoluindo sem quebrar o que ja foi validado.

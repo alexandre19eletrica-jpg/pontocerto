@@ -1,0 +1,23 @@
+---
+description: Documentação oficial do sistema vive no Git; toda movimentação relevante deve ser registrada para não se perder.
+alwaysApply: true
+---
+
+# Documentação e memória (fonte: Git, não Storage)
+
+- A **verdade** dos documentos de criação/continuidade do Ponto Certo fica no **repositório Git**, principalmente:
+  - `docs/` (oficiais, visuais, funcionais, técnicos, registro)
+  - `docs/registro_continuidade/` (continuidade, registro de atualizações, memória viva)
+- **Não** tratar o Firebase **Storage** como repositório da documentação de produto: Storage é para **ficheiros** da operação (anexos, PDFs de clientes, etc.).
+
+# Obrigatório após alterações de produto
+
+Sempre que a alteração for **relevante** (módulo, regra de negócio, rota, função, fluxo, permissão, publicação, links oficiais, versão de app, etc.):
+
+1. **Registar** em `docs/registro_continuidade/REGISTRO_ATUALIZACOES.md` (data, o que mudou, ficheiros-chave) — no mesmo commit ou imediatamente a seguir.
+2. Se o impacto for **grande** ou alinhar com “estado do sistema / memória”, actualizar também o ficheiro adequado em `docs/registro_continuidade/` (ex.: `CONTINUIDADE_ATUAL.md`, `MEMORIA_VIVA_SISTEMA.md`, `ESTADO_ATUAL_DO_SISTEMA.md`) **apenas o necessário** — sem duplicar parágrafos inteiros.
+
+# Estilo
+
+- Frases objectivas; bullets com **área**, **comportamento**, **caminhos de ficheiro**.
+- Não apagar o histórico de datas anteriores no registro: **acrescentar** secção com data.

@@ -1,0 +1,117 @@
+REVISAO MODULO A MODULO
+PONTO CERTO
+Atualizado em 29/03/2026
+
+Objetivo
+
+Executar uma revisao completa do sistema antes da escala comercial, validando cada modulo no uso real, corrigindo pontos soltos e registrando o resultado.
+
+Regra da revisao
+
+- revisar um modulo por vez
+- nao abrir muitos frontes ao mesmo tempo
+- registrar o que esta validado
+- registrar o que precisa correcao
+- so avancar para o proximo modulo quando o atual estiver aceitavel
+
+Ordem recomendada
+
+1. Login e acesso
+2. Empresa
+3. Clientes
+4. Tarefas
+5. Ordens de servico
+6. Faturamento
+7. Financeiro
+8. Fiscal
+9. Funcionarios
+10. Trabalhista
+11. Documentos
+12. Propostas
+13. Contratos
+14. Clausulas contratuais
+15. Catalogo de servicos
+16. Materiais
+17. Relatorios
+18. Pagamentos
+19. Dividas
+20. Ponto
+21. Justificativas
+22. Assistente
+23. Observabilidade
+24. Plataforma
+
+Modelo de revisao por modulo
+
+Para cada modulo, validar:
+
+- nome real da tela
+- acesso por perfil correto
+- visual web no desktop
+- visual web no celular
+- fluxo principal
+- criacao
+- edicao
+- exclusao quando existir
+- mensagens de erro
+- consistencia dos dados
+- exportacao, PDF ou compartilhamento quando existir
+- reflexo em outros modulos
+- observabilidade capturando erro quando houver
+
+Checklist de resultado por modulo
+
+Modulo:
+Status:
+Data:
+Validado por:
+
+Itens:
+- acesso
+- visual desktop
+- visual celular
+- fluxo principal
+- integracao
+- observabilidade
+
+Pendencias:
+- 
+
+Correcoes aplicadas:
+- 
+
+Observacoes:
+- 
+
+Pontos ja abertos antes da revisao final
+
+1. Observabilidade
+- exportacao ainda precisa de validacao final no uso real
+
+2. Assistente
+- precisa continuar sendo endurecido para ficar 100 por cento fiel ao sistema real
+
+3. Trabalhista
+- contrato simples ja voltou a gerar
+- texto interno juridico foi removido do documento final
+- precisa validar novamente no uso real apos essa limpeza
+
+Definicao de pronto para escala
+
+Um modulo entra como pronto quando:
+
+- fluxo principal funciona
+- nao ha erro critico aberto
+- visual esta usavel em desktop e celular
+- permissoes estao corretas
+- dados persistem corretamente
+- observabilidade consegue registrar falhas relevantes
+
+Meta da fase
+
+Chegar ao fim da revisao com:
+
+- modulos validados
+- pendencias classificadas
+- erros criticos reduzidos
+- base segura para escala de vendas

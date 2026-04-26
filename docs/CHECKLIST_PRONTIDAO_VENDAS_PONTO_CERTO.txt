@@ -1,0 +1,94 @@
+CHECKLIST DE PRONTIDAO PARA ESCALA DE VENDAS
+PONTO CERTO
+Atualizado em 29/03/2026
+
+Objetivo
+
+Esta checklist resume o que precisa estar fechado para o Ponto Certo entrar em escala comercial com mais seguranca, menos retrabalho e menor risco operacional.
+
+1. Critico Antes De Escalar
+
+[ ] Validar novamente o Contrato simples de funcionario no uso real apos a ultima correcao de paginacao
+[ ] Confirmar no uso real que Observabilidade > Exportar snapshot esta funcionando
+[ ] Confirmar no uso real que o Assistente responde de forma consistente em portugues e preso ao sistema real
+[ ] Fechar o erro repetido de lista constante no historico do assistente
+[ ] Reduzir ou classificar os incidentes antigos mais repetidos na Observabilidade
+[ ] Revisar se ainda existem erros de serializacao com NaN ou payload quebrado
+[ ] Fazer uma rodada de teste completa nos fluxos principais em navegador de celular
+[ ] Confirmar que web.app e dominio principal estao sempre servindo a mesma versao nova sem cache quebrado
+
+2. Fiscal E Operacao
+
+[ ] Validar emissao real de NFS-e com uma empresa nova alem da empresa suprema
+[ ] Validar cancelamento de NFS-e com empresa nova
+[ ] Confirmar onboarding fiscal multiempresa com Focus
+[ ] Confirmar cadastro automatico e sincronizacao do emitente na Focus para novos clientes
+[ ] Revisar checklist fiscal minima para entrada de cliente novo
+
+3. Comercial E SaaS
+
+[ ] Definir tabela oficial de planos
+[ ] Definir preco base por porte de empresa
+[ ] Definir preco por app ou usuario extra
+[ ] Definir limite de acessos incluidos por plano
+[ ] Definir regra de bloqueio e liberacao
+[ ] Definir regra de aprovacao manual ou automatica de empresas
+[ ] Definir politica de teste, migracao e cancelamento
+
+4. Suporte E Operacao Interna
+
+[ ] Definir processo de onboarding do cliente
+[ ] Definir roteiro de implantacao
+[ ] Definir politica de suporte
+[ ] Definir SLA interno
+[ ] Definir procedimento de rollback em caso de erro forte em producao
+[ ] Definir rotina de exportacao e analise da Observabilidade
+
+5. Seguranca E Confiabilidade
+
+[ ] Revisar permissoes por perfil em todos os modulos sensiveis
+[ ] Revisar isolamento total por empresa
+[ ] Revisar seguranca de chaves e integracoes
+[ ] Garantir que somente a empresa suprema veja dados de plataforma e observabilidade global
+[ ] Revisar trilha de auditoria para alteracoes sensiveis
+
+6. Materiais De Venda
+
+[ ] Apresentacao comercial
+[ ] Lista de modulos
+[ ] Lista de planos
+[ ] Texto de proposta comercial
+[ ] Texto de implantacao
+[ ] Texto de suporte
+[ ] Texto de contrato comercial
+
+7. Estado Atual Resumido
+
+Ja esta bem encaminhado:
+- multiempresa
+- fiscal real
+- contador
+- plataforma
+- assistente
+- observabilidade
+- documentos
+- propostas
+- faturamento
+- financeiro
+- trabalhista
+- ordens de servico
+
+Ainda precisa ser fechado no uso real:
+- contrato simples de funcionario
+- exportacao da observabilidade
+- estabilidade final do assistente
+- saneamento dos erros antigos repetidos
+
+Recomendacao objetiva
+
+O sistema ja esta em um ponto bom para preparar escala de vendas, mas o ideal e nao acelerar a venda em massa antes de fechar:
+- bugs repetidos
+- validacoes reais finais
+- tabela oficial de planos
+- onboarding do cliente
+- rotina de suporte

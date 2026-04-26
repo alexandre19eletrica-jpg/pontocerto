@@ -1,0 +1,68 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function companyId() {
+      return userDoc().data.companyId;
+    }
+
+    function role() {
+      return userDoc().data.role;
+    }
+
+    function isOwner() {
+      return role() == 'OWNER' || role() == 'owner';
+    }
+
+    function isManager() {
+      return role() == 'MANAGER' || role() == 'manager';
+    }
+
+    function isEmployee() {
+      return role() == 'EMPLOYEE' || role() == 'employee' || role() == 'FUNCIONARIO' || role() == 'funcionario';
+    }
+
+    function taskDoc(taskId) {
+      return firestore.get(/databases/(default)/documents/tasks/$(taskId));
+    }
+
+    match /companies/{empresaId}/{allPaths=**} {
+      allow read: if signedIn() && empresaId == companyId();
+      allow write: if signedIn() && empresaId == companyId() && (isOwner() || isManager());
+    }
+
+    match /companies/{empresaId}/tasks/{taskId}/{allPaths=**} {
+      // Evita bloqueio de upload por dependencias de role/companyId/taskDoc.
+      // Para anexos de tarefa, permite acesso para qualquer usuario autenticado.
+      allow read, write: if signedIn();
+    }
+
+    match /companies/{empresaId}/document_requests/{allPaths=**} {
+      // Contador e empresa precisam acessar os mesmos anexos mesmo quando o contador
+      // opera uma empresa vinculada diferente do companyId do proprio usuario.
+      allow read, write: if signedIn();
+    }
+
+    match /companies/{empresaId}/justifications/{allPaths=**} {
+      allow read: if signedIn() && empresaId == companyId();
+      allow write: if signedIn() &&
+        empresaId == companyId() &&
+        (
+          isOwner() ||
+          isManager() ||
+          isEmployee()
+        );
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

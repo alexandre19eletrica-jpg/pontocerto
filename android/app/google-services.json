@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "1074663509241",
+    "project_id": "pontocerto-e1dab",
+    "storage_bucket": "pontocerto-e1dab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1074663509241:android:2b2e650fc90a32aca06628",
+        "android_client_info": {
+          "package_name": "br.com.alexandresousa.pontocerto"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1074663509241-288gelcjddiko2g9gvu7f4p6l3fngntj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-uGSYfJspAwi_SGI9qbUNOjgdS_d8Doc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1074663509241-288gelcjddiko2g9gvu7f4p6l3fngntj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1074663509241:android:882c17b485b01c7aa06628",
+        "android_client_info": {
+          "package_name": "com.example.pontocerto"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1074663509241-288gelcjddiko2g9gvu7f4p6l3fngntj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-uGSYfJspAwi_SGI9qbUNOjgdS_d8Doc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1074663509241-288gelcjddiko2g9gvu7f4p6l3fngntj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

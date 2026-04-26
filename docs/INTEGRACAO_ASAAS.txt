@@ -1,0 +1,149 @@
+INTEGRACAO ASAAS
+Data base: 22/04/2026
+Projeto: Ponto Certo
+
+1. OBJETIVO
+
+Este arquivo separa a integracao Asaas da restante da documentacao.
+Ele serve para explicar:
+
+- como a cobranca recorrente e o billing funcionam
+- quais pontos usam o Asaas no backend
+- quais callables e telas dependem dessa integracao
+- quais configuracoes e webhooks precisam existir
+
+2. ESCOPO ATUAL
+
+O Asaas sustenta a camada comercial e de billing da empresa para:
+
+- cadastro de cliente no gateway
+- provisionamento de assinatura
+- geracao de boleto/link de pagamento
+- upgrades comerciais
+- cancelamento de assinatura
+- atualizacao de status por webhook
+- liberacao ou bloqueio de acesso conforme o estado financeiro
+
+3. ESTADO OPERACIONAL ATUAL
+
+Estado consolidado hoje:
+
+- a empresa pode nascer com estrutura de billing pronta
+- o sistema salva billingIntegration dentro do comercial da empresa
+- o webhook do Asaas atualiza status financeiro e acesso
+- a empresa possui tela de gestao comercial com leitura da assinatura
+
+Regras consolidadas:
+
+- contador pode operar o fluxo comercial da empresa conforme permissao
+- o acesso da empresa pode ser liberado por trial, pagamento confirmado ou carencia valida
+- boleto e link de pagamento podem ser reaproveitados no snapshot de billing
+
+4. CONFIGURACAO BASE
+
+No backend, a configuracao depende de:
+
+- ASAAS_API_KEY
+- ASAAS_ENVIRONMENT
+- ASAAS_WEBHOOK_TOKEN
+
+Sem isso:
+
+- nao ha provisionamento real
+- nao ha consulta real de assinatura
+- o webhook nao deve ser aceito
+
+5. BACKEND PRINCIPAL
+
+Arquivo central:
+
+- functions/src/index.ts
+
+Pontos tecnicos principais:
+
+- obterConfigAsaas
+- assertAsaasConfigured
+- asaasRequest
+- fetchAsaasCustomer
+- buildAsaasCustomerPayload
+- syncAsaasSubscriptionForCommercialSettings
+- resolveCompanyIdFromAsaasPayload
+- billingStatusFromAsaasEvent
+- billingAccessState
+
+Callables e endpoints principais:
+
+- platformProvisionCompanyBillingAsaas
+- companyGetBillingManagementSnapshot
+- companyUpdateAdditionalAppAccess
+- companyCancelBillingSubscription
+- asaasWebhook
+
+6. FLUXO RESUMIDO
+
+Fluxo tecnico principal:
+
+1. a empresa recebe ou cria configuracao comercial
+2. o backend provisiona cliente e assinatura no Asaas
+3. o sistema salva customerId, subscriptionId e paymentLinkUrl
+4. a UI mostra snapshot de cobranca
+5. o webhook do Asaas atualiza status, ultimo pagamento e bloqueio/liberacao
+6. a empresa pode gerar boleto de continuidade, contratar acessos extras ou cancelar assinatura
+
+7. DADOS SALVOS NO SISTEMA
+
+Campos recorrentes em billingIntegration:
+
+- provider
+- accessManagedByGateway
+- customerId
+- subscriptionId
+- paymentLinkUrl
+- checkoutUrl
+- status
+- currentPeriodEnd
+- graceUntil
+- lastPaymentAt
+- lastPaymentStatus
+- lastWebhookEvent
+- lastWebhookAt
+- webhookReady
+
+8. FRONTEND E SERVICOS RELACIONADOS
+
+Servico principal:
+
+- lib/features/company/presentation/services/company_billing_service.dart
+
+Tela relacionada:
+
+- lib/features/company/presentation/pages/company_page.dart
+
+Regra de acesso:
+
+- lib/core/company/company_access_state.dart
+
+Fluxos tambem relacionados:
+
+- lib/features/auth/presentation/pages/empresa_activation_page.dart
+- lib/features/auth/presentation/pages/cadastro_empresa_page.dart
+
+9. REGRAS OPERACIONAIS IMPORTANTES
+
+- o webhook precisa ser tratado como fonte oficial do estado financeiro
+- o snapshot de billing nao deve confiar apenas em copy comercial local
+- cancelamento, atraso, estorno e pendencia precisam refletir bloqueio ou mensagem coerente
+- a interface deve expor link de pagamento e estado da assinatura sem esconder o risco financeiro
+
+10. DOCUMENTOS RELACIONADOS
+
+- docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md
+- docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md
+- docs/OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md
+- docs/registro_continuidade/CONTINUIDADE_ATUAL.md
+
+11. RESUMO EXECUTIVO
+
+O Asaas e hoje a camada principal de cobranca recorrente e assinatura da empresa no Ponto Certo.
+O backend concentra provisionamento, sincronizacao, webhook e gestao de assinatura.
+O frontend usa snapshot e acoes controladas para refletir o estado comercial real da empresa.
