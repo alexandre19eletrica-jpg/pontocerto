@@ -1,0 +1,11 @@
+---
+description: Nome e versão do AAB para Google Play; alinhado a pubspec e scripts do repo.
+globs: pubspec.yaml,scripts/build_android_release.ps1,docs/PLAY_STORE_AAB_NAMING.md
+alwaysApply: false
+---
+
+# AAB (Android) — convenção
+
+- Ficheiro para Play / cópia na área de trabalho: **`pontocerto-<versionName>-<versionCode>.aab`** (ex. `1.0.82+1053` no `pubspec` → `pontocerto-1.0.82-1053.aab`).
+- **Nunca** baixar `version` ou `+build` no `pubspec` para uma release nova; a Play exige `versionCode` crescente.
+- Detalhe: `docs/PLAY_STORE_AAB_NAMING.md` — build com cópia: `scripts/build_android_release.ps1 -CopyToDesktop`.

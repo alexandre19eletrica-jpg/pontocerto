@@ -15,6 +15,7 @@ Data: 22/03/2026 — secao **Paridade 21/04** em 23/04/2026
 
 ## Release
 
+- **Android (Play):** subir AAB; nome do ficheiro para arquivo/upload manual: `pontocerto-<versionName>-<versionCode>.aab` (ex.: `pontocerto-1.0.82-1053.aab`), sempre com `version` em `pubspec.yaml` **maior** que a release anterior. Ver `docs/PLAY_STORE_AAB_NAMING.md` e `scripts/build_android_release.ps1 -CopyToDesktop`.
 - registrar data e objetivo da versao
 - publicar frontend e backend na mesma janela quando houver dependencia cruzada
 - validar login empresarial

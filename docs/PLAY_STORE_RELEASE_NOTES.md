@@ -1,5 +1,7 @@
 # Notas da Versao - Play Store
 
+**AAB:** convenção de nome e versionamento: ver [PLAY_STORE_AAB_NAMING.md](PLAY_STORE_AAB_NAMING.md).
+
 Use este texto como base no campo "Notas da versao" do Play Console.
 
 ## Texto curto (pt-BR)

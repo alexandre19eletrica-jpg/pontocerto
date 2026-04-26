@@ -1,5 +1,6 @@
 param(
-  [switch]$CleanFirst
+  [switch]$CleanFirst,
+  [switch]$CopyToDesktop
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,7 +44,26 @@ try {
     throw "AAB nao encontrado em $artifact"
   }
 
+  $pubspecPath = Join-Path $repoRoot 'pubspec.yaml'
+  $pubspecRaw = Get-Content $pubspecPath -Raw
+  $m = [regex]::Match($pubspecRaw, 'version:\s*([0-9.]+)\+(\d+)')
+  if ($m.Success) {
+    $vName = $m.Groups[1].Value
+    $vCode = $m.Groups[2].Value
+    $named = "pontocerto-$vName-$vCode.aab"
+  } else {
+    $named = "pontocerto-release.aab"
+  }
+
+  if ($CopyToDesktop) {
+    $desktop = [Environment]::GetFolderPath('Desktop')
+    $dest = Join-Path $desktop $named
+    Copy-Item -Path $artifact -Destination $dest -Force
+    Write-Host "Copiado para area de trabalho: $dest" -ForegroundColor Green
+  }
+
   Get-Item $artifact | Select-Object FullName, Length, LastWriteTime
+  Write-Host "Nome canónico (regra repositório): $named" -ForegroundColor Cyan
 } finally {
   Pop-Location
 }

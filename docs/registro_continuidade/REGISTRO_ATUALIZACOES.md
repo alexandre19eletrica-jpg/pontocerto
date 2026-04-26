@@ -6,6 +6,13 @@ Regra de projeto: `.cursor/rules/documentacao-git-e-registro.mdc`.
 Este arquivo e o log operacional resumido do que foi publicado (web/functions/app).  
 Atualize sempre que entrar qualquer mudanca em producao.
 
+## 2026-04-26
+
+- **Play Store / AAB**: regra de repositório para nome do bundle copiado para arquivo: `pontocerto-<versionName>-<versionCode>.aab` (ex.: `1.0.82+1053` → `pontocerto-1.0.82-1053.aab`); a versão no `pubspec` deve sempre crescer face à última publicada.
+- **Documentação**: `docs/PLAY_STORE_AAB_NAMING.md`, referência em `docs/PLAY_STORE_RELEASE_NOTES.md` e `docs/registro_continuidade/CHECKLIST_RELEASE_ROLLBACK.md`.
+- **Script**: `scripts/build_android_release.ps1` com `-CopyToDesktop` copia para a área de trabalho com o nome canónico.
+- **Cursor**: `.cursor/rules/aab-play-store-nome.mdc`.
+
 ## 2026-04-16
 
 - **Fiscal (Web)**: UI passou a **exigir automaticamente CNO** quando o codigo de servico exigir “grupo de obra” na Focus/NFSe Nacional (ex.: `07.02.02` -> `070202`).
