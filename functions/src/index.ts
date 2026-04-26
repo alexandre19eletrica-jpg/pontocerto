@@ -3830,15 +3830,32 @@ function buildFiscalOperationalPendingItems(params: {
       defaultOwner: 'platform',
     });
   }
-  if (!asTrimmedString(setup.apiToken)) {
-    pushItem({
-      code: 'api_token_missing',
-      title: 'Token da integracao fiscal ausente',
-      description: 'A integracao nao conseguira sincronizar com o provedor sem token/API key.',
-      category: 'configuracao',
-      severity: 'critical',
-      defaultOwner: 'platform',
-    });
+  if (providerIsFocus(asTrimmedString(setup.provider))) {
+    if (
+      !asTrimmedString(setup.apiToken) &&
+      !asTrimmedString(obterConfigFocusPlatform().apiToken)
+    ) {
+      pushItem({
+        code: 'api_token_missing',
+        title: 'Token da integracao fiscal ausente',
+        description:
+          'Para Focus: configure o token no cadastro da empresa ou o token global da plataforma (empresa suprema / FOCUS_API_TOKEN).',
+        category: 'configuracao',
+        severity: 'critical',
+        defaultOwner: 'platform',
+      });
+    }
+  } else {
+    if (!asTrimmedString(setup.apiToken)) {
+      pushItem({
+        code: 'api_token_missing',
+        title: 'Token da integracao fiscal ausente',
+        description: 'A integracao nao conseguira sincronizar com o provedor sem token/API key.',
+        category: 'configuracao',
+        severity: 'critical',
+        defaultOwner: 'platform',
+      });
+    }
   }
   if (provider.includes('focus') && !focusCompanyId) {
     pushItem({

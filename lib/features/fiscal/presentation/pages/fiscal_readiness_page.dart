@@ -28,7 +28,6 @@ import 'package:pontocerto/features/fiscal/presentation/widgets/invoice_workspac
 import 'package:pontocerto/features/employees/domain/employee.dart';
 import 'package:pontocerto/features/payments/domain/payment.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
-import 'package:pontocerto/core/urls/receita_official_urls.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 part 'fiscal_readiness_governance_actions.dart';
@@ -3289,6 +3288,9 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                 sessao.role == Role.owner ||
                 sessao.role == Role.manager ||
                 sessao.role == Role.accountant;
+            /// Provedor/ambiente/API global Focus: so a empresa suprema altera; demais
+            /// empresas completam certificado, matriz, homologacao e sync por CNPJ.
+            final canEditGlobalFiscalIntegration = hasSupremePlatformAccess(sessao);
             final canManageInvoices =
                 sessao.role == Role.owner ||
                 sessao.role == Role.manager ||
@@ -3376,6 +3378,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                               sessao: sessao,
                               settings: fiscalSettings,
                               canConfigureModule: canConfigureModule,
+                              canEditGlobalFiscalIntegration:
+                                  canEditGlobalFiscalIntegration,
                             ),
                             const SizedBox(height: 12),
                             _buildRealIntegrationCard(
@@ -3384,6 +3388,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                               companySettings: companySettings,
                               setup: realIntegration,
                               canConfigureModule: canConfigureModule,
+                              canEditGlobalFiscalIntegration:
+                                  canEditGlobalFiscalIntegration,
                             ),
                             const SizedBox(height: 12),
                             AppWorkspaceCard(
@@ -3481,11 +3487,15 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     required Session sessao,
     required _FiscalSettings settings,
     required bool canConfigureModule,
+    required bool canEditGlobalFiscalIntegration,
   }) {
+    final canEditFocusIntegration =
+        canConfigureModule && canEditGlobalFiscalIntegration;
     return AppWorkspaceCard(
       title: 'Modo fiscal',
-      subtitle:
-          'Controle do nivel de operacao fiscal e da preparacao da camada oficial.',
+      subtitle: canEditGlobalFiscalIntegration
+          ? 'Nivel de operacao fiscal e integracao com a plataforma.'
+          : 'A integracao com a Focus fica na empresa suprema. Aqui a empresa liga a preparacao de NFS-e e segue o provisionamento, sincronizacao e emissao.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3524,20 +3534,32 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                         sessao,
                         settings.copyWith(enableOfficialInvoicePrep: value),
                       )
-                    : (_) {},
+                    : null,
               ),
               _featureToggle(
-                label: 'Integracao real',
+                label: 'Integracao real (Focus)',
                 value: settings.enableRealInvoiceIntegration,
-                onChanged: canConfigureModule
+                onChanged: canEditFocusIntegration
                     ? (value) => _saveFiscalSettings(
                         sessao,
                         settings.copyWith(enableRealInvoiceIntegration: value),
                       )
-                    : (_) {},
+                    : null,
               ),
             ],
           ),
+          if (canConfigureModule && !canEditGlobalFiscalIntegration) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'A «Integracao real (Focus)» so a empresa suprema liga. Ative a preparacao de NFS-e acima, '
+              'conclua o provisionamento, sincronize e emita.',
+              style: TextStyle(
+                color: AppBrandColors.softText,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           if (!canConfigureModule)
             OutlinedButton.icon(
@@ -5105,6 +5127,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     required Map<String, dynamic> companySettings,
     required _FiscalRealIntegrationSetup setup,
     required bool canConfigureModule,
+    required bool canEditGlobalFiscalIntegration,
   }) {
     final complianceMatrix = _FiscalComplianceMatrix.fromSettings(
       companySettings,
@@ -5129,11 +5152,37 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     final score = (setup.readinessScore * 100).round();
     return AppWorkspaceCard(
       title: 'Emissao fiscal real',
-      subtitle:
-          'Estrutura base para integracao NFS-e oficial com ambiente, provedor, certificado e homologacao.',
+      subtitle: canEditGlobalFiscalIntegration
+          ? 'Estrutura de integracao NFS-e: ajuste global (suprema) ou por empresa.'
+          : 'Integracao Focus, homologacao e matriz: governadas pela suprema. Cada empresa: documentacao e '
+              'certificado (provisionamento), cadastro em Empresas, Sincronizar e emissao de notas.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (!canEditGlobalFiscalIntegration) ...[
+            Card(
+              elevation: 0,
+              color: const Color(0xFFE8EAF6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Color(0xFFC5CAE9)),
+              ),
+              child: const ListTile(
+                leading: Icon(Icons.lock_outline, color: Color(0xFF303F9F)),
+                title: Text(
+                  'Integracao global travada',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Text(
+                  'Tudo o que e integracao com a Focus (incluindo matriz, homologacao, automacao) '
+                  'e definido na empresa suprema. Por empresa: anexar documentacao e certificado para '
+                  'o provisionamento, manter o cadastro em Empresas, usar Sincronizar e emitir notas abaixo.',
+                  style: TextStyle(height: 1.35),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           _buildRealIntegrationSummary(
             score: score,
             environmentLabel: setup.environmentLabel,
@@ -5166,6 +5215,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
             readiness: readiness,
             checklist: checklist,
             canConfigureModule: canConfigureModule,
+            canEditGlobalFiscalIntegration: canEditGlobalFiscalIntegration,
           ),
           const SizedBox(height: 12),
           _buildComplianceMatrixCard(complianceMatrix),
@@ -5177,6 +5227,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
             setup: setup,
             complianceMatrix: complianceMatrix,
             canConfigureModule: canConfigureModule,
+            canEditGlobalFiscalIntegration: canEditGlobalFiscalIntegration,
           ),
         ],
       ),
@@ -5433,7 +5484,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     required _FiscalOperationalReadiness readiness,
     required _FiscalHomologationChecklist checklist,
     required bool canConfigureModule,
+    required bool canEditGlobalFiscalIntegration,
   }) {
+    final canEditChecklistSwitches =
+        canConfigureModule && canEditGlobalFiscalIntegration;
     final certificate =
         (companySettings['fiscalCertificate'] as Map?)
             ?.cast<String, dynamic>() ??
@@ -5527,9 +5581,32 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Use este checklist para fechar pendencias reais por empresa antes de liberar operacao oficial. Parte do progresso agora e atualizada automaticamente apos sincronizacao e emissao oficial valida. Em ambiente de producao, o backend bloqueia emissao oficial sem checklist completo e autorizacao final.',
+            canEditChecklistSwitches
+                ? 'Feche pendencias reais por empresa antes de liberar operacao oficial. O progresso e atualizado apos sincronizacao e emissao. Em producao, o backend pode bloquear emissao sem checklist e autorizacao final.'
+                : 'Somente a empresa suprema altera o checklist. A equipe acompanha o estado aqui; a liberacao de producao segue a governanca da plataforma.',
             style: const TextStyle(color: AppBrandColors.softText, height: 1.4),
           ),
+          if (!canEditChecklistSwitches) ...[
+            const SizedBox(height: 10),
+            const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lock_outline, size: 20, color: Color(0xFF303F9F)),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Homologacao assistida: edicao desativada para esta empresa; '
+                    'os interruptores so podem ser alterados na sessao suprema.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           Wrap(
             spacing: 10,
@@ -5555,7 +5632,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           ...helperItems.map(
             (item) => SwitchListTile(
               value: item.value,
-              onChanged: canConfigureModule ? item.onChanged : null,
+              onChanged: canEditChecklistSwitches ? item.onChanged : null,
               contentPadding: EdgeInsets.zero,
               title: Text(item.title),
               subtitle: Text(item.subtitle),
@@ -5608,68 +5685,109 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     required _FiscalRealIntegrationSetup setup,
     required _FiscalComplianceMatrix complianceMatrix,
     required bool canConfigureModule,
+    required bool canEditGlobalFiscalIntegration,
   }) {
+    final canOpenGlobalDialog =
+        canConfigureModule && canEditGlobalFiscalIntegration;
+    final configButton = FilledButton.icon(
+      onPressed: canOpenGlobalDialog
+          ? () => _openRealIntegrationDialog(sessao: sessao, current: setup)
+          : null,
+      icon: const Icon(Icons.hub_outlined),
+      label: const Text('Configurar emissao real'),
+    );
+    final canEditFocusLayer =
+        canConfigureModule && canEditGlobalFiscalIntegration;
+    final canCompanyFiscalActions = canConfigureModule;
+    const focusLayerLockedHint =
+        'Camada de integracao Focus: definida na empresa suprema (matriz, CNPJ base, reprocesso).';
+    const companyNextSteps =
+        'Na empresa: documentacao e certificado para o provisionamento, '
+        'dados de cadastro na tela de Empresas, depois Sincronizar e emitir.';
+
+    final lockHint = canOpenGlobalDialog
+        ? null
+        : (!canConfigureModule
+              ? 'Sem permissao para editar a configuracao fiscal com este acesso.'
+              : '$focusLayerLockedHint $companyNextSteps');
     return Align(
       alignment: Alignment.centerLeft,
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
-          FilledButton.icon(
-            onPressed: canConfigureModule
-                ? () =>
-                      _openRealIntegrationDialog(sessao: sessao, current: setup)
-                : null,
-            icon: const Icon(Icons.hub_outlined),
-            label: const Text('Configurar emissao real'),
+          lockHint == null
+              ? configButton
+              : Tooltip(message: lockHint, child: configButton),
+          Tooltip(
+            message: canEditFocusLayer
+                ? 'Editar matriz fiscal (suprema).'
+                : focusLayerLockedHint,
+            child: OutlinedButton.icon(
+              onPressed: canEditFocusLayer
+                  ? () => _openComplianceMatrixDialog(
+                        sessao: sessao,
+                        setup: setup,
+                        current: complianceMatrix,
+                      )
+                  : null,
+              icon: const Icon(Icons.rule_folder_outlined),
+              label: const Text('Matriz fiscal'),
+            ),
           ),
-          OutlinedButton.icon(
-            onPressed: canConfigureModule
-                ? () => _openComplianceMatrixDialog(
-                    sessao: sessao,
-                    setup: setup,
-                    current: complianceMatrix,
-                  )
-                : null,
-            icon: const Icon(Icons.rule_folder_outlined),
-            label: const Text('Matriz fiscal'),
+          Tooltip(
+            message: 'Certificado e documentos para o provisionamento na Focus.',
+            child: OutlinedButton.icon(
+              onPressed: canCompanyFiscalActions
+                  ? () => _uploadDigitalCertificate(sessao)
+                  : null,
+              icon: const Icon(Icons.workspace_premium_outlined),
+              label: const Text('Subir certificado'),
+            ),
           ),
-          OutlinedButton.icon(
-            onPressed: canConfigureModule
-                ? () => _uploadDigitalCertificate(sessao)
-                : null,
-            icon: const Icon(Icons.workspace_premium_outlined),
-            label: const Text('Subir certificado'),
+          Tooltip(
+            message: canEditFocusLayer
+                ? 'Preenche a base a partir do CNPJ (suprema).'
+                : focusLayerLockedHint,
+            child: OutlinedButton.icon(
+              onPressed: canEditFocusLayer
+                  ? () => _prepareFiscalBaseFromCompany(
+                        sessao: sessao,
+                        companyData: companyData,
+                        companySettings: companySettings,
+                        current: setup,
+                      )
+                  : null,
+              icon: const Icon(Icons.auto_fix_high_outlined),
+              label: const Text('Preparar pelo CNPJ'),
+            ),
           ),
-          OutlinedButton.icon(
-            onPressed: canConfigureModule
-                ? () => _prepareFiscalBaseFromCompany(
-                    sessao: sessao,
-                    companyData: companyData,
-                    companySettings: companySettings,
-                    current: setup,
-                  )
-                : null,
-            icon: const Icon(Icons.auto_fix_high_outlined),
-            label: const Text('Preparar pelo CNPJ'),
-          ),
-          OutlinedButton.icon(
-            onPressed: canConfigureModule
-                ? () => _refreshCompanyProvisioning(
-                    successMessage:
-                        'Automacao fiscal multiempresa reprocessada com sucesso.',
-                  )
-                : null,
-            icon: const Icon(Icons.settings_suggest_outlined),
-            label: const Text('Reprocessar automacao'),
+          Tooltip(
+            message: canEditFocusLayer
+                ? 'Reenviar a automacao de multiempresa (suprema).'
+                : focusLayerLockedHint,
+            child: OutlinedButton.icon(
+              onPressed: canEditFocusLayer
+                  ? () => _refreshCompanyProvisioning(
+                        successMessage:
+                            'Automacao fiscal multiempresa reprocessada com sucesso.',
+                      )
+                  : null,
+              icon: const Icon(Icons.settings_suggest_outlined),
+              label: const Text('Reprocessar automacao'),
+            ),
           ),
           if (setup.provider.trim().toLowerCase().contains('focus'))
-            OutlinedButton.icon(
-              onPressed: canConfigureModule
-                  ? () => _syncFocusCompany(sessao: sessao)
-                  : null,
-              icon: const Icon(Icons.sync_outlined),
-              label: const Text('Sincronizar Focus'),
+            Tooltip(
+              message:
+                  'Sincronize esta empresa com a Focus apos o cadastro e a documentacao.',
+              child: OutlinedButton.icon(
+                onPressed: canCompanyFiscalActions
+                    ? () => _syncFocusCompany(sessao: sessao)
+                    : null,
+                icon: const Icon(Icons.sync_outlined),
+                label: const Text('Sincronizar Focus'),
+              ),
             ),
         ],
       ),
@@ -6591,7 +6709,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
   Widget _featureToggle({
     required String label,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    required ValueChanged<bool>? onChanged,
   }) {
     return FilterChip(
       label: Text(label),
@@ -7035,7 +7153,7 @@ class _FiscalRealIntegrationSetup {
       apiBaseUrl: map['apiBaseUrl']?.toString() ?? '',
       apiToken: map['apiToken']?.toString() ?? '',
       lastHomologationNote: map['lastHomologationNote']?.toString() ?? '',
-      usesPlatformFocusToken: map['usesPlatformFocusToken'] == true,
+      usesPlatformFocusToken: focusFiscalSetupUsesPlatformToken(map),
     );
   }
 

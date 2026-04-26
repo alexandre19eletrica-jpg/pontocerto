@@ -3051,15 +3051,30 @@ function buildFiscalOperationalPendingItems(params) {
             defaultOwner: 'platform',
         });
     }
-    if (!asTrimmedString(setup.apiToken)) {
-        pushItem({
-            code: 'api_token_missing',
-            title: 'Token da integracao fiscal ausente',
-            description: 'A integracao nao conseguira sincronizar com o provedor sem token/API key.',
-            category: 'configuracao',
-            severity: 'critical',
-            defaultOwner: 'platform',
-        });
+    if (providerIsFocus(asTrimmedString(setup.provider))) {
+        if (!asTrimmedString(setup.apiToken) &&
+            !asTrimmedString(obterConfigFocusPlatform().apiToken)) {
+            pushItem({
+                code: 'api_token_missing',
+                title: 'Token da integracao fiscal ausente',
+                description: 'Para Focus: configure o token no cadastro da empresa ou o token global da plataforma (empresa suprema / FOCUS_API_TOKEN).',
+                category: 'configuracao',
+                severity: 'critical',
+                defaultOwner: 'platform',
+            });
+        }
+    }
+    else {
+        if (!asTrimmedString(setup.apiToken)) {
+            pushItem({
+                code: 'api_token_missing',
+                title: 'Token da integracao fiscal ausente',
+                description: 'A integracao nao conseguira sincronizar com o provedor sem token/API key.',
+                category: 'configuracao',
+                severity: 'critical',
+                defaultOwner: 'platform',
+            });
+        }
     }
     if (provider.includes('focus') && !focusCompanyId) {
         pushItem({
@@ -4398,6 +4413,10 @@ async function buildRecommendedFiscalSetup(params) {
         asTrimmedString(companyData.mainCnae ||
             companyData.codigoServicoPadrao ||
             companyData.defaultServiceCode);
+    const hasCompanyToken = asTrimmedString(currentIntegration.apiToken).length > 0;
+    const hasPlatformToken = asTrimmedString(platformFocus.apiToken).length > 0;
+    const useFocus = recommendedProvider.toLowerCase().includes('focus');
+    const usesPlatformFocusToken = useFocus && !hasCompanyToken && hasPlatformToken;
     const providerShouldBeAutoFilled = !asTrimmedString(currentIntegration.provider) ||
         asTrimmedString(currentIntegration.provider) ===
             'Prefeitura / integrador a definir';
@@ -4435,17 +4454,16 @@ async function buildRecommendedFiscalSetup(params) {
             (recommendedProvider.toLowerCase().includes('focus')
                 ? 'https://homologacao.focusnfe.com.br'
                 : ''),
-        apiToken: asTrimmedString(currentIntegration.apiToken) ||
-            (recommendedProvider.toLowerCase().includes('focus')
-                ? platformFocus.apiToken
-                : ''),
+        // Nunca persistir o token global da plataforma no Firestore (seguranca).
+        apiToken: hasCompanyToken ? asTrimmedString(currentIntegration.apiToken) : '',
+        usesPlatformFocusToken: usesPlatformFocusToken,
         lastHomologationNote: asTrimmedString(currentIntegration.lastHomologationNote) ||
             'Estrutura fiscal inicial criada automaticamente no onboarding. Validar certificado, municipio, token e homologacao antes da emissao oficial.',
     };
     const fiscalFeatures = {
         ...currentFeatures,
         enableOfficialInvoicePrep: true,
-        enableRealInvoiceIntegration: asTrimmedString(realIntegration.apiToken).length > 0,
+        enableRealInvoiceIntegration: hasCompanyToken || usesPlatformFocusToken,
     };
     return {
         routing,

@@ -23,6 +23,22 @@ bool _providerIsFocus(String? provider) {
   return t.contains('focus');
 }
 
+/// Quando o provedor é Focus e não há [apiToken] no documento da empresa, a
+/// plataforma usa o token global (empresa suprema / [FOCUS_API_TOKEN] no backend).
+/// Se [apiToken] estiver preenchido (legado), trata-se como token próprio.
+bool focusFiscalSetupUsesPlatformToken(Map<String, dynamic> integration) {
+  if (!_providerIsFocus(integration['provider']?.toString())) {
+    return false;
+  }
+  if (integration['usesPlatformFocusToken'] == true) {
+    return true;
+  }
+  if (_trim(integration['apiToken']).isNotEmpty) {
+    return false;
+  }
+  return true;
+}
+
 /// O chamador passa o mesmo criterio de [useNationalEmission] no app / rota fiscal.
 /// Nao re-duplicar aqui: depende de `fiscalRouting.routeType` e Focus NFSe API.
 
@@ -148,8 +164,8 @@ FocusOfficialIssueReadiness evaluateFocusOfficialIssueReadiness({
     missing.add('provedor fiscal');
   }
   if (_providerIsFocus(provider)) {
-    final usesPlatformToken = setup['usesPlatformFocusToken'] == true;
-    if (_trim(setup['apiToken']).isEmpty && !usesPlatformToken) {
+    if (_trim(setup['apiToken']).isEmpty &&
+        !focusFiscalSetupUsesPlatformToken(setup)) {
       missing.add('token da Focus NFe');
     }
   } else if (_trim(setup['apiBaseUrl']).isEmpty) {

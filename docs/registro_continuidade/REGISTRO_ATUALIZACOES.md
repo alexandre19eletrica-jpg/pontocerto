@@ -6,6 +6,12 @@ Regra de projeto: `.cursor/rules/documentacao-git-e-registro.mdc`.
 Este arquivo e o log operacional resumido do que foi publicado (web/functions/app).  
 Atualize sempre que entrar qualquer mudanca em producao.
 
+## 2026-04-27
+
+- **Play / app**: alvo de publicacao **`1.0.83+1054`** (`pontocerto-1.0.83-1054.aab`); ajuste fiscal: token Focus por plataforma (`focusFiscalSetupUsesPlatformToken`); `buildFiscalOperationalPendingItems` nao exige `apiToken` no doc se existir `FOCUS_API_TOKEN` (Focus) como em `validateInvoiceReadinessForOfficialIssue`.
+- **Fiscal (Web)**: governo **empresa suprema** em integracao (dialog «Configurar emissao real»), matriz, preparar CNPJ, reprocessar automacao, homologacao e chip «Integracao real (Focus)»; empresas: «NFS-e oficial», subir **certificado** (provisionamento), **Sincronizar Focus** e emissao; limpeza de part duplicado em `fiscal_readiness_sections.dart`.
+- **Deploy**: apos push, `firebase deploy --only functions` (e hosting se publiquem web); Android: build e Play Console com o AAB canónico.
+
 ## 2026-04-26
 
 - **Play Store (Android)**: publicada **`1.0.82+1053`** (versionName `1.0.82`, versionCode `1053`); ficheiro de arquivo canónico: `pontocerto-1.0.82-1053.aab` (regra: `pontocerto-<versionName>-<versionCode>.aab`).

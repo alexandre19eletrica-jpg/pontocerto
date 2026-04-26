@@ -2,7 +2,7 @@
 
 **AAB:** convenção de nome e versionamento: ver [PLAY_STORE_AAB_NAMING.md](PLAY_STORE_AAB_NAMING.md).
 
-**Última publicação registada (Git):** `1.0.82` (versionCode `1053`) em **2026-04-26**; artefacto: `pontocerto-1.0.82-1053.aab`.
+**Última publicação registada (Git):** `1.0.83` (versionCode `1054`) em **2026-04-27**; artefacto: `pontocerto-1.0.83-1054.aab`.
 
 Use este texto como base no campo "Notas da versao" do Play Console.
 
