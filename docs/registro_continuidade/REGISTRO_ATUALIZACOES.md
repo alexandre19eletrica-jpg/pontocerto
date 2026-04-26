@@ -8,6 +8,8 @@ Atualize sempre que entrar qualquer mudanca em producao.
 
 ## 2026-04-27
 
+- **Observacao (UX)**: na rota/sessao da **empresa suprema** a area fiscal ja mostra o **Token API** da Focus com a informacao de que **ja vem preenchido** (plataforma); noutras empresas essa **mesma clarificacao** nao surge da mesma forma — **a alinhar** numa fase de unificacao de mensagens, sem exibir o segredo.
+- **Proxima etapa (planeado)**: **auditoria** para deixar o **sistema um so**: a **base de funcionamento** e a **regra** devem partir do que **ja esta a funcionar e validado na empresa suprema**; as outras empresas **recebem o mesmo comportamento** (mesmas regras, mesma logica, mesma experiencia alinhada), variando so o **acesso** (papel, claims, permissoes, dados daquela empresa) — nao manter explicacoes ou fluxos divergentes por tenant sem necessidade. Cruzar tela a tela, assistente, fiscal e notificacoes. Amarra com a unificacao do **token** Focus e, abaixo, com o **Assistente** via suprema.
 - **Proxima etapa (planeado)**: o **token / credencial do Assistente** (integracao de modelo ou API) deve ser **carregado da empresa suprema** (ou da mesma camada de configuracao de plataforma), no mesmo espirito do **token Focus** global — sem um segredo distinto por empresa cliente na UI; implementar e documentar na rodada em que o Assistente for ligado a essa chave unificada.
 
 - **A conferir (nao se mexeu)**: ainda pode aparecer pedido de **token API** nalgum fluxo, mensagem de validacao ou ecra; anotado para **revisitar** — ver `focusFiscalSetupUsesPlatformToken`, `FOCUS_API_TOKEN` no ambiente das Functions, `fiscalRealIntegration.usesPlatformFocusToken` no Firestore e ecras fora de Fiscal. Sem alteracao de codigo nesta altura.
