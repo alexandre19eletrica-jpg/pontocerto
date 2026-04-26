@@ -674,6 +674,8 @@ function buildDefaultPublicSalesConfig(
       implementationFeeCents: 0,
       checkoutUrl: asTrimmedString(additionalAccess.checkoutUrl),
     },
+    // Trecho exibido no <head> do app web (codigo de base do Meta Pixel, etc).
+    metaPixelHeadSnippet: asTrimmedString(current.metaPixelHeadSnippet) || '',
   };
 }
 
@@ -5523,6 +5525,11 @@ async function buildRecommendedFiscalSetup(params: {
         companyData.codigoServicoPadrao ||
         companyData.defaultServiceCode,
     );
+  const hasCompanyToken = asTrimmedString(currentIntegration.apiToken).length > 0;
+  const hasPlatformToken = asTrimmedString(platformFocus.apiToken).length > 0;
+  const useFocus = recommendedProvider.toLowerCase().includes('focus');
+  const usesPlatformFocusToken =
+    useFocus && !hasCompanyToken && hasPlatformToken;
   const providerShouldBeAutoFilled =
     !asTrimmedString(currentIntegration.provider) ||
     asTrimmedString(currentIntegration.provider) ===
@@ -5568,11 +5575,9 @@ async function buildRecommendedFiscalSetup(params: {
       (recommendedProvider.toLowerCase().includes('focus')
         ? 'https://homologacao.focusnfe.com.br'
         : ''),
-    apiToken:
-      asTrimmedString(currentIntegration.apiToken) ||
-      (recommendedProvider.toLowerCase().includes('focus')
-        ? platformFocus.apiToken
-        : ''),
+    // Nunca persistir o token global da plataforma no Firestore (seguranca).
+    apiToken: hasCompanyToken ? asTrimmedString(currentIntegration.apiToken) : '',
+    usesPlatformFocusToken: usesPlatformFocusToken,
     lastHomologationNote:
       asTrimmedString(currentIntegration.lastHomologationNote) ||
       'Estrutura fiscal inicial criada automaticamente no onboarding. Validar certificado, municipio, token e homologacao antes da emissao oficial.',
@@ -5581,8 +5586,7 @@ async function buildRecommendedFiscalSetup(params: {
   const fiscalFeatures = {
     ...currentFeatures,
     enableOfficialInvoicePrep: true,
-    enableRealInvoiceIntegration:
-      asTrimmedString(realIntegration.apiToken).length > 0,
+    enableRealInvoiceIntegration: hasCompanyToken || usesPlatformFocusToken,
   };
 
   return {
@@ -10512,9 +10516,29 @@ exports.platformUpdatePublicSalesConfig = functions.https.onCall(async (data, co
   const beforeSnap = await publicSalesConfigRef().get();
   const beforeData = asRecord(beforeSnap.data());
   const beforeConfig = buildDefaultPublicSalesConfig(beforeData);
-  const payload = buildDefaultPublicSalesConfig(asRecord(data?.config));
-  const nextConfig = {
+  const d = asRecord(data);
+  // Callable pode trazer { config: { ... } } ou, em runtimes/versões, o plano no topo.
+  const nested = d.config;
+  const clientConfig =
+    nested != null && typeof nested === 'object' && !Array.isArray(nested)
+      ? asRecord(nested)
+      : d;
+  const payload = buildDefaultPublicSalesConfig(clientConfig);
+  const fromClient = asTrimmedString(clientConfig.metaPixelHeadSnippet);
+  const fromPayload = asTrimmedString((payload as Record<string, unknown>).metaPixelHeadSnippet);
+  const rawSnippet = fromClient.length > 0 ? fromClient : fromPayload;
+  if (rawSnippet.length > 65535) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Codigo do Meta Pixel: no maximo 65535 caracteres.',
+    );
+  }
+  const finalPayload = {
     ...payload,
+    metaPixelHeadSnippet: rawSnippet,
+  };
+  const nextConfig = {
+    ...finalPayload,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedByPlatformUid: claims.uid,
   };
@@ -10528,12 +10552,12 @@ exports.platformUpdatePublicSalesConfig = functions.https.onCall(async (data, co
     entityPath: 'platform_public',
     entityId: 'sales_page',
     before: beforeConfig,
-    after: payload,
+    after: finalPayload,
   });
 
   return {
     ok: true,
-    config: payload,
+    config: finalPayload,
   };
 });
 

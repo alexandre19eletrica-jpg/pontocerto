@@ -123,12 +123,11 @@ extension _FiscalReadinessSections on _FiscalReadinessPageState {
     required Map<String, dynamic> certificate,
     required _FiscalOperationalReadiness readiness,
   }) {
-    final canViewGlobalApiToken = hasSupremePlatformAccess(sessao);
-    final tokenStatusLabel = canViewGlobalApiToken
-        ? (setup.apiToken.isEmpty ? 'nao informado' : setup.apiTokenMasked)
-        : (setup.apiToken.isEmpty
-              ? 'aguardando token global da empresa suprema'
-              : 'preenchido globalmente pela empresa suprema');
+    final tokenStatusLabel = setup.usesPlatformFocusToken
+        ? 'ja preenchido pela empresa suprema (valor nao exibido)'
+        : (setup.apiToken.trim().isEmpty
+              ? 'nao informado'
+              : 'definido no cadastro (valor nao exibido por seguranca)');
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),

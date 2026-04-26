@@ -710,13 +710,21 @@ service cloud.firestore {
       allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
     }
 
+    // Transacao em doc novo: transaction.get() ve documento inexistente; resource
+    // fica inexistente e sameCompany(resource) nao aplica. Precisamos permitir get
+    // quando o doc ainda nao existe, desde que o usuario esteja autenticado.
     match /runtime_incidents/{docId} {
       allow read: if signedIn() &&
         (
-          (isOwner() || isManager()) ||
-          isAccountant()
-        ) &&
-        sameCompany(resource);
+          !exists(/databases/$(database)/documents/runtime_incidents/$(docId)) ||
+          (
+            (
+              (isOwner() || isManager()) ||
+              isAccountant()
+            ) &&
+            sameCompany(resource)
+          )
+        );
       allow create: if signedIn() &&
         sameCompanyData(request.resource.data) &&
         request.resource.data.reporterUserId == request.auth.uid;

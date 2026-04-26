@@ -1,8 +1,10 @@
 ﻿# Continuidade Atual
 
-Data: 23/04/2026
+Data: 26/04/2026
 
 ## Situacao
+
+- Em 26/04/2026 (fim de dia), **código, regras Firestore, Functions e documentação** foram alinhados ao **GitHub** (`origin/master`), com registo completo em `docs/registro_continuidade/REGISTRO_ATUALIZACOES.md` (**2026-04-26**), incluindo a publicação **Play Store** `1.0.82+1053` (`pontocerto-1.0.82-1053.aab`), integração Focus (token de plataforma sem persistir no doc da empresa; `usesPlatformFocusToken`), marketing web + Meta Pixel (web), refator da área fiscal de prontidão, ajuste de `runtime_incidents` nas regras, e a regra explícita de **commit+push** em `.cursor/rules/documentacao-git-e-registro.mdc`.
 
 - Em 26/04/2026, foi registrada a rodada de login e governanca:
   - login de empresa, contador, funcionario e rota legada `/login` agora atualiza o roteador apos definir a sessao, evitando precisar atualizar a pagina para o sistema reconhecer o usuario

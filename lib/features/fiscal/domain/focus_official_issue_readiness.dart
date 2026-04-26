@@ -148,7 +148,8 @@ FocusOfficialIssueReadiness evaluateFocusOfficialIssueReadiness({
     missing.add('provedor fiscal');
   }
   if (_providerIsFocus(provider)) {
-    if (_trim(setup['apiToken']).isEmpty) {
+    final usesPlatformToken = setup['usesPlatformFocusToken'] == true;
+    if (_trim(setup['apiToken']).isEmpty && !usesPlatformToken) {
       missing.add('token da Focus NFe');
     }
   } else if (_trim(setup['apiBaseUrl']).isEmpty) {

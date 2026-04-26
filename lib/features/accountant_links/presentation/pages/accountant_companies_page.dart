@@ -567,8 +567,9 @@ class _AccountantFiscalStatusPanel extends StatelessWidget {
         'Sistema definiu emissao pela NFSe Nacional da Focus',
       if (usesMunicipalFocus)
         'Sistema definiu emissao pela integracao municipal da Focus',
-      if ((integration['apiToken']?.toString().trim() ?? '').isNotEmpty)
-        'Token da integracao preenchido',
+      if (integration['usesPlatformFocusToken'] == true ||
+          (integration['apiToken']?.toString().trim() ?? '').isNotEmpty)
+        'Token da integracao ativo (global ou preenchido)',
       if ((integration['municipalCode']?.toString().trim() ?? '').isNotEmpty)
         usesNationalFocus
             ? 'Codigo fiscal/base nacional informado'

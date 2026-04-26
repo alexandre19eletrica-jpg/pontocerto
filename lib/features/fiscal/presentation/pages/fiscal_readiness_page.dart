@@ -10,7 +10,6 @@ import 'package:printing/printing.dart';
 import 'package:pontocerto/core/auth/session.dart';
 import 'package:pontocerto/core/errors/app_error_mapper.dart';
 import 'package:pontocerto/core/company/company_runtime_summary_provider.dart';
-import 'package:pontocerto/core/media/mobile_upload_optimizer.dart';
 import 'package:pontocerto/core/navigation/app_shell.dart';
 import 'package:pontocerto/core/navigation/shell_page_chrome.dart';
 import 'package:pontocerto/core/pdf/pdf_output.dart';
@@ -5232,7 +5231,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Token API: ${setup.apiToken.isEmpty ? 'nao informado' : setup.apiTokenMasked}',
+            'Token API: ${_tokenApiStatusLine(setup)}',
           ),
           const SizedBox(height: 6),
           Text(
@@ -5675,214 +5674,6 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
         ],
       ),
     );
-  }
-
-  Future<void> _openRealIntegrationDialog({
-    required Session sessao,
-    required _FiscalRealIntegrationSetup current,
-  }) async {
-    final environmentController = TextEditingController(
-      text: current.environment,
-    );
-    final providerController = TextEditingController(text: current.provider);
-    final municipalCodeController = TextEditingController(
-      text: current.municipalCode,
-    );
-    final certificateController = TextEditingController(
-      text: current.certificateRef,
-    );
-    final apiBaseUrlController = TextEditingController(
-      text: current.apiBaseUrl,
-    );
-    final apiTokenController = TextEditingController(text: current.apiToken);
-    final homologationController = TextEditingController(
-      text: current.lastHomologationNote,
-    );
-    var selectedEnvironment = current.environment.trim().isEmpty
-        ? 'homologacao'
-        : current.environment.trim();
-    var selectedProvider = current.provider.trim();
-    var selectedFocusApi = current.focusNfseApi.trim().isEmpty
-        ? 'municipal'
-        : current.focusNfseApi.trim();
-
-    await showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Preparar emissao fiscal real'),
-          content: SizedBox(
-            width: 620,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedEnvironment,
-                    decoration: const InputDecoration(labelText: 'Ambiente'),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'homologacao',
-                        child: Text('Homologacao'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'producao',
-                        child: Text('Producao'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setDialogState(() {
-                        selectedEnvironment = value;
-                        environmentController.text = value;
-                        if (selectedProvider.toLowerCase().contains('focus')) {
-                          apiBaseUrlController.text = value == 'producao'
-                              ? 'https://api.focusnfe.com.br'
-                              : 'https://homologacao.focusnfe.com.br';
-                        }
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedProvider.isEmpty
-                        ? null
-                        : selectedProvider,
-                    decoration: const InputDecoration(labelText: 'Provedor'),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Focus NFe',
-                        child: Text('Focus NFe'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Tecnospeed',
-                        child: Text('Tecnospeed'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Prefeitura direta',
-                        child: Text('Prefeitura direta'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Outro integrador',
-                        child: Text('Outro integrador'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setDialogState(() {
-                        selectedProvider = value;
-                        providerController.text = value;
-                        if (value.toLowerCase().contains('focus')) {
-                          apiBaseUrlController.text =
-                              selectedEnvironment == 'producao'
-                              ? 'https://api.focusnfe.com.br'
-                              : 'https://homologacao.focusnfe.com.br';
-                        }
-                      });
-                    },
-                  ),
-                  if (selectedProvider.toLowerCase().contains('focus')) ...[
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedFocusApi,
-                      decoration: const InputDecoration(
-                        labelText: 'API Focus para emissao',
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'municipal',
-                          child: Text('NFSe municipal Focus'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'national',
-                          child: Text('NFSe Nacional'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setDialogState(() => selectedFocusApi = value);
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: municipalCodeController,
-                    decoration: InputDecoration(
-                      labelText: selectedFocusApi == 'national'
-                          ? 'Codigo fiscal padrao da emissao'
-                          : 'Codigo municipal de servico',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: certificateController,
-                    decoration: const InputDecoration(
-                      labelText: 'Referencia do certificado A1/A3',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: apiBaseUrlController,
-                    decoration: const InputDecoration(
-                      labelText: 'Base URL / endpoint principal',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: apiTokenController,
-                    decoration: const InputDecoration(
-                      labelText: 'Token API / chave',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: homologationController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Observacoes de homologacao',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final next = _FiscalRealIntegrationSetup(
-                  environment: environmentController.text.trim(),
-                  provider: providerController.text.trim(),
-                  focusNfseApi: selectedProvider.toLowerCase().contains('focus')
-                      ? selectedFocusApi
-                      : current.focusNfseApi,
-                  municipalCode: municipalCodeController.text.trim(),
-                  certificateRef: certificateController.text.trim(),
-                  apiBaseUrl: apiBaseUrlController.text.trim(),
-                  apiToken: apiTokenController.text.trim(),
-                  lastHomologationNote: homologationController.text.trim(),
-                );
-                await _saveRealIntegrationSetup(sessao, next);
-                if (!context.mounted) return;
-                Navigator.of(context).pop();
-              },
-              child: const Text('Salvar estrutura'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    environmentController.dispose();
-    providerController.dispose();
-    municipalCodeController.dispose();
-    certificateController.dispose();
-    apiBaseUrlController.dispose();
-    apiTokenController.dispose();
-    homologationController.dispose();
   }
 
   Future<void> _saveRealIntegrationSetup(
@@ -6980,6 +6771,17 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     (messageContext ?? context).showUserMessage(text);
   }
 
+  /// Nunca exibir o segredo; token global so na infra (empresa suprema / env).
+  String _tokenApiStatusLine(_FiscalRealIntegrationSetup setup) {
+    if (setup.usesPlatformFocusToken) {
+      return 'ja preenchido pela empresa suprema (valor nao exibido)';
+    }
+    if (setup.apiToken.trim().isEmpty) {
+      return 'nao informado';
+    }
+    return 'definido no cadastro (valor nao exibido por seguranca)';
+  }
+
   _FiscalOperationalReadiness _buildFiscalOperationalReadiness({
     required _FiscalRealIntegrationSetup setup,
     required Map<String, dynamic> certificate,
@@ -7005,7 +6807,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
             : 'Informar o codigo municipal base da emissao.',
       );
     }
-    if (setup.apiToken.trim().isEmpty) {
+    if (setup.apiToken.trim().isEmpty && !setup.usesPlatformFocusToken) {
       blockers.add('Informar o token/API key da integracao fiscal.');
     }
     if (setup.provider.trim().toLowerCase().contains('focus') &&
@@ -7214,6 +7016,7 @@ class _FiscalRealIntegrationSetup {
     required this.apiBaseUrl,
     required this.apiToken,
     required this.lastHomologationNote,
+    this.usesPlatformFocusToken = false,
   });
 
   factory _FiscalRealIntegrationSetup.fromSettings(
@@ -7232,6 +7035,7 @@ class _FiscalRealIntegrationSetup {
       apiBaseUrl: map['apiBaseUrl']?.toString() ?? '',
       apiToken: map['apiToken']?.toString() ?? '',
       lastHomologationNote: map['lastHomologationNote']?.toString() ?? '',
+      usesPlatformFocusToken: map['usesPlatformFocusToken'] == true,
     );
   }
 
@@ -7243,6 +7047,8 @@ class _FiscalRealIntegrationSetup {
   final String apiBaseUrl;
   final String apiToken;
   final String lastHomologationNote;
+  /// Token global do backend (empresa suprema / FOCUS_API_TOKEN) — nunca mostrar o valor.
+  final bool usesPlatformFocusToken;
 
   _FiscalRealIntegrationSetup copyWith({
     String? environment,
@@ -7252,6 +7058,7 @@ class _FiscalRealIntegrationSetup {
     String? certificateRef,
     String? apiBaseUrl,
     String? apiToken,
+    bool? usesPlatformFocusToken,
     String? lastHomologationNote,
   }) {
     return _FiscalRealIntegrationSetup(
@@ -7263,24 +7070,32 @@ class _FiscalRealIntegrationSetup {
       apiBaseUrl: apiBaseUrl ?? this.apiBaseUrl,
       apiToken: apiToken ?? this.apiToken,
       lastHomologationNote: lastHomologationNote ?? this.lastHomologationNote,
+      usesPlatformFocusToken: usesPlatformFocusToken ?? this.usesPlatformFocusToken,
     );
   }
 
+  bool get _hasEffectiveFocusToken =>
+      apiToken.trim().isNotEmpty || usesPlatformFocusToken;
+
   double get readinessScore {
+    final isFocus = provider.trim().toLowerCase().contains('focus');
+    final tokenSlot = isFocus
+        ? (_hasEffectiveFocusToken ? '1' : '')
+        : apiToken;
     final filled = [
       environment,
       provider,
-      if (provider.trim().toLowerCase().contains('focus')) focusNfseApi,
+      if (isFocus) focusNfseApi,
       municipalCode,
       certificateRef,
       apiBaseUrl,
-      apiToken,
+      tokenSlot,
       lastHomologationNote,
     ].where((value) => value.trim().isNotEmpty).length;
     return filled / 7;
   }
 
-  bool get isPrepared => apiToken.trim().isNotEmpty && readinessScore >= 0.7;
+  bool get isPrepared => _hasEffectiveFocusToken && readinessScore >= 0.7;
 
   bool get usesFocusNationalApi =>
       focusNfseApi.trim().toLowerCase() == 'national';
@@ -7320,6 +7135,7 @@ class _FiscalRealIntegrationSetup {
       'certificateRef': certificateRef,
       'apiBaseUrl': apiBaseUrl,
       'apiToken': apiToken,
+      'usesPlatformFocusToken': usesPlatformFocusToken,
       'lastHomologationNote': lastHomologationNote,
     };
   }

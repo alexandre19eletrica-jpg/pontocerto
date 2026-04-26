@@ -7,6 +7,7 @@ import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/utils/formatadores_input.dart';
 import 'package:pontocerto/features/fiscal/presentation/services/fiscal_registry_lookup_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/accounting_office_signup_service.dart';
+import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
 
 class AccountingOfficeSignupPage extends StatefulWidget {
@@ -46,6 +47,10 @@ class _AccountingOfficeSignupPageState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      metaFbqTrackCadastroEscritorioView();
+    });
     if (widget.token.trim().isNotEmpty) {
       _loadPrefill();
     }
@@ -189,6 +194,12 @@ class _AccountingOfficeSignupPageState
         ),
       );
       if (!mounted) return;
+      metaFbqTrackCompleteRegistrationEscritorio(
+        officeId: result.officeId,
+        contentName: result.officeName.isNotEmpty
+            ? result.officeName
+            : 'escritorio_contabil',
+      );
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(

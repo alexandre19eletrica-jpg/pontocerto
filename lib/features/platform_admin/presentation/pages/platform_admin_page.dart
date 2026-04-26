@@ -12,6 +12,7 @@ import 'package:pontocerto/core/navigation/shell_page_chrome.dart';
 import 'package:pontocerto/core/platform/platform_access.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
+import 'package:pontocerto/core/utils/replace_trailing_paste_text_input_formatter.dart';
 import 'package:pontocerto/core/utils/trial_invite_bulk_parser.dart';
 import 'package:pontocerto/features/finance/presentation/utils/money.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_sales_config_service.dart';
@@ -2044,6 +2045,13 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                               config.additionalAccess.title,
                               '${config.additionalAccess.priceLabel} | ${config.additionalAccess.checkoutUrl.isNotEmpty ? config.additionalAccess.checkoutUrl : 'link pendente'}',
                             ),
+                            const SizedBox(height: 6),
+                            _DetailLine(
+                              'Meta Pixel (head do site web)',
+                              config.metaPixelHeadSnippet.isNotEmpty
+                                  ? 'Configurado'
+                                  : 'Nao configurado',
+                            ),
                           ],
                         ),
                       );
@@ -3887,6 +3895,9 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     final additionalCheckout = TextEditingController(
       text: config.additionalAccess.checkoutUrl,
     );
+    final metaPixelHead = TextEditingController(
+      text: config.metaPixelHeadSnippet,
+    );
 
     try {
       final confirmed = await showDialog<bool>(
@@ -3898,6 +3909,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _salesConfigField('Solo titulo', soloTitle),
                   _salesConfigField('Solo preco', soloPrice),
@@ -3916,6 +3928,49 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                     additionalImplantation,
                   ),
                   _salesConfigField('Adicional checkout', additionalCheckout),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Codigo de base do Meta Pixel (HTML no head do site web)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Apos salvar, e obrigatorio publicar: (1) Cloud Functions, (2) o site web (flutter build web + deploy do Hosting). Enquanto nao fizer o deploy, o pixel nao aparece no site publico, mesmo com esta mensagem de sucesso.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'No guia do Meta, copie o trecho de instalacao; ele deve ficar no head da pagina, como se fosse colado no index.html, entre abertura e fechamento do head. Se ja existir outro codigo nesse bloco, coloque o pixel abaixo dele e acima de fechar o head. Aqui, ao salvar, o app web aplica isso de forma equivalente (na primeira carga, em todas as rotas do mesmo site). Ao colar um codigo novo por cima do que ja esta no campo, o conteudo anterior e substituido (nao soma duas vezes).',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: metaPixelHead,
+                    maxLength: 65535,
+                    maxLines: 10,
+                    keyboardType: TextInputType.multiline,
+                    inputFormatters: const [
+                      ReplaceTrailingBlockPasteTextInputFormatter(),
+                    ],
+                    style: const TextStyle(
+                      fontFamily: 'ui-monospace, monospace',
+                      fontSize: 12,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Cole o codigo (script e noscript do Events Manager)',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -3934,7 +3989,8 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       );
       if (confirmed != true) return;
 
-      await _publicSalesConfigService.update(
+      final trechoMetaPixel = metaPixelHead.text;
+      final saved = await _publicSalesConfigService.update(
         PublicSalesConfig(
           enabled: true,
           planSolo: PublicSalesPlan(
@@ -3955,11 +4011,22 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
             implantationLabel: additionalImplantation.text.trim(),
             checkoutUrl: additionalCheckout.text.trim(),
           ),
+          metaPixelHeadSnippet: trechoMetaPixel,
           updatedAtIso: '',
         ),
       );
 
       if (!mounted) return;
+      if (trechoMetaPixel.trim().isNotEmpty &&
+          saved.metaPixelHeadSnippet.trim().isEmpty) {
+        if (context.mounted) {
+          context.showUserError(
+            'O codigo do pixel voltou vazio do servidor. Publique as Cloud Functions (firebase deploy --only functions) e salve de novo. No Firestore, confira platform_public / sales_page, campo metaPixelHeadSnippet.',
+          );
+        }
+        _reload();
+        return;
+      }
       _reload();
       if (context.mounted) {
         context.showUserMessage('Landing publica atualizada.');
@@ -3982,6 +4049,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       additionalPrice.dispose();
       additionalImplantation.dispose();
       additionalCheckout.dispose();
+      metaPixelHead.dispose();
     }
   }
 
@@ -4018,7 +4086,6 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     final homologationController = TextEditingController(
       text: fiscal.lastHomologationNote,
     );
-    final apiTokenController = TextEditingController();
     final certificatePasswordController = TextEditingController();
     bool companyBaseReviewed = fiscal.pendingItems
         .where((item) => item.code == 'check_company_base')
@@ -4114,13 +4181,11 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    TextField(
-                      controller: apiTokenController,
-                      decoration: const InputDecoration(
-                        labelText: 'Token especifico da empresa',
-                        helperText:
-                            'Opcional. Deixe vazio para continuar usando o token padrao da plataforma.',
-                      ),
+                    const Text(
+                      'Token API Focus global: definido pela empresa suprema / '
+                      'infraestrutura (nao exibido). Deixe vazio no cadastro da '
+                      'empresa para usar o token padrao da plataforma.',
+                      style: TextStyle(height: 1.35),
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -4223,7 +4288,6 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
           'focusNfseApi': focusApiController.text.trim(),
           'municipalCode': municipalCodeController.text.trim(),
           'certificateRef': certificateRefController.text.trim(),
-          'apiToken': apiTokenController.text.trim(),
           'lastHomologationNote': homologationController.text.trim(),
         },
         checklistPatch: {
@@ -4258,7 +4322,6 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       municipalCodeController.dispose();
       certificateRefController.dispose();
       homologationController.dispose();
-      apiTokenController.dispose();
       certificatePasswordController.dispose();
     }
   }

@@ -8,10 +8,17 @@ Atualize sempre que entrar qualquer mudanca em producao.
 
 ## 2026-04-26
 
-- **Play Store / AAB**: regra de repositório para nome do bundle copiado para arquivo: `pontocerto-<versionName>-<versionCode>.aab` (ex.: `1.0.82+1053` → `pontocerto-1.0.82-1053.aab`); a versão no `pubspec` deve sempre crescer face à última publicada.
-- **Documentação**: `docs/PLAY_STORE_AAB_NAMING.md`, referência em `docs/PLAY_STORE_RELEASE_NOTES.md` e `docs/registro_continuidade/CHECKLIST_RELEASE_ROLLBACK.md`.
-- **Script**: `scripts/build_android_release.ps1` com `-CopyToDesktop` copia para a área de trabalho com o nome canónico.
-- **Cursor**: `.cursor/rules/aab-play-store-nome.mdc`.
+- **Play Store (Android)**: publicada **`1.0.82+1053`** (versionName `1.0.82`, versionCode `1053`); ficheiro de arquivo canónico: `pontocerto-1.0.82-1053.aab` (regra: `pontocerto-<versionName>-<versionCode>.aab`).
+- **Play Store / processo / repo**: regra e script em `docs/PLAY_STORE_AAB_NAMING.md`, `docs/PLAY_STORE_RELEASE_NOTES.md`, `docs/registro_continuidade/CHECKLIST_RELEASE_ROLLBACK.md`, `scripts/build_android_release.ps1` (`-CopyToDesktop`); regra Cursor `.cursor/rules/aab-play-store-nome.mdc`. O `pubspec` deve sempre crescer face à última publicada.
+- **Cloud Functions** (`functions/src/index.ts`, `functions/lib/*`): `buildRecommendedFiscalSetup` passa a expor `usesPlatformFocusToken`; **não** se persiste o token global da plataforma no documento de integração da empresa; emissão real continua permitida com token da empresa **ou** uso do token de plataforma nos callables, conforme a configuração.
+- **Fiscal (Web)**: refatoração da página de prontidão e acções de integração real (menos duplicação, diálogos alinhados); leitores de prontidão e secções ajustados (`fiscal_readiness_page.dart`, `fiscal_readiness_integration_actions.dart`, `fiscal_readiness_sections.dart`, `focus_official_issue_readiness.dart`).
+- **Plataforma / contador**: `platform_admin_page.dart` (fluxo de token alinhado à política de não expor token global de produção nesse ecrã); `accountant_companies_page.dart` (indicação quando a empresa usa token da plataforma).
+- **Marketing (Web)**: `/vendas` e páginas públicas (tipografia, copy, prereg) — `sales_page.dart`, `sales_preregistration_page.dart`, `accounting_office_signup_page.dart`, `public_sales_config_service.dart`.
+- **Meta Pixel (Web)**: carregamento condicional a partir de config pública e eventos (ficheiros `public_meta_pixel_bootstrap*.dart`, `meta_fbq_events*.dart`); `main.dart` agenda bootstrap em web com Firebase OK.
+- **Observabilidade + Firestore**: `runtime_incident_reporter.dart` afinado; `firestore.rules` — leitura de `runtime_incidents` corrigida para `transaction.get()` em documento ainda inexistente (permitir `get` em doc novo antes de `sameCompany`, conforme comentário na regra).
+- **Regra de documentação** (commit + push no mesmo fecho): `.cursor/rules/documentacao-git-e-registro.mdc`.
+- **Util**: `lib/core/utils/replace_trailing_paste_text_input_formatter.dart`.
+- **Código** sincronizado com **Git** (`origin/master`) no encerramento desta rodada.
 
 ## 2026-04-16
 

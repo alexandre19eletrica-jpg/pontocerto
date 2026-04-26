@@ -548,6 +548,8 @@ function buildDefaultPublicSalesConfig(current) {
             implementationFeeCents: 0,
             checkoutUrl: asTrimmedString(additionalAccess.checkoutUrl),
         },
+        // Trecho exibido no <head> do app web (codigo de base do Meta Pixel, etc).
+        metaPixelHeadSnippet: asTrimmedString(current.metaPixelHeadSnippet) || '',
     };
 }
 function hashPublicToken(value) {
@@ -8363,9 +8365,25 @@ exports.platformUpdatePublicSalesConfig = functions.https.onCall(async (data, co
     const beforeSnap = await publicSalesConfigRef().get();
     const beforeData = asRecord(beforeSnap.data());
     const beforeConfig = buildDefaultPublicSalesConfig(beforeData);
-    const payload = buildDefaultPublicSalesConfig(asRecord(data?.config));
-    const nextConfig = {
+    const d = asRecord(data);
+    // Callable pode trazer { config: { ... } } ou, em runtimes/versões, o plano no topo.
+    const nested = d.config;
+    const clientConfig = nested != null && typeof nested === 'object' && !Array.isArray(nested)
+        ? asRecord(nested)
+        : d;
+    const payload = buildDefaultPublicSalesConfig(clientConfig);
+    const fromClient = asTrimmedString(clientConfig.metaPixelHeadSnippet);
+    const fromPayload = asTrimmedString(payload.metaPixelHeadSnippet);
+    const rawSnippet = fromClient.length > 0 ? fromClient : fromPayload;
+    if (rawSnippet.length > 65535) {
+        throw new functions.https.HttpsError('invalid-argument', 'Codigo do Meta Pixel: no maximo 65535 caracteres.');
+    }
+    const finalPayload = {
         ...payload,
+        metaPixelHeadSnippet: rawSnippet,
+    };
+    const nextConfig = {
+        ...finalPayload,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedByPlatformUid: claims.uid,
     };
@@ -8377,11 +8395,11 @@ exports.platformUpdatePublicSalesConfig = functions.https.onCall(async (data, co
         entityPath: 'platform_public',
         entityId: 'sales_page',
         before: beforeConfig,
-        after: payload,
+        after: finalPayload,
     });
     return {
         ok: true,
-        config: payload,
+        config: finalPayload,
     };
 });
 exports.publicGetSalesOnboardingRequest = functions.https.onCall(async (data) => {

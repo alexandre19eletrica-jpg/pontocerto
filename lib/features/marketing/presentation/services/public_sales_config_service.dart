@@ -40,6 +40,7 @@ class PublicSalesConfig {
     required this.planSolo,
     required this.planEquipe,
     required this.additionalAccess,
+    required this.metaPixelHeadSnippet,
     required this.updatedAtIso,
   });
 
@@ -47,6 +48,8 @@ class PublicSalesConfig {
   final PublicSalesPlan planSolo;
   final PublicSalesPlan planEquipe;
   final PublicSalesPlan additionalAccess;
+  /// Codigo de base (HTML) do Meta Pixel, como no Events Manager, para o head.
+  final String metaPixelHeadSnippet;
   final String updatedAtIso;
 
   factory PublicSalesConfig.defaults() {
@@ -73,6 +76,7 @@ class PublicSalesConfig {
             'Tambem entra no teste real de 30 dias quando a empresa estiver ativa',
         checkoutUrl: '',
       ),
+      metaPixelHeadSnippet: '',
       updatedAtIso: '',
     );
   }
@@ -95,6 +99,7 @@ class PublicSalesConfig {
           map['additionalAccess'] as Map? ?? const <String, dynamic>{},
         ),
       ),
+      metaPixelHeadSnippet: map['metaPixelHeadSnippet']?.toString() ?? '',
       updatedAtIso: map['updatedAt']?.toString() ?? '',
     );
   }
@@ -105,6 +110,7 @@ class PublicSalesConfig {
       'planSolo': planSolo.toMap(),
       'planEquipe': planEquipe.toMap(),
       'additionalAccess': additionalAccess.toMap(),
+      'metaPixelHeadSnippet': metaPixelHeadSnippet,
     };
   }
 }

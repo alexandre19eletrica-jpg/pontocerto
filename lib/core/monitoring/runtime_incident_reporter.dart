@@ -41,46 +41,52 @@ class RuntimeIncidentReporter {
     String? screenLabel,
     Map<String, dynamic>? extra,
   }) async {
-    await _ensurePackageInfo();
-    final normalizedScreenLabel =
-        _normalizeText(screenLabel) ?? _currentScreenLabel ?? _currentRoute;
-    final normalizedExtra = _normalizeExtra(extra ?? const <String, dynamic>{});
-    final message = _normalizeError(error);
-    final fingerprint = _fingerprintFrom(
-      source: source,
-      category: category,
-      message: message,
-      screenLabel: normalizedScreenLabel,
-    );
-    final payload = _PendingIncident(
-      source: source,
-      message: message,
-      stackTrace: _shortStack(stackTrace),
-      severity: severity,
-      category: category,
-      screenLabel: normalizedScreenLabel,
-      extra: <String, dynamic>{
-        ...normalizedExtra,
-        'route': _currentRoute ?? Uri.base.path,
-        'currentUrl': kIsWeb ? Uri.base.toString() : '',
-        'platformLabel': _platformLabel(),
-        'appVersion': _appVersionLabel ?? '',
-        'errorType': error.runtimeType.toString(),
-      },
-      fingerprint: fingerprint,
-      capturedAt: DateTime.now(),
-    );
+    try {
+      await _ensurePackageInfo();
+      final normalizedScreenLabel =
+          _normalizeText(screenLabel) ?? _currentScreenLabel ?? _currentRoute;
+      final normalizedExtra = _normalizeExtra(extra ?? const <String, dynamic>{});
+      final message = _normalizeError(error);
+      final fingerprint = _fingerprintFrom(
+        source: source,
+        category: category,
+        message: message,
+        screenLabel: normalizedScreenLabel,
+      );
+      final payload = _PendingIncident(
+        source: source,
+        message: message,
+        stackTrace: _shortStack(stackTrace),
+        severity: severity,
+        category: category,
+        screenLabel: normalizedScreenLabel,
+        extra: <String, dynamic>{
+          ...normalizedExtra,
+          'route': _currentRoute ?? Uri.base.path,
+          'currentUrl': kIsWeb ? Uri.base.toString() : '',
+          'platformLabel': _platformLabel(),
+          'appVersion': _appVersionLabel ?? '',
+          'errorType': error.runtimeType.toString(),
+        },
+        fingerprint: fingerprint,
+        capturedAt: DateTime.now(),
+      );
 
-    final session = _session;
-    if (session == null) {
-      if (_pending.length >= 20) {
-        _pending.removeAt(0);
+      final session = _session;
+      if (session == null) {
+        if (_pending.length >= 20) {
+          _pending.removeAt(0);
+        }
+        _pending.add(payload);
+        return;
       }
-      _pending.add(payload);
-      return;
-    }
 
-    await _write(session, payload);
+      await _write(session, payload);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('RuntimeIncidentReporter.capture failed: $e');
+      }
+    }
   }
 
   Future<void> _flushPending() async {

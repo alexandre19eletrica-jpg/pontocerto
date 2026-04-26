@@ -6,6 +6,7 @@ import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_sales_config_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/sales_analytics_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/sales_preregistration_service.dart';
+import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
 
 class SalesPreRegistrationPage extends StatefulWidget {
@@ -66,6 +67,7 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
           pagePath: '/contratar',
           planCode: widget.planCode,
         );
+        metaFbqTrackSolicitacaoTesteView();
       }
     } catch (_) {
       if (!mounted) return;
@@ -105,6 +107,10 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
         planCode: widget.planCode,
         implementationMode: _implementationMode,
         leadId: result.leadId,
+      );
+      metaFbqTrackLeadPreCadastro(
+        leadId: result.leadId,
+        planCode: widget.planCode,
       );
       if (!mounted) return;
       context.showUserSuccess(

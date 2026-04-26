@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
 
 const _ink = Color(0xFF16202B);
 const _muted = Color(0xFF5C6B7A);
@@ -7,8 +8,22 @@ const _primary = Color(0xFF1E4FD7);
 const _surface = Color(0xFFF4F7FB);
 const _line = Color(0xFFDCE5EF);
 
-class SalesPage extends StatelessWidget {
+class SalesPage extends StatefulWidget {
   const SalesPage({super.key});
+
+  @override
+  State<SalesPage> createState() => _SalesPageState();
+}
+
+class _SalesPageState extends State<SalesPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      metaFbqTrackVendasFunnel();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -684,7 +699,7 @@ class _TestimonialCard extends StatelessWidget {
             testimonial.text,
             style: const TextStyle(
               color: _ink,
-              fontSize: 16,
+              fontSize: 17.5,
               height: 1.55,
               fontWeight: FontWeight.w700,
             ),
@@ -694,6 +709,7 @@ class _TestimonialCard extends StatelessWidget {
             testimonial.role,
             style: const TextStyle(
               color: _ink,
+              fontSize: 15.5,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -702,8 +718,8 @@ class _TestimonialCard extends StatelessWidget {
             testimonial.segment,
             style: const TextStyle(
               color: _muted,
-              fontSize: 14,
-              height: 1.35,
+              fontSize: 15,
+              height: 1.4,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -772,7 +788,7 @@ class _PrimaryButton extends StatelessWidget {
           backgroundColor: light ? Colors.white : _primary,
           foregroundColor: light ? _primary : Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
@@ -799,7 +815,9 @@ class _Pill extends StatelessWidget {
           text,
           style: const TextStyle(
             color: Color(0xFF2446A8),
+            fontSize: 15.5,
             fontWeight: FontWeight.w800,
+            height: 1.3,
           ),
         ),
       ),
@@ -931,8 +949,9 @@ class _CheckChip extends StatelessWidget {
                 softWrap: true,
                 style: TextStyle(
                   color: light ? Colors.white : _ink,
+                  fontSize: 16.5,
                   fontWeight: FontWeight.w800,
-                  height: 1.35,
+                  height: 1.4,
                 ),
               ),
             ),
@@ -962,6 +981,7 @@ class _SignalGrid extends StatelessWidget {
             side: const BorderSide(color: Color(0xFFD6E1FF)),
             labelStyle: const TextStyle(
               color: Color(0xFF2446A8),
+              fontSize: 15.5,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1033,7 +1053,7 @@ class _NumberLine extends StatelessWidget {
               number.toString(),
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1065,7 +1085,7 @@ class _QuoteBox extends StatelessWidget {
         text,
         style: const TextStyle(
           color: Color(0xFF0B5D4E),
-          fontSize: 18,
+          fontSize: 19,
           height: 1.55,
           fontWeight: FontWeight.w900,
         ),
@@ -1187,9 +1207,9 @@ class _ScreenShotCard extends StatelessWidget {
                 label,
                 style: TextStyle(
                   color: _ink,
-                  fontSize: compact ? 16 : 17,
+                  fontSize: compact ? 17 : 18,
                   fontWeight: FontWeight.w900,
-                  height: 1.25,
+                  height: 1.28,
                 ),
               ),
               const SizedBox(height: 4),
@@ -1197,8 +1217,8 @@ class _ScreenShotCard extends StatelessWidget {
                 caption,
                 style: TextStyle(
                   color: _muted,
-                  fontSize: compact ? 15 : 16,
-                  height: 1.45,
+                  fontSize: compact ? 16 : 17,
+                  height: 1.5,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1211,37 +1231,37 @@ class _ScreenShotCard extends StatelessWidget {
 }
 
 const _leadStyle = TextStyle(
-  fontSize: 19,
+  fontSize: 20.5,
   height: 1.55,
   color: _muted,
   fontWeight: FontWeight.w600,
 );
 
-const _bodyStyle = TextStyle(fontSize: 18, height: 1.7, color: _muted);
+const _bodyStyle = TextStyle(fontSize: 19.5, height: 1.68, color: _muted);
 
 const _strongBodyStyle = TextStyle(
-  fontSize: 19,
-  height: 1.65,
+  fontSize: 20.5,
+  height: 1.62,
   color: _ink,
   fontWeight: FontWeight.w900,
 );
 
 const _itemStyle = TextStyle(
-  fontSize: 17,
-  height: 1.5,
+  fontSize: 18.5,
+  height: 1.52,
   color: _ink,
   fontWeight: FontWeight.w700,
 );
 
 const _footerStrongStyle = TextStyle(
   color: _ink,
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: FontWeight.w900,
 );
 
 const _footerMutedStyle = TextStyle(
   color: _muted,
-  fontSize: 13,
-  height: 1.45,
+  fontSize: 14,
+  height: 1.5,
   fontWeight: FontWeight.w600,
 );

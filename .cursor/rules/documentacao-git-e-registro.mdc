@@ -16,6 +16,15 @@ Sempre que a alteração for **relevante** (módulo, regra de negócio, rota, fu
 
 1. **Registar** em `docs/registro_continuidade/REGISTRO_ATUALIZACOES.md` (data, o que mudou, ficheiros-chave) — no mesmo commit ou imediatamente a seguir.
 2. Se o impacto for **grande** ou alinhar com “estado do sistema / memória”, actualizar também o ficheiro adequado em `docs/registro_continuidade/` (ex.: `CONTINUIDADE_ATUAL.md`, `MEMORIA_VIVA_SISTEMA.md`, `ESTADO_ATUAL_DO_SISTEMA.md`) **apenas o necessário** — sem duplicar parágrafos inteiros.
+3. **Subir para o GitHub** a mesma alteração (cópia na nuvem). Não basta gravar no PC: após editar `docs/` e ficheiros de código relevantes, **commit + push** ao `origin` no **mesmo encerramento** da tarefa. **Nunca** colar segredos (tokens, passwords, chaves API completas) em ficheiros que vão para o Git.
+
+**Comando canónico** (PowerShell, um bloco — ajustar mensagem de commit ao contexto):
+
+```powershell
+cd C:\Users\hp\pontocerto; git add -A; git commit -m "Atualizar documentacao e codigo"; git push origin master
+```
+
+Se `commit` disser *nothing to commit*, usar **só** `git push origin master`. Remoto do projecto: `https://github.com/alexandre19eletrica-jpg/pontocerto.git`.
 
 # Estilo
 

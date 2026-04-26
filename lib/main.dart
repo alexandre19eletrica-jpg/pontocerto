@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pontocerto/app/app.dart';
+import 'package:pontocerto/features/marketing/presentation/services/public_meta_pixel_bootstrap.dart';
 import 'package:pontocerto/core/company/empresa_cache.dart';
 import 'package:pontocerto/core/firebase/firebase_init.dart';
 import 'package:pontocerto/core/firebase/firebase_status.dart';
@@ -69,6 +71,10 @@ Future<void> main() async {
     await initFirebase();
   } catch (_) {
     firebaseDisponivel = false;
+  }
+
+  if (kIsWeb && firebaseDisponivel) {
+    unawaited(schedulePublicMetaPixelFromConfig());
   }
 
   runZonedGuarded(
