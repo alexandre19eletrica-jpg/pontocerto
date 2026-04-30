@@ -1,32 +1,44 @@
 ---
-description: Documentação oficial do sistema vive no Git; toda movimentação relevante deve ser registrada para não se perder.
+description: Documentação oficial do Ponto Certo são só 4 ficheiros no Git; cada actualização relevante actualiza o(s) oficiais certo(s) e faz push.
 alwaysApply: true
 ---
 
-# Documentação e memória (fonte: Git, não Storage)
+# Documentação oficial (apenas 4 ficheiros)
 
-- A **verdade** dos documentos de criação/continuidade do Ponto Certo fica no **repositório Git**, principalmente:
-  - `docs/` (oficiais, visuais, funcionais, técnicos, registro)
-  - `docs/registro_continuidade/` (continuidade, registro de atualizações, memória viva)
-- **Não** tratar o Firebase **Storage** como repositório da documentação de produto: Storage é para **ficheiros** da operação (anexos, PDFs de clientes, etc.).
+A documentação **oficial** do produto é **exclusivamente** estes quatro ficheiros em `docs/` — **não** criar nem tratar como “oficial” outro `.md` parallel (ex.: não inventar “OFICIAL_05” nem novo pacote oficial).
 
-# Obrigatório após alterações de produto
+1. `docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md` — **visual**: o que mudou na UI e **como ficou** (ecrãs, estados, tokens de cor/layout quando relevante).
+2. `docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md` — **funcional**: **como funciona** o que mudou (fluxos, regras de negócio, permissões, o que o utilizador consegue fazer).
+3. `docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md` — **estrutura / arquitectura**: o que mudou em módulos, rotas, dados, Functions, integrações, fronteiras técnicas.
+4. `docs/OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md` — **memória e registo**: backup documental da rodada (decisões, datas, versão de app quando couber, o que ficou decidido para histórico e continuidade).
 
-Sempre que a alteração for **relevante** (módulo, regra de negócio, rota, função, fluxo, permissão, publicação, links oficiais, versão de app, etc.):
+Ficheiros em `docs/registro_continuidade/`, prompts e outros apoios **não** substituem estes quatro nem passam a “oficiais”; se algo for decisão de produto, deve **reflectir-se** nos OFICIAL acima.
 
-1. **Registar** em `docs/registro_continuidade/REGISTRO_ATUALIZACOES.md` (data, o que mudou, ficheiros-chave) — no mesmo commit ou imediatamente a seguir.
-2. Se o impacto for **grande** ou alinhar com “estado do sistema / memória”, actualizar também o ficheiro adequado em `docs/registro_continuidade/` (ex.: `CONTINUIDADE_ATUAL.md`, `MEMORIA_VIVA_SISTEMA.md`, `ESTADO_ATUAL_DO_SISTEMA.md`) **apenas o necessário** — sem duplicar parágrafos inteiros.
-3. **Subir para o GitHub** a mesma alteração (cópia na nuvem). Não basta gravar no PC: após editar `docs/` e ficheiros de código relevantes, **commit + push** ao `origin` no **mesmo encerramento** da tarefa. **Nunca** colar segredos (tokens, passwords, chaves API completas) em ficheiros que vão para o Git.
+# Fonte: Git (não Storage)
 
-**Comando canónico** (PowerShell, um bloco — ajustar mensagem de commit ao contexto):
+- **Não** usar Firebase **Storage** como repositório da documentação de produto (Storage é anexos, PDFs da operação, etc.).
+
+# Obrigatório quando houver actualização relevante
+
+Sempre que a alteração for **relevante** (UI, comportamento, arquitectura, rota, regra de negócio, Function, permissão, publicação, links, versão de app, etc.):
+
+1. **Actualizar o(s) OFICIAL aplicáveis** (01–04 conforme o tipo de mudança; **04** deve acolher sempre um vestígio de **registo/memória** para backup documental quando a rodada não for só refino interno insignificante).
+2. Manter texto **objectivo**, por área/data; nos oficiais, **acrescentar** secções/datados em vez de apagar histórico útil.
+3. **Commit + push** ao `origin` no **mesmo encerramento** da tarefa, com os mesmos documentos oficiais que reflectem a alteração — **não** deixar só no PC.
+
+**Remoto**: `https://github.com/alexandre19eletrica-jpg/pontocerto.git` (branch `master` quando aplicável).
+
+**Comando canónico** (PowerShell, um bloco — ajustar mensagem ao contexto):
 
 ```powershell
-cd C:\Users\hp\pontocerto; git add -A; git commit -m "Atualizar documentacao e codigo"; git push origin master
+cd C:\Users\hp\pontocerto; git add -A; git commit -m "Atualizar documentacao oficial e codigo"; git push origin master
 ```
 
-Se `commit` disser *nothing to commit*, usar **só** `git push origin master`. Remoto do projecto: `https://github.com/alexandre19eletrica-jpg/pontocerto.git`.
+Se `commit` disser *nothing to commit*, usar **só** `git push origin master`.
+
+**Nunca** colar segredos (tokens completos, passwords, chaves API) em documentação que vai para o Git.
 
 # Estilo
 
-- Frases objectivas; bullets com **área**, **comportamento**, **caminhos de ficheiro**.
-- Não apagar o histórico de datas anteriores no registro: **acrescentar** secção com data.
+- Bullets com **área**, **comportamento**, **caminhos de ficheiro** quando útil.
+- Não apagar blocos históricos essenciais sem necessidade; preferir **acrescentar** data/rodada.
