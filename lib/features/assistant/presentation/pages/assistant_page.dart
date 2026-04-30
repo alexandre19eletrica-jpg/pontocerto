@@ -72,7 +72,7 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
         title: 'Assistente Inteligente',
         subtitle: showHistory
             ? 'Revise as conversas deste login e toque em uma delas para voltar ao dialogo.'
-            : 'Use para tirar duvidas sobre o sistema.',
+            : 'Use para tirar duvidas sobre o sistema. Todas as empresas usam a mesma credencial OpenAI da plataforma (suprema); nao e necessario cadastrar chave. Limites por empresa ficam na governanca do assistente.',
         chips: showSupremeQueue
             ? [
                 Tooltip(

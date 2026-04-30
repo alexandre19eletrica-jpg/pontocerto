@@ -24,7 +24,7 @@ bool _providerIsFocus(String? provider) {
 }
 
 /// Quando o provedor é Focus e não há [apiToken] no documento da empresa, a
-/// plataforma usa o token global (empresa suprema / [FOCUS_API_TOKEN] no backend).
+/// plataforma usa o token global ([FOCUS_API_TOKEN] nas Functions).
 /// Se [apiToken] estiver preenchido (legado), trata-se como token próprio.
 bool focusFiscalSetupUsesPlatformToken(Map<String, dynamic> integration) {
   if (!_providerIsFocus(integration['provider']?.toString())) {

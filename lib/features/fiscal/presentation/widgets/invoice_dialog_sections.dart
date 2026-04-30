@@ -141,7 +141,7 @@ class InvoiceServiceSection extends StatelessWidget {
                   'Dados bancarios para recebimento (texto no fim da descricao da nota)',
               alignLabelWithHint: true,
               helperText:
-                  'Recarrega do cadastro da empresa. Salve a nota para gravar no cadastro.',
+                  'Igual ao cartao «Recebimento na NFS-e» na pagina Fiscal. Salvar a nota grava tambem no cadastro da empresa.',
             ),
           ),
         ],

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pontocerto/core/auth/session.dart';
+import 'package:pontocerto/core/errors/app_error_mapper.dart';
+import 'package:pontocerto/core/platform/platform_access.dart';
+import 'package:pontocerto/features/employees/presentation/employees_provider.dart';
 import 'package:pontocerto/core/pdf/pdf_output.dart';
 import 'package:pontocerto/core/widgets/botao_voltar_app.dart';
 import 'package:pontocerto/features/device_consent/domain/device_consent.dart';
@@ -99,6 +102,64 @@ class EmployeeReviewPage extends ConsumerWidget {
       appBar: AppBar(
         leading: const BotaoVoltarApp(),
         title: Text('Funcionario: ${employee.nomeCompleto}'),
+        actions: [
+          if (sessao != null &&
+              sessao.role != Role.employee &&
+              sessao.userId != employee.id &&
+              !isSupremePlatformCompanyId(sessao.companyId) &&
+              (sessao.role == Role.owner ||
+                  sessao.role == Role.manager ||
+                  sessao.role == Role.accountant))
+            IconButton(
+              tooltip: employee.ativo ? 'Inativar acesso' : 'Reativar acesso',
+              icon: Icon(
+                employee.ativo
+                    ? Icons.pause_circle_outline_rounded
+                    : Icons.play_circle_outline_rounded,
+              ),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(
+                      employee.ativo
+                          ? 'Inativar colaborador?'
+                          : 'Reativar colaborador?',
+                    ),
+                    content: Text(
+                      employee.ativo
+                          ? 'O acesso ao sistema sera desativado.'
+                          : 'O colaborador volta a ficar ativo nas rotinas.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancelar'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Confirmar'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm != true) return;
+                try {
+                  await ref
+                      .read(employeesProvider.notifier)
+                      .toggleAtivo(employee.id);
+                  if (!context.mounted) return;
+                  context.showUserMessage('Status do colaborador atualizado.');
+                  Navigator.of(context).pop();
+                } catch (error) {
+                  if (!context.mounted) return;
+                  context.showUserMessage(
+                    AppErrorMapper.messageFrom(error),
+                  );
+                }
+              },
+            ),
+        ],
       ),
       body: Container(
         decoration: const BoxDecoration(

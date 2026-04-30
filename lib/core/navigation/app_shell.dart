@@ -266,26 +266,14 @@ class _AppShellScaffoldState extends State<AppShellScaffold> {
               iconTheme: const IconThemeData(color: AppBrandColors.ink),
               title: Text(
                 widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: AppBrandColors.ink,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Center(
-                    child: Text(
-                      widget.session.nome,
-                      style: const TextStyle(
-                        color: AppBrandColors.softText,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-                ...(widget.actions ?? const []),
-              ],
+              actions: [...(widget.actions ?? const [])],
             ),
       body: Row(
         children: [

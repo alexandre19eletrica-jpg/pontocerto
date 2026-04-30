@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pontocerto/core/auth/accountant_company_context_service.dart';
 import 'package:pontocerto/core/auth/session.dart';
 import 'package:pontocerto/core/company/company_access_state.dart';
+import 'package:pontocerto/core/platform/platform_access.dart';
 import 'package:pontocerto/core/firebase/firebase_status.dart';
 import 'package:pontocerto/core/monitoring/runtime_incident_reporter.dart';
 
@@ -74,18 +75,20 @@ class _SessionBootstrapState extends ConsumerState<SessionBootstrap> {
             await _accountantContextService.selectCompany(companyId);
           }
         } else if (companyId.isNotEmpty) {
-          final settingsSnap = await FirebaseFirestore.instance
-              .collection('company_settings')
-              .doc(companyId)
-              .get();
-          final accessState = CompanyAccessState.fromSettings(
-            settingsSnap.data() ?? <String, dynamic>{},
-            companyId: companyId,
-          );
-          if (!accessState.allowLogin) {
-            await FirebaseAuth.instance.signOut();
-            ref.read(sessionProvider.notifier).logout();
-            return;
+          if (!isSupremePlatformCompanyId(companyId)) {
+            final settingsSnap = await FirebaseFirestore.instance
+                .collection('company_settings')
+                .doc(companyId)
+                .get();
+            final accessState = CompanyAccessState.fromSettings(
+              settingsSnap.data() ?? <String, dynamic>{},
+              companyId: companyId,
+            );
+            if (!accessState.allowLogin) {
+              await FirebaseAuth.instance.signOut();
+              ref.read(sessionProvider.notifier).logout();
+              return;
+            }
           }
         }
         ref

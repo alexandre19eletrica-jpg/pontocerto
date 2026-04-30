@@ -8,6 +8,11 @@ const _primary = Color(0xFF1E4FD7);
 const _surface = Color(0xFFF4F7FB);
 const _line = Color(0xFFDCE5EF);
 
+void _irContratarTrialEscritorio(BuildContext context) {
+  metaFbqTrackStartTrialEscritorio();
+  context.go('/contratar');
+}
+
 class SalesPage extends StatefulWidget {
   const SalesPage({super.key});
 
@@ -155,7 +160,7 @@ class _HeroSection extends StatelessWidget {
         const SizedBox(height: 26),
         _PrimaryButton(
           label: 'Começar teste grátis',
-          onPressed: () => context.go('/contratar'),
+          onPressed: () => _irContratarTrialEscritorio(context),
         ),
       ],
     );
@@ -443,7 +448,7 @@ class _OfferSection extends StatelessWidget {
           _PrimaryButton(
             label: 'Começar teste grátis agora',
             light: true,
-            onPressed: () => context.go('/contratar'),
+            onPressed: () => _irContratarTrialEscritorio(context),
           ),
         ],
       ),
@@ -504,7 +509,7 @@ class _ClosingSection extends StatelessWidget {
           const SizedBox(height: 24),
           _PrimaryButton(
             label: 'Começar teste grátis',
-            onPressed: () => context.go('/contratar'),
+            onPressed: () => _irContratarTrialEscritorio(context),
           ),
         ],
       ),

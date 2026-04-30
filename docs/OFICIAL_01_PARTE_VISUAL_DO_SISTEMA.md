@@ -236,6 +236,10 @@ Antes de qualquer implementacao que altere fluxo, tela, promessa comercial ou na
 4. so depois executar a implementacao no codigo
 5. ao final, registrar a rodada na memoria oficial e na continuidade
 
+## Evolucao visual futura (so planeada)
+
+Qualquer UI nova para **certificadora** (contador) ou para **pre-visualizacao fiscal futura** (IBS/CBS) so entra neste documento **depois** da descricao funcional e antes do codigo — ver [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md) (registo **29/04/2026**; **sem** implementacao nessa data).
+
 ## Documentos relacionados
 
 - [OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md)

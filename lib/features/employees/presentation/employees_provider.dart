@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pontocerto/core/auth/session.dart';
+import 'package:pontocerto/core/platform/platform_access.dart';
 import 'package:pontocerto/core/company/company_visual_identity.dart';
 import 'package:pontocerto/core/firebase/employee_access_service.dart';
 import 'package:pontocerto/core/firebase/firebase_status.dart';
@@ -267,6 +268,11 @@ class EmployeesNotifier extends Notifier<List<Employee>> {
   Future<void> toggleAtivo(String id) async {
     final sessao = ref.read(sessionProvider);
     if (sessao == null) throw Exception('Sessao nao encontrada.');
+    if (isSupremePlatformCompanyId(sessao.companyId)) {
+      throw Exception(
+        'A empresa suprema da plataforma nao pode ter colaboradores inativados por aqui.',
+      );
+    }
 
     Employee? employee;
     for (final item in state) {
@@ -317,6 +323,14 @@ class EmployeesNotifier extends Notifier<List<Employee>> {
   bool _isNumericOnly(String id) => RegExp(r'^\d+$').hasMatch(id);
 
   Future<void> remove(String id) async {
+    final sessao = ref.read(sessionProvider);
+    if (sessao == null) throw Exception('Sessao nao encontrada.');
+    if (isSupremePlatformCompanyId(sessao.companyId)) {
+      throw Exception(
+        'Nao e permitido remover usuarios da empresa suprema por aqui.',
+      );
+    }
+
     final snapshotAnterior = state;
     state = [
       for (final item in state)

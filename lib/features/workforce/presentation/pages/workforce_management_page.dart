@@ -69,11 +69,11 @@ class _WorkforceManagementPageState
     if (sessao == null) {
       return const Scaffold(body: Center(child: Text('Sem sessao ativa.')));
     }
-    if (sessao.role == Role.employee || sessao.role == Role.accountant) {
+    if (sessao.role == Role.employee) {
       ref.read(shellPageChromeProvider.notifier).state = const ShellPageChrome();
       return const Scaffold(
         body: Center(
-          child: Text('Modulo disponivel apenas para empresa/gerencia.'),
+          child: Text('Modulo disponivel apenas para empresa, gerencia ou contador.'),
         ),
       );
     }

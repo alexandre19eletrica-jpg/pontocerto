@@ -78,11 +78,57 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
   final Set<String> _autoReconciledProcessingKeys = <String>{};
   bool _reconcilingProcessingInvoices = false;
   bool _showInactiveFiscalServices = false;
+  TextEditingController? _fiscalPaymentReceiptController;
+  String? _fiscalPaymentReceiptCompanyId;
 
   @override
   void dispose() {
+    _fiscalPaymentReceiptController?.dispose();
     _competenceController.dispose();
     super.dispose();
+  }
+
+  void _ensureFiscalPaymentReceiptController({
+    required String companyId,
+    required Map<String, dynamic> companyData,
+  }) {
+    if (_fiscalPaymentReceiptCompanyId != companyId) {
+      _fiscalPaymentReceiptController?.dispose();
+      _fiscalPaymentReceiptController = TextEditingController(
+        text: companyData['fiscalPaymentBankInfo']?.toString() ?? '',
+      );
+      _fiscalPaymentReceiptCompanyId = companyId;
+    }
+  }
+
+  Future<void> _persistFiscalPaymentReceiptNote({
+    required Session sessao,
+    required Map<String, dynamic> companyData,
+  }) async {
+    final controller = _fiscalPaymentReceiptController;
+    if (controller == null) {
+      return;
+    }
+    final mergedCompanyData = Map<String, dynamic>.from(companyData);
+    mergedCompanyData['fiscalPaymentBankInfo'] = controller.text.trim();
+    try {
+      await FirebaseFirestore.instance
+          .collection('company_settings')
+          .doc(sessao.companyId)
+          .set(
+            {
+              'companyId': sessao.companyId,
+              'companyData': mergedCompanyData,
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+            SetOptions(merge: true),
+          );
+      if (!mounted) return;
+      _msg('Dados de recebimento gravados. Passam para o texto da nota ao emitir.');
+    } catch (_) {
+      if (!mounted) return;
+      _msg('Nao foi possivel gravar os dados de recebimento.');
+    }
   }
 
   String _companyProfileLabel(String profile) {
@@ -2883,6 +2929,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           companyData['mainCnaeDescription']?.toString().trim() ?? '',
       'legalNature': companyData['legalNature']?.toString().trim() ?? '',
       'taxRegime': _inferTaxRegime(companyData),
+      'fiscalPaymentBankInfo':
+          companyData['fiscalPaymentBankInfo']?.toString().trim() ?? '',
     };
   }
 
@@ -3116,7 +3164,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
 
       await _refreshCompanyProvisioning(
         successMessage:
-            'Base fiscal preparada e automacao multiempresa reprocessada.',
+            'Base fiscal desta empresa preparada e automacao de provisionamento reprocessada.',
       );
     } catch (_) {
       _msg('Nao foi possivel preparar a base fiscal pelo CNPJ agora.');
@@ -3390,6 +3438,13 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                               canConfigureModule: canConfigureModule,
                               canEditGlobalFiscalIntegration:
                                   canEditGlobalFiscalIntegration,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildFiscalPaymentReceiptCard(
+                              sessao: sessao,
+                              companyData: companyData,
+                              fiscalSettings: fiscalSettings,
+                              canManageInvoices: canManageInvoices,
                             ),
                             const SizedBox(height: 12),
                             AppWorkspaceCard(
@@ -4144,6 +4199,26 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                       .isEmpty,
             )
             .length;
+        final draftDocs = monthInvoices.where((doc) {
+          final status =
+              (doc.data()['status']?.toString().toUpperCase() ?? 'DRAFT');
+          return !_fiscalStatusIsApprovedOrLegacyEmitted(
+                doc.data()['status']?.toString(),
+              ) &&
+              status != 'CANCELED' &&
+              status != 'CANCELLED';
+        }).toList();
+        final approvedDocs = monthInvoices
+            .where(
+              (doc) => _fiscalStatusIsApprovedOrLegacyEmitted(
+                doc.data()['status']?.toString(),
+              ),
+            )
+            .toList();
+        final canceledDocs = monthInvoices.where((doc) {
+          final st = (doc.data()['status']?.toString().toUpperCase() ?? '');
+          return st == 'CANCELED' || st == 'CANCELLED';
+        }).toList();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4184,13 +4259,44 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
               canManageInvoices: canManageInvoices,
             ),
             const SizedBox(height: 12),
-            _buildIssuedInvoicesModule(
+            _buildInvoiceNotesCard(
+              title: 'Rascunhos e em preparo',
+              subtitle:
+                  'Notas que ainda nao foram autorizadas nesta competencia. Edite, emita ou exclua antes da validacao oficial.',
+              emptyText:
+                  'Nenhuma nota em rascunho ou processamento nesta competencia.',
+              docs: draftDocs,
               sessao: sessao,
               companyData: companyData,
               companySettings: companySettings,
               realIntegration: realIntegration,
               canManageInvoices: canManageInvoices,
-              monthInvoices: monthInvoices,
+            ),
+            const SizedBox(height: 12),
+            _buildInvoiceNotesCard(
+              title: 'Aprovadas / autorizadas',
+              subtitle:
+                  'Registros com emissao ou aprovacao oficial na competencia selecionada.',
+              emptyText: 'Nenhuma nota aprovada ou autorizada nesta competencia.',
+              docs: approvedDocs,
+              sessao: sessao,
+              companyData: companyData,
+              companySettings: companySettings,
+              realIntegration: realIntegration,
+              canManageInvoices: canManageInvoices,
+            ),
+            const SizedBox(height: 12),
+            _buildInvoiceNotesCard(
+              title: 'Canceladas',
+              subtitle:
+                  'Notas com status de cancelamento fiscal nesta competencia.',
+              emptyText: 'Nenhuma nota cancelada nesta competencia.',
+              docs: canceledDocs,
+              sessao: sessao,
+              companyData: companyData,
+              companySettings: companySettings,
+              realIntegration: realIntegration,
+              canManageInvoices: canManageInvoices,
             ),
             const SizedBox(height: 12),
             AppDesktopSplit(
@@ -4223,35 +4329,67 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                 },
               ),
             ),
-            const SizedBox(height: 16),
-            AppWorkspaceCard(
-              title: 'Notas em preparo',
-              subtitle:
-                  'Rascunhos, notas em processamento e itens que ainda exigem acao antes da emissao oficial.',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _buildInvoiceList(
-                  sessao: sessao,
-                  companyData: companyData,
-                  companySettings: companySettings,
-                  realIntegration: realIntegration,
-                  canManageInvoices: canManageInvoices,
-                  monthInvoices: monthInvoices.where((doc) {
-                    final status =
-                        (doc.data()['status']?.toString().toUpperCase() ??
-                        'DRAFT');
-                    return !_fiscalStatusIsApprovedOrLegacyEmitted(
-                          doc.data()['status']?.toString(),
-                        ) &&
-                        status != 'CANCELED' &&
-                        status != 'CANCELLED';
-                  }).toList(),
-                ),
-              ),
-            ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildInvoiceNotesCard({
+    required String title,
+    required String subtitle,
+    required String emptyText,
+    required List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+    required Session sessao,
+    required Map<String, dynamic> companyData,
+    required Map<String, dynamic> companySettings,
+    required _FiscalRealIntegrationSetup realIntegration,
+    required bool canManageInvoices,
+  }) {
+    final countLabel =
+        '${docs.length} registro(s) nesta competencia.';
+    return AppWorkspaceCard(
+      title: title,
+      subtitle: subtitle,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: EdgeInsets.zero,
+          expandedAlignment: Alignment.topLeft,
+          expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+          shape: const RoundedRectangleBorder(),
+          collapsedShape: const RoundedRectangleBorder(),
+          title: Text(
+            docs.isEmpty
+                ? '$countLabel Toque para ver.'
+                : '$countLabel Toque para ver as notas.',
+            style: const TextStyle(
+              color: AppBrandColors.softText,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              height: 1.35,
+            ),
+          ),
+          children: [
+            if (docs.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(emptyText),
+              )
+            else
+              ..._buildInvoiceList(
+                sessao: sessao,
+                companyData: companyData,
+                companySettings: companySettings,
+                realIntegration: realIntegration,
+                canManageInvoices: canManageInvoices,
+                monthInvoices: docs,
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -4351,107 +4489,6 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildIssuedInvoicesModule({
-    required Session sessao,
-    required Map<String, dynamic> companyData,
-    required Map<String, dynamic> companySettings,
-    required _FiscalRealIntegrationSetup realIntegration,
-    required bool canManageInvoices,
-    required List<QueryDocumentSnapshot<Map<String, dynamic>>> monthInvoices,
-  }) {
-    final issued = monthInvoices
-        .where(
-          (doc) => _fiscalStatusIsApprovedOrLegacyEmitted(
-            doc.data()['status']?.toString(),
-          ),
-        )
-        .toList();
-    final canceled = monthInvoices
-        .where(
-          (doc) =>
-              (doc.data()['status']?.toString().toUpperCase() ?? '') ==
-              'CANCELED',
-        )
-        .toList();
-
-    return AppWorkspaceCard(
-      title: 'Notas emitidas',
-      subtitle:
-          'Acompanhe as notas que ja passaram pela emissao oficial, separadas por status final.',
-      child: ExpansionTile(
-        tilePadding: EdgeInsets.zero,
-        childrenPadding: EdgeInsets.zero,
-        title: Text(
-          'Notas emitidas',
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
-        subtitle: Text(
-          '${issued.length} com registro (emit./aprov.) e ${canceled.length} cancelada(s) nesta competencia.',
-        ),
-        children: [
-          _buildInvoiceStatusBucket(
-            title: 'Aprovadas/autorizadas',
-            docs: issued,
-            emptyText: 'Nenhuma nota com registro oficial nesta competencia.',
-            sessao: sessao,
-            companyData: companyData,
-            companySettings: companySettings,
-            realIntegration: realIntegration,
-            canManageInvoices: canManageInvoices,
-          ),
-          const SizedBox(height: 8),
-          _buildInvoiceStatusBucket(
-            title: 'Canceladas',
-            docs: canceled,
-            emptyText: 'Nenhuma nota cancelada nesta competencia.',
-            sessao: sessao,
-            companyData: companyData,
-            companySettings: companySettings,
-            realIntegration: realIntegration,
-            canManageInvoices: canManageInvoices,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInvoiceStatusBucket({
-    required String title,
-    required List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
-    required String emptyText,
-    required Session sessao,
-    required Map<String, dynamic> companyData,
-    required Map<String, dynamic> companySettings,
-    required _FiscalRealIntegrationSetup realIntegration,
-    required bool canManageInvoices,
-  }) {
-    return ExpansionTile(
-      tilePadding: EdgeInsets.zero,
-      childrenPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-      subtitle: Text('${docs.length} registro(s)'),
-      children: [
-        if (docs.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(emptyText),
-            ),
-          )
-        else
-          ..._buildInvoiceList(
-            sessao: sessao,
-            companyData: companyData,
-            companySettings: companySettings,
-            realIntegration: realIntegration,
-            canManageInvoices: canManageInvoices,
-            monthInvoices: docs,
-          ),
-      ],
     );
   }
 
@@ -4630,122 +4667,173 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           'Falha na consulta oficial: ${lastEmissionError.isEmpty ? 'verificar tentativa mais recente' : lastEmissionError}',
         );
       }
-      return ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Icon(
-          lastAttemptStatus == 'FAILED' ||
-                  lastAttemptStatus == 'CANCEL_FAILED' ||
-                  lastAttemptStatus == 'QUERY_FAILED'
-              ? Icons.error_outline
-              : lastAttemptStatus == 'PROCESSING'
-              ? Icons.sync_outlined
-              : Icons.receipt_long_outlined,
-          color:
-              lastAttemptStatus == 'FAILED' ||
-                  lastAttemptStatus == 'CANCEL_FAILED' ||
-                  lastAttemptStatus == 'QUERY_FAILED'
-              ? AppBrandColors.gold
-              : lastAttemptStatus == 'PROCESSING'
-              ? AppBrandColors.primary
-              : null,
-        ),
-        title: Text(data['clientName']?.toString() ?? '-'),
-        subtitle: Text(subtitleLines.join('\n')),
-        isThreeLine: true,
-        trailing: Wrap(
-          spacing: 4,
-          children: [
-            IconButton(
-              tooltip: 'PDF',
-              onPressed: () =>
-                  _previewInvoicePdf(companyData: companyData, data: data),
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-            ),
-            IconButton(
-              tooltip: 'Editar',
-              onPressed: canManageInvoices
-                  ? () => _openInvoiceDialog(
-                      sessao: sessao,
-                      companyData: companyData,
-                      companySettings: companySettings,
-                      realIntegration: realIntegration,
-                      editing: doc,
-                    )
-                  : null,
-              icon: const Icon(Icons.edit_outlined),
-            ),
-            IconButton(
-              tooltip: 'Consultar status oficial',
-              onPressed: canManageInvoices
-                  ? () => _refreshInvoiceOfficialStatus(
-                      sessao: sessao,
-                      invoiceId: doc.id,
-                    )
-                  : null,
-              icon: const Icon(Icons.sync_outlined),
-            ),
-            IconButton(
-              tooltip: 'Emitir oficial',
-              onPressed: canManageInvoices &&
-                      !_fiscalStatusIsApprovedOrLegacyEmitted(
-                        doc.data()['status']?.toString(),
-                      )
-                  ? () =>
-                        _emitInvoiceOfficial(sessao: sessao, invoiceId: doc.id)
-                  : null,
-              icon: const Icon(Icons.cloud_upload_outlined),
-            ),
-            IconButton(
-              tooltip: 'Cancelar oficial',
-              onPressed: canManageInvoices &&
-                      _fiscalStatusIsApprovedOrLegacyEmitted(
-                        doc.data()['status']?.toString(),
-                      )
-                  ? () async {
-                      final reason = await _askCancellationReason();
-                      if (reason == null || reason.trim().isEmpty) {
-                        return;
-                      }
-                      await _cancelInvoiceOfficial(
-                        sessao: sessao,
-                        invoiceId: doc.id,
-                        reason: reason,
-                      );
-                    }
-                  : null,
-              icon: const Icon(Icons.cancel_outlined),
-            ),
-            IconButton(
-              tooltip: 'Gerar no financeiro',
-              onPressed: canManageInvoices
-                  ? () => _createFinanceReceivableFromInvoice(
-                      sessao: sessao,
-                      invoiceId: doc.id,
-                      invoiceData: data,
-                    )
-                  : null,
-              icon: Icon(
-                financeMovementId.isNotEmpty
-                    ? Icons.account_balance_wallet
-                    : Icons.post_add_outlined,
+      final statusIcon = Icon(
+        lastAttemptStatus == 'FAILED' ||
+                lastAttemptStatus == 'CANCEL_FAILED' ||
+                lastAttemptStatus == 'QUERY_FAILED'
+            ? Icons.error_outline
+            : lastAttemptStatus == 'PROCESSING'
+            ? Icons.sync_outlined
+            : Icons.receipt_long_outlined,
+        color:
+            lastAttemptStatus == 'FAILED' ||
+                lastAttemptStatus == 'CANCEL_FAILED' ||
+                lastAttemptStatus == 'QUERY_FAILED'
+            ? AppBrandColors.gold
+            : lastAttemptStatus == 'PROCESSING'
+            ? AppBrandColors.primary
+            : null,
+      );
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppBrandColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: statusIcon,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      data['clientName']?.toString() ?? '-',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                      maxLines: 4,
+                      softWrap: true,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            IconButton(
-              tooltip: 'Portal oficial',
-              onPressed: () => _openUrl(data['officialPortalUrl']?.toString()),
-              icon: const Icon(Icons.open_in_new_outlined),
-            ),
-            if (canManageInvoices && _invoiceDeletableAsNonFiscal(data))
-              IconButton(
-                tooltip: 'Excluir (rascunho ou sem validade fiscal)',
-                onPressed: () => _deleteServiceInvoiceIfAllowed(
-                  sessao: sessao,
-                  docId: doc.id,
-                  data: data,
+              const SizedBox(height: 10),
+              Text(
+                subtitleLines.join('\n'),
+                style: const TextStyle(
+                  color: AppBrandColors.softText,
+                  height: 1.35,
                 ),
-                icon: const Icon(Icons.delete_outline, color: Color(0xFFB91C1C)),
               ),
-          ],
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                alignment: WrapAlignment.start,
+                children: [
+                  IconButton(
+                    tooltip: 'PDF',
+                    onPressed: () => _previewInvoicePdf(
+                      companyData: companyData,
+                      data: data,
+                    ),
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Editar',
+                    onPressed: canManageInvoices
+                        ? () => _openInvoiceDialog(
+                              sessao: sessao,
+                              companyData: companyData,
+                              companySettings: companySettings,
+                              realIntegration: realIntegration,
+                              editing: doc,
+                            )
+                        : null,
+                    icon: const Icon(Icons.edit_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Consultar status oficial',
+                    onPressed: canManageInvoices
+                        ? () => _refreshInvoiceOfficialStatus(
+                              sessao: sessao,
+                              invoiceId: doc.id,
+                            )
+                        : null,
+                    icon: const Icon(Icons.sync_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Emitir oficial',
+                    onPressed: canManageInvoices &&
+                            !_fiscalStatusIsApprovedOrLegacyEmitted(
+                              doc.data()['status']?.toString(),
+                            )
+                        ? () => _emitInvoiceOfficial(
+                              sessao: sessao,
+                              invoiceId: doc.id,
+                            )
+                        : null,
+                    icon: const Icon(Icons.cloud_upload_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Cancelar oficial',
+                    onPressed: canManageInvoices &&
+                            _fiscalStatusIsApprovedOrLegacyEmitted(
+                              doc.data()['status']?.toString(),
+                            )
+                        ? () async {
+                              final reason = await _askCancellationReason();
+                              if (reason == null || reason.trim().isEmpty) {
+                                return;
+                              }
+                              await _cancelInvoiceOfficial(
+                                sessao: sessao,
+                                invoiceId: doc.id,
+                                reason: reason,
+                              );
+                            }
+                        : null,
+                    icon: const Icon(Icons.cancel_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Gerar no financeiro',
+                    onPressed: canManageInvoices
+                        ? () => _createFinanceReceivableFromInvoice(
+                              sessao: sessao,
+                              invoiceId: doc.id,
+                              invoiceData: data,
+                            )
+                        : null,
+                    icon: Icon(
+                      financeMovementId.isNotEmpty
+                          ? Icons.account_balance_wallet
+                          : Icons.post_add_outlined,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Portal oficial',
+                    onPressed: () =>
+                        _openUrl(data['officialPortalUrl']?.toString()),
+                    icon: const Icon(Icons.open_in_new_outlined),
+                  ),
+                  if (canManageInvoices && _invoiceDeletableAsNonFiscal(data))
+                    IconButton(
+                      tooltip: 'Excluir (rascunho ou sem validade fiscal)',
+                      onPressed: () => _deleteServiceInvoiceIfAllowed(
+                            sessao: sessao,
+                            docId: doc.id,
+                            data: data,
+                          ),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Color(0xFFB91C1C),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       );
     }).toList();
@@ -5121,6 +5209,69 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     }
   }
 
+  Widget _buildFiscalPaymentReceiptCard({
+    required Session sessao,
+    required Map<String, dynamic> companyData,
+    required _FiscalSettings fiscalSettings,
+    required bool canManageInvoices,
+  }) {
+    if (!fiscalSettings.enableOfficialInvoicePrep) {
+      return const SizedBox.shrink();
+    }
+    _ensureFiscalPaymentReceiptController(
+      companyId: sessao.companyId,
+      companyData: companyData,
+    );
+    final c = _fiscalPaymentReceiptController!;
+    return AppWorkspaceCard(
+      title: 'Recebimento na NFS-e',
+      subtitle:
+          'Instrucoes de pagamento e dados bancarios vao para o fim do texto da discriminacao do servico '
+          '(corpo da nota na Focus). Podem ser editados tambem ao abrir Nova NFS-e.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: c,
+            enabled: canManageInvoices,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'Dados para o tomador efetuar o pagamento',
+              alignLabelWithHint: true,
+              helperText:
+                  'Ex.: Pix (chave), banco, agencia, conta, favorecido, prazo.',
+            ),
+          ),
+          if (!canManageInvoices) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Somente perfis com permissao de emissao podem alterar este texto.',
+              style: TextStyle(
+                color: AppBrandColors.softText,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: canManageInvoices
+                  ? () => _persistFiscalPaymentReceiptNote(
+                        sessao: sessao,
+                        companyData: companyData,
+                      )
+                  : null,
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('Gravar na empresa'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRealIntegrationCard({
     required Session sessao,
     required Map<String, dynamic> companyData,
@@ -5153,9 +5304,11 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     return AppWorkspaceCard(
       title: 'Emissao fiscal real',
       subtitle: canEditGlobalFiscalIntegration
-          ? 'Estrutura de integracao NFS-e: ajuste global (suprema) ou por empresa.'
-          : 'Integracao Focus, homologacao e matriz: governadas pela suprema. Cada empresa: documentacao e '
-              'certificado (provisionamento), cadastro em Empresas, Sincronizar e emissao de notas.',
+          ? 'Integracao global (ambiente, provedor, API, tokens) pela sua empresa suprema. Inscricao municipal, '
+              'codigo municipal, CNAE, matriz e preparacao pelo CNPJ sao individuais por empresa cadastrada.'
+          : 'Integracao global (ambiente, provedor, API Focus, URL, tokens): apenas a suprema altera — nao confundir '
+              'com dados cadastrais desta empresa (inscricao municipal, CNAE, codigos, matriz). '
+              'Matriz fiscal, preparar pelo CNPJ, checklist e automacao desta empresa estao liberados com permissao.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -5174,9 +5327,9 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
                 subtitle: Text(
-                  'Tudo o que e integracao com a Focus (incluindo matriz, homologacao, automacao) '
-                  'e definido na empresa suprema. Por empresa: anexar documentacao e certificado para '
-                  'o provisionamento, manter o cadastro em Empresas, usar Sincronizar e emitir notas abaixo.',
+                  'So a suprema altera ambiente, provedor, API Focus, URL e tokens (uma base para todas as empresas). '
+                  'Nesta empresa continuam livres: inscricao municipal, CNAE, matriz fiscal, preparacao pelo CNPJ e checklist. '
+                  'Em «Configurar emissao real» aparecem os globais (leitura) e o que for local: codigo da emissao, certificado e observacoes.',
                   style: TextStyle(height: 1.35),
                 ),
               ),
@@ -5215,7 +5368,6 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
             readiness: readiness,
             checklist: checklist,
             canConfigureModule: canConfigureModule,
-            canEditGlobalFiscalIntegration: canEditGlobalFiscalIntegration,
           ),
           const SizedBox(height: 12),
           _buildComplianceMatrixCard(complianceMatrix),
@@ -5484,10 +5636,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     required _FiscalOperationalReadiness readiness,
     required _FiscalHomologationChecklist checklist,
     required bool canConfigureModule,
-    required bool canEditGlobalFiscalIntegration,
   }) {
-    final canEditChecklistSwitches =
-        canConfigureModule && canEditGlobalFiscalIntegration;
+    final canEditChecklistSwitches = canConfigureModule;
     final certificate =
         (companySettings['fiscalCertificate'] as Map?)
             ?.cast<String, dynamic>() ??
@@ -5582,8 +5732,9 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           const SizedBox(height: 6),
           Text(
             canEditChecklistSwitches
-                ? 'Feche pendencias reais por empresa antes de liberar operacao oficial. O progresso e atualizado apos sincronizacao e emissao. Em producao, o backend pode bloquear emissao sem checklist e autorizacao final.'
-                : 'Somente a empresa suprema altera o checklist. A equipe acompanha o estado aqui; a liberacao de producao segue a governanca da plataforma.',
+                ? 'Checklist por empresa (cadastro, certificado, matriz, conexao, piloto). '
+                    'Feche pendencias reais antes de autorizar producao. O backend pode exigir itens concluidos para emissao oficial.'
+                : 'Sem permissao para alterar o checklist com este acesso. Pedido de ajuste pode ser feito ao responsavel da empresa.',
             style: const TextStyle(color: AppBrandColors.softText, height: 1.4),
           ),
           if (!canEditChecklistSwitches) ...[
@@ -5595,8 +5746,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Homologacao assistida: edicao desativada para esta empresa; '
-                    'os interruptores so podem ser alterados na sessao suprema.',
+                    'Edicao do checklist exige permissao de configuracao fiscal nesta empresa.',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.35,
@@ -5687,44 +5837,40 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     required bool canConfigureModule,
     required bool canEditGlobalFiscalIntegration,
   }) {
-    final canOpenGlobalDialog =
-        canConfigureModule && canEditGlobalFiscalIntegration;
+    final canOpenEmissionConfigDialog = canConfigureModule;
     final configButton = FilledButton.icon(
-      onPressed: canOpenGlobalDialog
+      onPressed: canOpenEmissionConfigDialog
           ? () => _openRealIntegrationDialog(sessao: sessao, current: setup)
           : null,
       icon: const Icon(Icons.hub_outlined),
       label: const Text('Configurar emissao real'),
     );
-    final canEditFocusLayer =
-        canConfigureModule && canEditGlobalFiscalIntegration;
+    final canEditCompanyFiscalPrep = canConfigureModule;
     final canCompanyFiscalActions = canConfigureModule;
-    const focusLayerLockedHint =
-        'Camada de integracao Focus: definida na empresa suprema (matriz, CNPJ base, reprocesso).';
-    const companyNextSteps =
-        'Na empresa: documentacao e certificado para o provisionamento, '
-        'dados de cadastro na tela de Empresas, depois Sincronizar e emitir.';
+    const fiscalPrepLockedHint =
+        'Requer permissao para configurar o modulo fiscal nesta empresa.';
 
-    final lockHint = canOpenGlobalDialog
-        ? null
-        : (!canConfigureModule
-              ? 'Sem permissao para editar a configuracao fiscal com este acesso.'
-              : '$focusLayerLockedHint $companyNextSteps');
+    final String? emissionConfigTooltip = !canConfigureModule
+        ? 'Sem permissao para editar a configuracao fiscal com este acesso.'
+        : (!canEditGlobalFiscalIntegration
+              ? 'Ambiente, provedor, API Focus e URL base vêm da empresa suprema (somente leitura). '
+                  'Aqui voce complementa codigo fiscal, certificado e observacoes desta empresa.'
+              : null);
     return Align(
       alignment: Alignment.centerLeft,
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
-          lockHint == null
+          emissionConfigTooltip == null
               ? configButton
-              : Tooltip(message: lockHint, child: configButton),
+              : Tooltip(message: emissionConfigTooltip, child: configButton),
           Tooltip(
-            message: canEditFocusLayer
-                ? 'Editar matriz fiscal (suprema).'
-                : focusLayerLockedHint,
+            message: canEditCompanyFiscalPrep
+                ? 'Matriz fiscal desta empresa (municipio base, ISS, regras por servico/CNAE).'
+                : fiscalPrepLockedHint,
             child: OutlinedButton.icon(
-              onPressed: canEditFocusLayer
+              onPressed: canEditCompanyFiscalPrep
                   ? () => _openComplianceMatrixDialog(
                         sessao: sessao,
                         setup: setup,
@@ -5746,11 +5892,11 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
             ),
           ),
           Tooltip(
-            message: canEditFocusLayer
-                ? 'Preenche a base a partir do CNPJ (suprema).'
-                : focusLayerLockedHint,
+            message: canEditCompanyFiscalPrep
+                ? 'Preenche cadastro e base fiscal desta empresa a partir do CNPJ (dados individuais).'
+                : fiscalPrepLockedHint,
             child: OutlinedButton.icon(
-              onPressed: canEditFocusLayer
+              onPressed: canEditCompanyFiscalPrep
                   ? () => _prepareFiscalBaseFromCompany(
                         sessao: sessao,
                         companyData: companyData,
@@ -5763,14 +5909,14 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
             ),
           ),
           Tooltip(
-            message: canEditFocusLayer
-                ? 'Reenviar a automacao de multiempresa (suprema).'
-                : focusLayerLockedHint,
+            message: canEditCompanyFiscalPrep
+                ? 'Reprocessar automacao de provisionamento Focus apenas para esta empresa.'
+                : fiscalPrepLockedHint,
             child: OutlinedButton.icon(
-              onPressed: canEditFocusLayer
+              onPressed: canEditCompanyFiscalPrep
                   ? () => _refreshCompanyProvisioning(
                         successMessage:
-                            'Automacao fiscal multiempresa reprocessada com sucesso.',
+                            'Automacao de provisionamento desta empresa reprocessada com sucesso.',
                       )
                   : null,
               icon: const Icon(Icons.settings_suggest_outlined),
@@ -6889,10 +7035,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     (messageContext ?? context).showUserMessage(text);
   }
 
-  /// Nunca exibir o segredo; token global so na infra (empresa suprema / env).
+  /// Nunca exibir o segredo; credencial global na infra (Functions / env).
   String _tokenApiStatusLine(_FiscalRealIntegrationSetup setup) {
     if (setup.usesPlatformFocusToken) {
-      return 'ja preenchido pela empresa suprema (valor nao exibido)';
+      return 'gerenciada pela plataforma (valor nao exibido)';
     }
     if (setup.apiToken.trim().isEmpty) {
       return 'nao informado';
@@ -7165,7 +7311,7 @@ class _FiscalRealIntegrationSetup {
   final String apiBaseUrl;
   final String apiToken;
   final String lastHomologationNote;
-  /// Token global do backend (empresa suprema / FOCUS_API_TOKEN) — nunca mostrar o valor.
+  /// Token global no backend (FOCUS_API_TOKEN nas Functions) — nunca mostrar o valor.
   final bool usesPlatformFocusToken;
 
   _FiscalRealIntegrationSetup copyWith({

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -979,9 +978,8 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
                                     : null,
                               ),
                               const SizedBox(height: 16),
-                              _buildAssistantTokenCard(
-                                sessao: sessao,
-                                canManage: canManage,
+                              _buildAssistantCredentialInfoCard(
+                                showTechnical: canManage,
                               ),
                             ],
                           ),
@@ -1718,99 +1716,27 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
     }
   }
 
-  Future<void> _configureAssistantToken(Session sessao) async {
-    final controller = TextEditingController();
-    final token = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Token da OpenAI'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Somente o owner da empresa consegue alterar esta chave. O valor fica restrito no backend e nao aparece completo depois de salvo.',
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Token da OpenAI',
-                hintText: 'sk-...',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-
-    if (!mounted || token == null) return;
-    if (token.isEmpty) {
-      _msg('Informe o token da OpenAI para salvar.');
-      return;
-    }
-
-    try {
-      await _assistantAdminService.saveCompanyApiKey(token);
-      await _writeAuditLog(
-        sessao: sessao,
-        action: 'assistant_company_api_key_save',
-        entityPath: 'assistant_secure',
-        entityId: sessao.companyId,
-        before: {'hasCompanyApiKey': _assistantConfigStatus?.hasCompanyApiKey},
-        after: {'hasCompanyApiKey': true},
-      );
-      await _loadAssistantConfigStatus();
-      _msg('Token da OpenAI salvo com sucesso.');
-    } on FirebaseFunctionsException catch (e) {
-      _msg(e.message ?? 'Nao foi possivel salvar o token da OpenAI.');
-    } catch (_) {
-      _msg('Nao foi possivel salvar o token da OpenAI.');
-    }
-  }
-
-  Future<void> _removeAssistantToken(Session sessao) async {
-    try {
-      await _assistantAdminService.removeCompanyApiKey();
-      await _writeAuditLog(
-        sessao: sessao,
-        action: 'assistant_company_api_key_remove',
-        entityPath: 'assistant_secure',
-        entityId: sessao.companyId,
-        before: {'hasCompanyApiKey': _assistantConfigStatus?.hasCompanyApiKey},
-        after: {'hasCompanyApiKey': false},
-      );
-      await _loadAssistantConfigStatus();
-      _msg('Token da OpenAI removido da empresa.');
-    } on FirebaseFunctionsException catch (e) {
-      _msg(e.message ?? 'Nao foi possivel remover o token da OpenAI.');
-    } catch (_) {
-      _msg('Nao foi possivel remover o token da OpenAI.');
-    }
-  }
-
-  Widget _buildAssistantTokenCard({
-    required Session sessao,
-    required bool canManage,
-  }) {
+  Widget _buildAssistantCredentialInfoCard({required bool showTechnical}) {
     final status = _assistantConfigStatus;
-    final sourceLabel = switch (status?.source) {
-      'company' => 'Usando token da propria empresa',
-      'platform' => 'Usando token central da plataforma',
-      _ => 'Sem token configurado',
+    final hasCompany = status?.hasCompanyApiKey == true;
+    final hasPlatform = status?.hasPlatformApiKey == true;
+
+    final sourceChip = switch (status?.source) {
+      'company' => 'Credencial desta empresa: chave propria (legado)',
+      'platform' => 'Credencial: plataforma (suprema)',
+      _ => hasPlatform
+          ? 'Credencial: plataforma (suprema)'
+          : 'Credencial: verificar na plataforma',
     };
+
+    final bodyText = !showTechnical
+        ? 'O assistente usa a mesma credencial OpenAI da plataforma (empresa suprema). Sua empresa nao precisa cadastrar token: basta usar o assistente. Limites de uso por empresa ficam na franquia mensal acima.'
+        : hasCompany
+            ? 'Esta empresa ainda possui chave OpenAI propria cadastrada (legado). O modelo do produto e credencial unica da suprema para todos; alinhe com o suporte se quiser remover o cadastro legado.'
+            : hasPlatform
+                ? 'O assistente esta ligado a credencial unica da plataforma (mesma da empresa suprema). Nao ha cadastro de token por empresa nesta tela: a empresa use o assistente e ajuste franquia e permissoes acima. A suprema controla a credencial e pode acompanhar consumo por empresa cadastrada.'
+                : 'Credencial da plataforma nao detectada agora; o assistente pode falhar ate a suprema concluir OPENAI_API_KEY. Avise o suporte se continuar indisponivel.';
+
     final updatedAtLabel = status?.updatedAtIso.isNotEmpty == true
         ? _formatIsoDateTime(status!.updatedAtIso)
         : null;
@@ -1826,56 +1752,56 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Configuracao da OpenAI',
+            'Credencial do assistente',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
-            'O assistente desta empresa pode operar com uma chave propria da OpenAI. Essa configuracao fica restrita ao owner.',
+            bodyText,
             style: TextStyle(color: AppBrandColors.softText),
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              AppHeaderChip(sourceLabel),
-              AppHeaderChip('Modelo ${status?.model ?? 'gpt-5-mini'}'),
-              if ((status?.keyPreview ?? '').isNotEmpty)
-                AppHeaderChip('Token ${status!.keyPreview}'),
-              if (updatedAtLabel != null)
-                AppHeaderChip('Atualizado $updatedAtLabel'),
-              if ((status?.updatedByName ?? '').isNotEmpty)
-                AppHeaderChip('Por ${status!.updatedByName}'),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              ElevatedButton.icon(
-                onPressed: !canManage || _assistantConfigLoading
-                    ? null
-                    : () => _configureAssistantToken(sessao),
-                icon: const Icon(Icons.key_outlined),
-                label: Text(
-                  status?.hasCompanyApiKey == true
-                      ? 'Atualizar token'
-                      : 'Configurar token',
+          if (showTechnical) ...[
+            const SizedBox(height: 10),
+            if (_assistantConfigLoading)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppBrandColors.softText,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Carregando status tecnico...',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppBrandColors.softText,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed:
-                    !canManage ||
-                        _assistantConfigLoading ||
-                        status?.hasCompanyApiKey != true
-                    ? null
-                    : () => _removeAssistantToken(sessao),
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Remover'),
-              ),
-            ],
-          ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                AppHeaderChip(sourceChip),
+                if (status != null)
+                  AppHeaderChip('Modelo ${status.model}'),
+                if ((status?.keyPreview ?? '').isNotEmpty)
+                  AppHeaderChip('Chave ${status!.keyPreview}'),
+                if (updatedAtLabel != null)
+                  AppHeaderChip('Atualizado $updatedAtLabel'),
+                if ((status?.updatedByName ?? '').isNotEmpty)
+                  AppHeaderChip('Por ${status!.updatedByName}'),
+              ],
+            ),
+          ],
         ],
       ),
     );

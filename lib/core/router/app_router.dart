@@ -32,6 +32,9 @@ import 'package:pontocerto/features/material_catalog/presentation/pages/material
 import 'package:pontocerto/features/marketing/presentation/pages/sales_page.dart';
 import 'package:pontocerto/features/marketing/presentation/pages/accountant_partner_invite_page.dart';
 import 'package:pontocerto/features/marketing/presentation/pages/accounting_office_signup_page.dart';
+import 'package:pontocerto/features/marketing/presentation/pages/vendas_contador_page.dart';
+import 'package:pontocerto/features/marketing/presentation/pages/vendas_convite_page.dart';
+import 'package:pontocerto/features/marketing/presentation/pages/vendas_empresa_page.dart';
 import 'package:pontocerto/features/marketing/presentation/pages/employee_tester_showcase_page.dart';
 import 'package:pontocerto/features/marketing/presentation/pages/employee_tester_signup_page.dart';
 import 'package:pontocerto/features/marketing/presentation/pages/sales_onboarding_page.dart';
@@ -72,6 +75,9 @@ class RotasApp {
         final estaNaAtivacao = location == '/ativacao-empresa';
         final estaNoInicio = location == '/inicio' || location == '/';
         final estaNaPaginaDeVendas = location == '/vendas';
+        final estaVContador = location == '/vendas-contador';
+        final estaVEmpresa = location == '/vendas-empresa';
+        final estaConviteVendas = location == '/convite';
         final estaNoPreCadastroPublico = location == '/contratar';
         final estaNoOnboardingPublico = location == '/boas-vindas-empresa';
         final estaNoConviteContador = location == '/convite-contador';
@@ -82,6 +88,9 @@ class RotasApp {
 
         if (sessao == null) {
           if (estaNaPaginaDeVendas ||
+              estaVContador ||
+              estaVEmpresa ||
+              estaConviteVendas ||
               estaNoPreCadastroPublico ||
               estaNoOnboardingPublico ||
               estaNoConviteContador ||
@@ -117,7 +126,10 @@ class RotasApp {
           return null;
         }
 
-        if (estaNaPaginaDeVendas) {
+        if (estaNaPaginaDeVendas ||
+            estaVContador ||
+            estaVEmpresa ||
+            estaConviteVendas) {
           return null;
         }
         if (estaNoPreCadastroPublico) {
@@ -244,6 +256,20 @@ class RotasApp {
         builder: (context, state) => const EmpresaActivationPage(),
       ),
       GoRoute(path: '/vendas', builder: (context, state) => const SalesPage()),
+      GoRoute(
+        path: '/vendas-contador',
+        builder: (context, state) => const VendasContadorPage(),
+      ),
+      GoRoute(
+        path: '/vendas-empresa',
+        builder: (context, state) => const VendasEmpresaPage(),
+      ),
+      GoRoute(
+        path: '/convite',
+        builder: (context, state) => VendasConvitePage(
+          token: state.uri.queryParameters['token'] ?? '',
+        ),
+      ),
       GoRoute(
         path: '/contratar',
         redirect: (context, state) =>

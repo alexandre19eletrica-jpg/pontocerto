@@ -26,7 +26,17 @@ class AccountantCompaniesPage extends ConsumerWidget {
     final linksAsync = ref.watch(accountantCompanyLinksProvider);
     final profileAsync = ref.watch(accountantFiscalProfileProvider);
 
-    ref.read(shellPageChromeProvider.notifier).state = const ShellPageChrome(
+    var vinculosResumoChip = 'Carregando vinculos...';
+    if (linksAsync.hasValue) {
+      final vis =
+          _dedupeVisualLinks([...linksAsync.value!], session.companyId);
+      final inact = vis.where((l) => !l.isActive).length;
+      vinculosResumoChip = inact > 0
+          ? '$inact vinculo(s) inativo(s) na lista'
+          : 'Todos os vinculos ativos';
+    }
+
+    ref.read(shellPageChromeProvider.notifier).state = ShellPageChrome(
       header: AppWorkspaceHeader(
         title: 'Empresas vinculadas',
         subtitle:
@@ -34,6 +44,7 @@ class AccountantCompaniesPage extends ConsumerWidget {
         chips: [
           AppHeaderChip('Carteira organizada'),
           AppHeaderChip('Troca rapida de contexto'),
+          AppHeaderChip(vinculosResumoChip),
         ],
       ),
     );
@@ -52,6 +63,9 @@ class AccountantCompaniesPage extends ConsumerWidget {
                   final aCurrent = a.companyId == session.companyId ? 1 : 0;
                   final bCurrent = b.companyId == session.companyId ? 1 : 0;
                   if (aCurrent != bCurrent) return bCurrent.compareTo(aCurrent);
+                  final aAct = a.isActive ? 0 : 1;
+                  final bAct = b.isActive ? 0 : 1;
+                  if (aAct != bAct) return aAct.compareTo(bAct);
                   return a.companyName.toLowerCase().compareTo(
                     b.companyName.toLowerCase(),
                   );
@@ -469,6 +483,7 @@ class _AccountantCompanyTile extends ConsumerWidget {
             children: [
               AppHeaderChip(visualCode),
               if (formattedDocument.isNotEmpty) AppHeaderChip(formattedDocument),
+              AppHeaderChip(link.isActive ? 'Vinculo ativo' : 'Vinculo inativo'),
               AppHeaderChip(isCurrent ? 'Empresa atual' : 'Disponivel'),
             ],
           ),

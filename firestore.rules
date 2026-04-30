@@ -5,6 +5,17 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    /** Espelha supremePlatformCompanyIds no app (Dart) e SUPREME_PLATFORM_COMPANY_IDS nas Functions. */
+    function isSupremePlatformCompanyId(companyId) {
+      return companyId == 'comp_1771754418259';
+    }
+
+    /** Impede desativar (ativo == false) qualquer usuario cuja empresa seja a suprema. */
+    function supremePlatformUserMustRemainActive() {
+      return !isSupremePlatformCompanyId(resource.data.companyId) ||
+        request.resource.data.ativo != false;
+    }
+
     function userDoc() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
@@ -285,16 +296,25 @@ service cloud.firestore {
         );
 
       allow update: if signedIn() &&
+        supremePlatformUserMustRemainActive() &&
         (
           (
             uid == request.auth.uid &&
             request.resource.data.companyId == resource.data.companyId &&
             request.resource.data.role == resource.data.role
           ) ||
-          ((isOwner() || isManager()) && sameCompany(resource) && sameCompanyData(request.resource.data))
+          ((isOwner() || isManager()) && sameCompany(resource) && sameCompanyData(request.resource.data)) ||
+          (
+            isAccountant() &&
+            accountantLinkedCompany(resource.data.companyId) &&
+            request.resource.data.companyId == resource.data.companyId &&
+            request.resource.data.role == resource.data.role &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'updatedAt'])
+          )
         );
 
       allow delete: if signedIn() &&
+        !isSupremePlatformCompanyId(resource.data.companyId) &&
         ((isOwner() || isManager()) && sameCompany(resource));
     }
 

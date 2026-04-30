@@ -214,6 +214,10 @@ Frentes tecnicas de publicacao:
 - `functions`
 - `appbundle` quando houver impacto no app
 
+## Evolucao fiscal futura (so documentada; nao implementada)
+
+Certificadora (orquestracao AC + estados + ponte para `fiscalCertificate` / Focus) e preparacao **IBS/CBS** (campos opcionais, flags desligadas, sem alteracao de payload real ate decisao) estao descritas **somente** em [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md). Qualquer implementacao deve obedecer a ordem `OFICIAL_01` → `02` → `03` → codigo → `OFICIAL_04` e continuidade.
+
 ## Referencias tecnicas centrais
 
 - [firestore.rules](/C:/Users/hp/pontocerto/firestore.rules)

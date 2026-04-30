@@ -60,6 +60,8 @@ bool canAccessRoute(Role role, String location) {
       '/documents',
       '/fiscal',
       '/improvements',
+      '/workforce',
+      '/employees',
     };
     return rotasPermitidasContador.contains(location);
   }

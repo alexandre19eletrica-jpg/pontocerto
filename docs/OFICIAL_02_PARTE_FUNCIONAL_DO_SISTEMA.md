@@ -275,6 +275,10 @@ Antes de qualquer implementacao nova:
 4. implementar no codigo apenas depois dessa descricao oficial
 5. salvar a memoria da rodada no `OFICIAL_04` e na `CONTINUIDADE_ATUAL`
 
+## Funcionalidades em planeamento seguro (nao implementadas)
+
+O **que** se pretende fazer em seguranca — certificadora (fluxo contador → estado → encaixe em `company_settings` / fiscal existente) e preparacao **IBS/CBS** sem quebrar emissao — esta **apenas descrito** em [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md). **Nada disto foi ligado a producao** na rodada que registou o plano; implementar so apos `OFICIAL_01`–`03` e aprovacao.
+
 ## Documentos relacionados
 
 - [OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md)

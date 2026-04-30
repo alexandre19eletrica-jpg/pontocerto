@@ -54,6 +54,17 @@ class SalesAnalyticsService {
     );
   }
 
+  /// Clique que abre o WhatsApp comercial (landing / vendas). Não indica envio da mensagem no app.
+  Future<void> trackWhatsappComercial({String pagePath = ''}) async {
+    final path = pagePath.trim().isEmpty
+        ? (Uri.base.path.isEmpty ? '/' : Uri.base.path)
+        : pagePath;
+    await _trackEvent(
+      eventName: 'sales_whatsapp_comercial',
+      pagePath: path,
+    );
+  }
+
   Future<Map<String, dynamic>> currentTrackingPayload() async {
     final context = await _ensureContext();
     return context.toPayload();

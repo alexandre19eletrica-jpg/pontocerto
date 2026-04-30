@@ -19,6 +19,7 @@ class CompanyAccessState {
     Map<String, dynamic> settings, {
     String companyId = '',
   }) {
+    // Unica empresa suprema: nunca bloquear por cobranca, ativacao ou flags comerciais.
     if (isSupremePlatformCompanyId(companyId)) {
       return const CompanyAccessState(
         allowLogin: true,

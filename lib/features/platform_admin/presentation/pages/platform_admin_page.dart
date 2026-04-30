@@ -4182,9 +4182,8 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Token API Focus global: definido pela empresa suprema / '
-                      'infraestrutura (nao exibido). Deixe vazio no cadastro da '
-                      'empresa para usar o token padrao da plataforma.',
+                      'Token API Focus global: configurado na infraestrutura da plataforma '
+                      '(nao exibido aqui). No cadastro da empresa cliente, deixe vazio para usar esse token padrao.',
                       style: TextStyle(height: 1.35),
                     ),
                     const SizedBox(height: 8),

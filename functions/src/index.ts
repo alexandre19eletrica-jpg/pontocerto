@@ -5,6 +5,7 @@ import sendgridMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
 import { GoogleAuth } from 'google-auth-library';
 import { defineString } from 'firebase-functions/params';
+import {initVendasPublicExports} from './vendas_public_flow';
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -19,9 +20,14 @@ type Claims = {
   employeeId: string;
 };
 
+/** Unica empresa suprema (plataforma). Espelho de `supremePlatformCompanyIds` no app (Dart).
+ * Perfis de usuario com este companyId nao podem ser desativados (ativo=false) nem ter delete
+ * via regras do Firestore; cancelamento de assinatura Asaas e barrado em companyCancelBillingSubscription.
+ */
 const SUPREME_PLATFORM_COMPANY_IDS = new Set([
+  // Bonfim Alexandre Sousa Santos — unico ID suprema; nao incluir outros.
+  // Login e flags comerciais nunca bloqueiam esta empresa (companyAccessState, buildDefaultCommercialSettings, bootstrap).
   'comp_1771754418259',
-  'comp_17717554418259',
 ]);
 const DEFAULT_ACCOUNTANT_COMPANY_PRICE_CENTS = 9790;
 
@@ -839,6 +845,8 @@ function marketingEventScore(eventName: string): number {
       return 4;
     case 'sales_plan_select':
       return 8;
+    case 'sales_whatsapp_comercial':
+      return 10;
     case 'sales_preregistration_submit':
       return 20;
     default:
@@ -1769,6 +1777,16 @@ function companyAccessState(settingsData: Record<string, unknown>): {
   approvalStatus: string;
   message: string;
 } {
+  const inferredCompanyId =
+    asTrimmedString(settingsData.companyId) || asTrimmedString(settingsData.id);
+  if (isSupremePlatformCompany(inferredCompanyId)) {
+    return {
+      allowLogin: true,
+      lifecycleStatus: 'released',
+      approvalStatus: 'approved',
+      message: '',
+    };
+  }
   const commercial = buildDefaultCommercialSettings(settingsData);
   const lifecycleStatus = asTrimmedString(commercial.lifecycleStatus) || 'trial';
   const approvalStatus = asTrimmedString(commercial.approvalStatus) || 'auto_approved';
@@ -6921,11 +6939,18 @@ async function enviarNotificacaoInternaNovoCadastro(params: {
 }): Promise<void> {
   try {
     const emailCfg = obterConfigEmail();
+    const fromRaw = asTrimmedString(emailCfg.fromEmail).toLowerCase();
+    const toInternal =
+      fromRaw.includes('@') && !fromRaw.startsWith('@') ? fromRaw : PLATFORM_SIGNUP_NOTIFICATION_EMAIL;
+    const fromEmail =
+      fromRaw.includes('@') && !fromRaw.startsWith('@')
+        ? fromRaw
+        : asTrimmedString(emailCfg.fromEmail) || PLATFORM_SIGNUP_NOTIFICATION_EMAIL;
     await enviarEmailHtml({
-      toEmail: PLATFORM_SIGNUP_NOTIFICATION_EMAIL,
+      toEmail: toInternal,
       subject: params.subject,
       html: params.html,
-      fromEmail: emailCfg.fromEmail || PLATFORM_SIGNUP_NOTIFICATION_EMAIL,
+      fromEmail,
       sendgridKey: emailCfg.sendgridKey,
       smtpUser: emailCfg.smtpUser,
       smtpAppPassword: emailCfg.smtpAppPassword,
@@ -13831,6 +13856,13 @@ exports.companyCancelBillingSubscription = functions.https.onCall(async (data, c
   const claims = assertClaims(context);
   assertRole(claims, ['OWNER']);
 
+  if (isSupremePlatformCompany(claims.companyId)) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'A empresa suprema da plataforma nao utiliza cancelamento de assinatura por este fluxo.',
+    );
+  }
+
   const cfg = assertAsaasConfigured();
   const settingsRef = admin.firestore().collection('company_settings').doc(claims.companyId);
   const settingsSnap = await settingsRef.get();
@@ -15654,6 +15686,14 @@ exports.setEmployeeActiveStatus = functions.https.onCall(async (data, context) =
 
     const before = snap.data() ?? {};
     assertCompany(String(before.companyId ?? ''), claims);
+
+    const companyIdBefore = String(before.companyId ?? '');
+    if (isSupremePlatformCompany(companyIdBefore) && !ativo) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Contas da empresa suprema da plataforma nao podem ser desativadas.',
+      );
+    }
 
     tx.set(
       employeeRef,
@@ -17675,3 +17715,9 @@ exports.syncFiscalInvoiceRuntimeSummary = functions.firestore
 
     await rebuildFiscalInvoiceRuntimeSummary(companyId);
   });
+
+initVendasPublicExports(exports as Record<string, unknown>, {
+  obterConfigEmail,
+  enviarEmailHtml,
+  escapeHtml,
+});

@@ -15,6 +15,10 @@
       "cleanUrls": true,
       "rewrites": [
         {
+          "source": "/api/lead-contabilidade",
+          "function": "leadContabilidadeHttp"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }

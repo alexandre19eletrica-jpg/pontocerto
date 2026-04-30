@@ -19,7 +19,7 @@ final accountantCompanyLinksProvider = StreamProvider<List<AccountantLink>>((
         final rawLinks = [
           for (final doc in snapshot.docs)
             AccountantLink.fromMap({...doc.data(), 'id': doc.id}),
-        ].where((item) => item.isActive).toList();
+        ];
 
         final hasRichLinks = rawLinks.any(_isRichAccountantLink);
         final normalizedLinks = hasRichLinks
@@ -43,13 +43,18 @@ final accountantCompanyLinksProvider = StreamProvider<List<AccountantLink>>((
         }
 
         final links = dedupedLinks.values.toList()
-          ..sort((a, b) => a.companyName.compareTo(b.companyName));
+          ..sort((a, b) {
+            final aAct = a.isActive ? 0 : 1;
+            final bAct = b.isActive ? 0 : 1;
+            if (aAct != bAct) return aAct.compareTo(bAct);
+            return a.companyName.toLowerCase().compareTo(b.companyName.toLowerCase());
+          });
         return links;
       });
 });
 
 int _linkScore(AccountantLink item) {
-  var score = 0;
+  var score = item.isActive ? 500000 : 0;
   if (item.companyDisplayCode.trim().isNotEmpty) score += 10;
   if (item.companyDocument.trim().isNotEmpty) score += 5;
   if (item.companyName.trim().isNotEmpty) score += 5;

@@ -1,9 +1,11 @@
 # Memoria e Registro Atual Oficial do Sistema
 
-Data base: 27/04/2026
+Data base: 29/04/2026
 Projeto: Ponto Certo
 
-**Registo recente (27/04/2026):** a memoria viva, o registo de atualizacoes, a continuidade, o prompt do assistente e este ficheiro mantem a **mesma fonte** em `docs/`: a governanca **Focus** (integracao, homologacao, matriz, automacao) concentra-se na **empresa suprema** na UI fiscal; as empresas concentram-se em **documentacao de provisionamento**, **cadastro**, **sincronizacao** e **emissao** — ver `registro_continuidade/REGISTRO_ATUALIZACOES.md` (secao 2026-04-27) e `PROMPT_ASSISTENTE_PONTO_CERTO.md`. Versao de app alvo: `1.0.83+1054` no repositorio.
+**Registo recente (29/04/2026):** ver `registro_continuidade/REGISTRO_ATUALIZACOES.md` (**2026-04-29**): marketing WhatsApp comercial (Meta + `sales_whatsapp_comercial`), carteira contador com todos os vinculos, Functions (email interno → `fromEmail`), sessao contador em Trabalhista + inativar funcionarios, regras Firestore para patch `ativo`/`updatedAt`, protecao **suprema** (sem AAB nesta rodada). **Planeamento apenas (sem codigo de certificadora nem IBS/CBS):** [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md).
+
+**Registo anterior (27–28/04/2026):** a governanca **Focus** (integracao, homologacao, matriz, automacao) concentra-se na **empresa suprema** na UI fiscal; as empresas concentram-se em **documentacao de provisionamento**, **cadastro**, **sincronizacao** e **emissao** — ver `registro_continuidade/REGISTRO_ATUALIZACOES.md` (secoes 2026-04-27 e 2026-04-28) e `PROMPT_ASSISTENTE_PONTO_CERTO.md`. Ultima versao Play referida no registo: **`1.0.84+1055`** (rodada 28/04); **29/04** nao gerou novo AAB.
 
 ## Objetivo
 
@@ -225,8 +227,13 @@ Esta rodada consolida ajustes que devem ser considerados pelo assistente e por f
 5. **Redundancia fiscal**: evitar reabrir separacao funcional entre `emitida` e `aprovada/autorizada`. Para o usuario, o registro oficial bem-sucedido deve aparecer como `Aprovada / autorizada`.
 6. **Pagina de vendas**: a proxima alteracao de copy/imagens deve manter `/vendas` responsiva/adaptativa para celular e computador. A pagina deve reorganizar blocos por largura/plataforma sem criar promessa comercial fora do sistema real.
 
+## Registro de rodada: documentacao segura certificadora + IBS/CBS (29/04/2026)
+
+Foi **registado** (sem implementar) o plano em [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md): fluxo futuro de certificadora no perfil contador com ponte para `fiscalCertificate`/Focus; e fases **F1–F7** para preparacao **IBS/CBS** com campos opcionais, logs, simulador isolado e **flags desligadas** — **proibicao** de alterar payload de emissao real ate decisao. A execucao sera passo a passo apos alinhar `OFICIAL_01`–`03`. Detalhe operacional da rodada (marketing, carteira, Functions, Trabalhista, suprema, deploy web, **sem AAB**): `registro_continuidade/REGISTRO_ATUALIZACOES.md` **2026-04-29**.
+
 ## Documentos relacionados
 
+- [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md) — planeamento **nao implementado**
 - [ESTADO_SISTEMA_VERIFICAVEL_GERADO.md](ESTADO_SISTEMA_VERIFICAVEL_GERADO.md)
 - [OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md](OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md)
 - [OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md](OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md)

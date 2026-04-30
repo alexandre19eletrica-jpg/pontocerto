@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:pontocerto/core/auth/session.dart';
+import 'package:pontocerto/core/platform/platform_access.dart';
 import 'package:pontocerto/core/errors/app_error_mapper.dart';
 import 'package:pontocerto/core/navigation/app_shell.dart';
 import 'package:pontocerto/core/navigation/shell_page_chrome.dart';
@@ -73,6 +74,8 @@ class EmployeesPage extends ConsumerWidget {
                 ? 'Sem inativos'
                 : 'Inativos ${operational.length - ativos}',
           ),
+          if (isSupremePlatformCompanyId(sessao.companyId))
+            const AppHeaderChip('Plataforma suprema: inativacao bloqueada'),
         ],
       ),
     );
@@ -120,8 +123,9 @@ class EmployeesPage extends ConsumerWidget {
             if (sessao.role == Role.owner)
               AppWorkspaceCard(
                 title: 'Plano e acessos do app',
-                subtitle:
-                    'A assinatura renova automaticamente todo mes ate cancelamento. Use esta area para ampliar os acessos do app Play Store da equipe.',
+                subtitle: isSupremePlatformCompanyId(sessao.companyId)
+                    ? 'Empresa suprema da plataforma: o ciclo comercial padrao e a protecao de acesso valem de outra forma; nao e possivel cancelar assinatura por este fluxo.'
+                    : 'A assinatura renova automaticamente todo mes ate cancelamento. Use esta area para ampliar os acessos do app Play Store da equipe.',
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -137,11 +141,12 @@ class EmployeesPage extends ConsumerWidget {
                         'Contratar acesso app Play Store para funcionario',
                       ),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: () => _cancelPlan(context),
-                      icon: const Icon(Icons.cancel_outlined),
-                      label: const Text('Cancelar plano'),
-                    ),
+                    if (!isSupremePlatformCompanyId(sessao.companyId))
+                      OutlinedButton.icon(
+                        onPressed: () => _cancelPlan(context),
+                        icon: const Icon(Icons.cancel_outlined),
+                        label: const Text('Cancelar plano'),
+                      ),
                   ],
                 ),
               ),
@@ -162,7 +167,7 @@ class EmployeesPage extends ConsumerWidget {
                       maxColumns: 3,
                       children: [
                         for (final item in operational)
-                          _employeeListTile(context, item),
+                          _employeeListTile(context, ref, sessao, item),
                       ],
                     ),
             ),
@@ -202,7 +207,7 @@ class EmployeesPage extends ConsumerWidget {
                           maxColumns: 3,
                           children: [
                             for (final item in accountants)
-                              _employeeListTile(context, item),
+                              _employeeListTile(context, ref, sessao, item),
                           ],
                         ),
                       ],
@@ -394,6 +399,8 @@ class EmployeesPage extends ConsumerWidget {
 
   Widget _employeeListTile(
     BuildContext context,
+    WidgetRef ref,
+    Session sessao,
     Employee item,
   ) {
     final apelido = item.apelido == null ? '' : ' (${item.apelido})';
@@ -441,7 +448,10 @@ class EmployeesPage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -461,6 +471,54 @@ class EmployeesPage extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (_podeAlternarStatusColaborador(sessao, item))
+                    TextButton.icon(
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: Text(
+                              item.ativo
+                                  ? 'Inativar colaborador?'
+                                  : 'Reativar colaborador?',
+                            ),
+                            content: Text(
+                              item.ativo
+                                  ? 'O acesso ao sistema sera desativado. Pode reativar depois por aqui.'
+                                  : 'O colaborador voltara a aparecer como ativo nas rotinas.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Cancelar'),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text('Confirmar'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm != true) return;
+                        try {
+                          await ref
+                              .read(employeesProvider.notifier)
+                              .toggleAtivo(item.id);
+                          if (!context.mounted) return;
+                          _ok(context, 'Status do colaborador atualizado.');
+                        } catch (error) {
+                          if (!context.mounted) return;
+                          _ok(context, AppErrorMapper.messageFrom(error));
+                        }
+                      },
+                      icon: Icon(
+                        item.ativo
+                            ? Icons.pause_circle_outline_rounded
+                            : Icons.play_circle_outline_rounded,
+                        size: 20,
+                      ),
+                      label: Text(item.ativo ? 'Inativar' : 'Reativar'),
+                    ),
                 ],
               ),
             ],
@@ -468,6 +526,14 @@ class EmployeesPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  bool _podeAlternarStatusColaborador(Session sessao, Employee item) {
+    if (sessao.userId == item.id) return false;
+    if (isSupremePlatformCompanyId(sessao.companyId)) return false;
+    return sessao.role == Role.owner ||
+        sessao.role == Role.manager ||
+        sessao.role == Role.accountant;
   }
 
   String _rotuloRole(EmployeeRole role) {

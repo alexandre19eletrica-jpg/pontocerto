@@ -13,6 +13,7 @@ import 'package:pontocerto/core/platform/platform_access.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/widgets/botao_voltar_app.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
+import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
 
 class PaginaLoginContador extends ConsumerStatefulWidget {
   const PaginaLoginContador({super.key});
@@ -141,7 +142,10 @@ class _PaginaLoginContadorState extends ConsumerState<PaginaLoginContador> {
                       TextButton(
                         onPressed: _carregando
                             ? null
-                            : () => context.go('/cadastro-escritorio-contabil'),
+                            : () {
+                                metaFbqTrackStartTrialEscritorio();
+                                context.go('/cadastro-escritorio-contabil');
+                              },
                         child: const Text(
                           'Cadastrar escritorio de contabilidade',
                         ),
