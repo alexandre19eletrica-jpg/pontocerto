@@ -4,6 +4,7 @@ Data: 29/04/2026
 
 ## Situacao
 
+- **WhatsApp (Web) nas landings empresa/contador (correccao)**: abertura `wa.me` sem perder o gesto do clique — ver `vendas_whatsapp_button.dart` e `vendas_whatsapp_web_open_web.dart`; memoria em OFICIAL 01–04.
 - **Registo 29/04/2026** (ver `REGISTRO_ATUALIZACOES` **2026-04-29**): marketing **WhatsApp comercial** com eventos no clique (Meta + `sales_whatsapp_comercial`); **carteira contador** com todos os vinculos e chips; **Functions** — email interno de novo cadastro para `fromEmail`; contador com **Trabalhista** (`/workforce`, `/employees`) e **inativar** funcionarios com regra Firestore (so `ativo`/`updatedAt`); **suprema** protegida contra inativacao indevida callables/UI; **deploy web** + rules/functions (retry se timeout). **Nenhum AAB** gerado nesta rodada. **Planeamento documental** (sem implementar produto): `docs/PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md` — certificadora + IBS/CBS em fases seguras.
 - **Pendencias proxima edicao**: `flutter build appbundle` e Play se necessario (versao acima da ultima publicada); repetir ou fraccionar deploy de **functions** se analise do CLI der timeout; funcoes que dependam de subida Android ficam **apos** AAB.
 

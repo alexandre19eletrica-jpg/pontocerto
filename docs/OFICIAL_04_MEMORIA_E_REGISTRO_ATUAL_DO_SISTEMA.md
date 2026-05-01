@@ -231,6 +231,8 @@ Esta rodada consolida ajustes que devem ser considerados pelo assistente e por f
 
 Foi **registado** (sem implementar) o plano em [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md): fluxo futuro de certificadora no perfil contador com ponte para `fiscalCertificate`/Focus; e fases **F1–F7** para preparacao **IBS/CBS** com campos opcionais, logs, simulador isolado e **flags desligadas** — **proibicao** de alterar payload de emissao real ate decisao. A execucao sera passo a passo apos alinhar `OFICIAL_01`–`03`. Detalhe operacional da rodada (marketing, carteira, Functions, Trabalhista, suprema, deploy web, **sem AAB**): `registro_continuidade/REGISTRO_ATUALIZACOES.md` **2026-04-29**.
 
+**Correcao subsequente — WhatsApp nas landings (Web):** botoes nas paginas empresa e contador deixaram de confiar em `await canLaunchUrl` antes de `launchUrl`, porque isso **fazia perder** o gesto de clique reconhecido pelo navegador e o pop-up/tab para `wa.me` era bloqueado. Passou-se a `window.open` sincrono na variante Web (`vendas_whatsapp_web_open_web.dart`) e `launchUrl` directo nos alvos nativos (`vendas_whatsapp_button.dart`).
+
 ## Documentos relacionados
 
 - [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md) — planeamento **nao implementado**

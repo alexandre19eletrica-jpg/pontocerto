@@ -176,6 +176,7 @@ Se voltar erro:
 - o onboarding principal segue para o escritorio quando o fluxo nasce nesse modelo
 - os emails enviados para escritorio contabil e contador parceiro devem apresentar o sistema como iniciativa real de `Bonfim Alexandre Sousa Santos`, desenvolvedor do sistema e empresario dos ramos de obras, construcao civil e servicos eletricos
 - essa comunicacao deve explicar que o produto nasceu da dificuldade de emissao de notas, da desorganizacao operacional e do caos recorrente na gestao da propria empresa
+- o **WhatsApp comercial** (`wa.me`) nas landings empresa/contador deve abrir sempre que o visitante tocar nos botoes previstos; no **Web**, a abertura preserva o gesto do utilizador (sem `await` previo ao `window.open`) para os browsers nao bloquearem a nova aba
 
 ## Funcionalidade de equipe oficial
 

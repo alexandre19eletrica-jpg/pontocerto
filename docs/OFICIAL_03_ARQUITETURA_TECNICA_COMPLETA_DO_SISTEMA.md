@@ -14,6 +14,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 - Flutter
 - operacao web-first para empresa, gestor e contador
 - app Android para funcionario e acessos moveis
+- abertura de **WhatsApp** (`wa.me`) em landings marketing: no **Web** usa implementacao especifica com **import condicional** (`dart.library.html`) e `window.open` na mesma virada do clique (`vendas_whatsapp_web_open_web.dart` vs stub); fora do Web continua `url_launcher` com `LaunchMode.externalApplication` — **nao** anteceder a abertura Web com `await canLaunchUrl` no fluxo deste botao (bloqueava pop-ups)
 
 ## 2. Backend
 
