@@ -53,11 +53,14 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     }
 
     final currentUid = FirebaseAuth.instance.currentUser?.uid ?? sessao.userId;
-    final isEmpresa = sessao.role != Role.employee;
+    final isEmployee = sessao.role == Role.employee;
+    final isAccountant = sessao.role == Role.accountant;
+    final canManageTasks = sessao.role == Role.owner || sessao.role == Role.manager;
+    final isEmpresa = !isEmployee;
     final employees = ref.watch(employeesProvider).where((e) => e.ativo).toList()
       ..sort((a, b) => a.nomeCompleto.compareTo(b.nomeCompleto));
     final todas = ref.watch(tasksProvider);
-    final tarefasBase = sessao.role == Role.employee
+    final tarefasBase = isEmployee
         ? todas.where((t) => t.autorId == currentUid).toList()
         : todas;
     if (isEmpresa &&
@@ -73,18 +76,25 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               .where((t) => t.autorId == _selectedResponsibleFilterId)
               .toList()
         : tarefasBase;
-    final concluidas = tarefas.where((t) => t.status == StatusTarefa.finalizado).length;
-    final pendentes = tarefas.length - concluidas;
+    final tarefasVisiveis = isAccountant
+        ? tarefas.where((t) => t.status == StatusTarefa.finalizado).toList()
+        : tarefas;
+    final concluidas = tarefasVisiveis
+        .where((t) => t.status == StatusTarefa.finalizado)
+        .length;
+    final pendentes = tarefasVisiveis.length - concluidas;
 
     ref.read(shellPageChromeProvider.notifier).state = ShellPageChrome(
       header: AppWorkspaceHeader(
         title: 'Tarefas e execucao',
         subtitle:
-            'Fluxo de campo com tarefas, cliente, materiais, anexos e acompanhamento do status operacional.',
+            isAccountant
+                ? 'Consulta das tarefas finalizadas da empresa ativa da carteira para conferencia operacional antes da emissao fiscal.'
+                : 'Fluxo de campo com tarefas, cliente, materiais, anexos e acompanhamento do status operacional.',
         chips: [
           const AppHeaderChip('Execucao conectada'),
           const AppHeaderChip('PDF e anexos'),
-          AppHeaderChip('Total ${tarefas.length}'),
+          AppHeaderChip('Total ${tarefasVisiveis.length}'),
         ],
       ),
     );
@@ -95,19 +105,23 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               AppWorkspaceCard(
                 title: 'Resumo de tarefas',
                 subtitle:
-                    'Visao rapida da carga operacional, com abertura para criacao de novas tarefas sem repetir contexto.',
-                trailing: TextButton.icon(
-                  onPressed: () => _abrirDialogoCriar(sessao, currentUid),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Criar'),
-                ),
+                    isAccountant
+                        ? 'Consulta do que ja foi finalizado na empresa ativa, sem alterar a operacao da equipe.'
+                        : 'Visao rapida da carga operacional, com abertura para criacao de novas tarefas sem repetir contexto.',
+                trailing: canManageTasks
+                    ? TextButton.icon(
+                        onPressed: () => _abrirDialogoCriar(sessao, currentUid),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Criar'),
+                      )
+                    : null,
                 child: Wrap(
                   spacing: 16,
                   runSpacing: 16,
                   children: [
                     AppMetricCard(
                       label: 'Total',
-                      value: tarefas.length.toString(),
+                      value: tarefasVisiveis.length.toString(),
                       caption: 'Tarefas no recorte atual',
                     ),
                     AppMetricCard(
@@ -123,34 +137,39 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                   ],
                 ),
               ),
-              if (sessao.role == Role.employee) ...[
+              if (isEmployee) ...[
                 const SizedBox(height: 16),
-                _buildEmployeeAlertCard(tarefas),
+                _buildEmployeeAlertCard(tarefasVisiveis),
               ],
               if (isEmpresa) ...[
                 const SizedBox(height: 16),
                 _buildCompanyAssignmentCard(
                   employees: employees,
                   tarefasBase: tarefasBase,
-                  tarefasFiltradas: tarefas,
+                  tarefasFiltradas: tarefasVisiveis,
+                  readOnlyAccountant: isAccountant,
                 ),
               ],
               const SizedBox(height: 16),
               AppWorkspaceCard(
                 title: 'Lista operacional',
                 subtitle:
-                    isEmpresa
+                    isAccountant
+                        ? 'Somente tarefas finalizadas da empresa ativa, para consulta do contador.'
+                        : isEmpresa
                         ? 'Tarefas por responsavel, com cliente, status e data de execucao.'
                         : 'Tarefas em andamento, aprovadas, finalizadas ou em orcamento, com cliente e data de execucao.',
                 child: Column(
                   children: [
-                    if (tarefas.isEmpty)
+                    if (tarefasVisiveis.isEmpty)
                       _buildEmptyTaskTile(
-                        isEmpresa && _selectedResponsibleFilterId != null
+                        isAccountant
+                            ? 'Nenhum servico finalizado encontrado para a empresa ativa.'
+                            : isEmpresa && _selectedResponsibleFilterId != null
                             ? 'Nenhuma tarefa encontrada para o responsavel selecionado.'
                             : 'Nenhuma tarefa cadastrada.',
                       ),
-                    ...tarefas.map((tarefa) {
+                    ...tarefasVisiveis.map((tarefa) {
                       return _buildTaskListTile(
                         context,
                         sessao: sessao,
@@ -211,6 +230,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     required List<Employee> employees,
     required List<TarefaItem> tarefasBase,
     required List<TarefaItem> tarefasFiltradas,
+    required bool readOnlyAccountant,
   }) {
     final pendentesGerais = tarefasBase
         .where((t) => t.status != StatusTarefa.finalizado)
@@ -223,7 +243,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     return AppWorkspaceCard(
       title: 'Distribuicao por responsavel',
       subtitle:
-          'Acompanhe a carga por funcionario e filtre a fila operacional antes de cobrar execucao.',
+          readOnlyAccountant
+              ? 'Filtre os servicos finalizados por responsavel dentro da empresa ativa da carteira.'
+              : 'Acompanhe a carga por funcionario e filtre a fila operacional antes de cobrar execucao.',
       child: Column(
         children: [
           DropdownButtonFormField<String?>(
@@ -378,6 +400,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
   }
 
   Future<void> _abrirDialogoCriar(Session sessao, String currentUid) async {
+    if (sessao.role == Role.accountant) {
+      _msg('Contador possui consulta operacional somente leitura nesta rota.');
+      return;
+    }
     final nomeCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     final clienteCtrl = TextEditingController();

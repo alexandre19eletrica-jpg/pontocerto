@@ -29,6 +29,7 @@ class TaskDetailsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final sessao = ref.watch(sessionProvider);
     final tarefa = ref
         .watch(tasksProvider)
         .where((e) => e.id == taskId)
@@ -39,24 +40,36 @@ class TaskDetailsPage extends ConsumerWidget {
         body: const Center(child: Text('Tarefa nao encontrada.')),
       );
     }
+    final readOnlyAccountant = sessao?.role == Role.accountant;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(tarefa.nome),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => _editarTarefa(context, ref, tarefa),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () => _excluirTarefa(context, ref, tarefa.id),
-          ),
-        ],
+        actions: readOnlyAccountant
+            ? null
+            : [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _editarTarefa(context, ref, tarefa),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => _excluirTarefa(context, ref, tarefa.id),
+                ),
+              ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (readOnlyAccountant)
+            _surface(
+              child: const ListTile(
+                title: Text('Consulta do contador'),
+                subtitle: Text(
+                  'Esta tarefa esta em modo somente leitura para conferencia operacional e apoio a emissao fiscal da empresa ativa.',
+                ),
+              ),
+            ),
           _bloco(
             context,
             'Descricao',
@@ -98,11 +111,12 @@ class TaskDetailsPage extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              TextButton.icon(
-                onPressed: () => _adicionarItem(context, ref, tarefa),
-                icon: const Icon(Icons.add),
-                label: const Text('Adicionar'),
-              ),
+              if (!readOnlyAccountant)
+                TextButton.icon(
+                  onPressed: () => _adicionarItem(context, ref, tarefa),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar'),
+                ),
             ],
           ),
           if (tarefa.itens.isEmpty)
@@ -122,18 +136,22 @@ class TaskDetailsPage extends ConsumerWidget {
                 secondary: Wrap(
                   spacing: 4,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => _editarItem(context, ref, tarefa, idx),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => _excluirItem(context, ref, tarefa, idx),
-                    ),
+                    if (!readOnlyAccountant)
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () => _editarItem(context, ref, tarefa, idx),
+                      ),
+                    if (!readOnlyAccountant)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => _excluirItem(context, ref, tarefa, idx),
+                      ),
                   ],
                 ),
-                onChanged: (valor) =>
-                    _marcarItem(context, ref, tarefa, idx, valor ?? false),
+                onChanged: readOnlyAccountant
+                    ? null
+                    : (valor) =>
+                        _marcarItem(context, ref, tarefa, idx, valor ?? false),
               ),
             );
           }),
@@ -145,10 +163,11 @@ class TaskDetailsPage extends ConsumerWidget {
               trailing: Wrap(
                 spacing: 4,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => _editarValorTotal(context, ref, tarefa),
-                  ),
+                  if (!readOnlyAccountant)
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => _editarValorTotal(context, ref, tarefa),
+                    ),
                   IconButton(
                     icon: const Icon(Icons.share_outlined),
                     tooltip: 'Compartilhar tarefa em PDF',
@@ -163,6 +182,7 @@ class TaskDetailsPage extends ConsumerWidget {
             context: context,
             titulo: 'Materiais necessarios',
             lista: tarefa.materiaisNecessarios,
+            canManage: !readOnlyAccountant,
             onAdd: () => _adicionarMaterial(
               context,
               ref,
@@ -189,6 +209,7 @@ class TaskDetailsPage extends ConsumerWidget {
             context: context,
             titulo: 'Materiais utilizados',
             lista: tarefa.materiaisUtilizados,
+            canManage: !readOnlyAccountant,
             onAdd: () => _adicionarMaterial(
               context,
               ref,
@@ -219,11 +240,12 @@ class TaskDetailsPage extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              TextButton.icon(
-                onPressed: () => _adicionarAnexo(context, ref, tarefa),
-                icon: const Icon(Icons.attach_file),
-                label: const Text('Adicionar'),
-              ),
+              if (!readOnlyAccountant)
+                TextButton.icon(
+                  onPressed: () => _adicionarAnexo(context, ref, tarefa),
+                  icon: const Icon(Icons.attach_file),
+                  label: const Text('Adicionar'),
+                ),
             ],
           ),
           if (tarefa.anexos.isEmpty)
@@ -239,10 +261,12 @@ class TaskDetailsPage extends ConsumerWidget {
                 title: Text(_tituloAnexo(a)),
                 subtitle: Text(_subtituloAnexo(a)),
                 onTap: () => _abrirAnexo(context, a),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _excluirAnexo(context, ref, tarefa, a),
-                ),
+                trailing: readOnlyAccountant
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => _excluirAnexo(context, ref, tarefa, a),
+                      ),
               ),
             ),
           ),
@@ -256,6 +280,7 @@ class TaskDetailsPage extends ConsumerWidget {
                 tarefa,
                 StatusTarefa.orcamento,
                 'Orcamento',
+                enabled: !readOnlyAccountant,
               ),
               _chipStatus(
                 context,
@@ -263,6 +288,7 @@ class TaskDetailsPage extends ConsumerWidget {
                 tarefa,
                 StatusTarefa.aprovado,
                 'Aprovado',
+                enabled: !readOnlyAccountant,
               ),
               _chipStatus(
                 context,
@@ -270,6 +296,7 @@ class TaskDetailsPage extends ConsumerWidget {
                 tarefa,
                 StatusTarefa.iniciado,
                 'Iniciado',
+                enabled: !readOnlyAccountant,
               ),
               _chipStatus(
                 context,
@@ -277,6 +304,7 @@ class TaskDetailsPage extends ConsumerWidget {
                 tarefa,
                 StatusTarefa.emAndamento,
                 'Em andamento',
+                enabled: !readOnlyAccountant,
               ),
               _chipStatus(
                 context,
@@ -284,6 +312,7 @@ class TaskDetailsPage extends ConsumerWidget {
                 tarefa,
                 StatusTarefa.finalizado,
                 'Finalizado',
+                enabled: !readOnlyAccountant,
               ),
             ],
           ),

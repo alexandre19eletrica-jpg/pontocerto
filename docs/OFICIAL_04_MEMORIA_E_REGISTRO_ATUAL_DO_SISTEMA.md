@@ -7,6 +7,8 @@ Projeto: Ponto Certo
 
 **Registo anterior (27–28/04/2026):** a governanca **Focus** (integracao, homologacao, matriz, automacao) concentra-se na **empresa suprema** na UI fiscal; as empresas concentram-se em **documentacao de provisionamento**, **cadastro**, **sincronizacao** e **emissao** — ver `registro_continuidade/REGISTRO_ATUALIZACOES.md` (secoes 2026-04-27 e 2026-04-28) e `PROMPT_ASSISTENTE_PONTO_CERTO.md`. Ultima versao Play referida no registo: **`1.0.84+1055`** (rodada 28/04); **29/04** nao gerou novo AAB.
 
+**Complemento desta continuidade (Trabalhista/contador):** a rota do contador passou a refletir melhor a empresa **ativa** da carteira no `Trabalhista`, com apoio operacional em `Tarefas` e `Ordens de servico` apenas para itens **finalizados** e em **somente leitura**. O modulo trabalhista ganhou dossie do colaborador, checklist por competencia em `workforce_competence_obligations`, trilha de eventos em `workforce_employee_events` e snapshot com memoria de calculo por colaborador/competencia em `workforce_employee_competence_snapshots`. Essas estruturas sao apenas de conferencia/trilha e **nao** substituem as fontes de verdade ja validadas: `users`, `employee_registration_documents` e `payments`.
+
 ## Objetivo
 
 Este documento define onde o estado atual do sistema deve ser registrado e como manter essa memoria viva sem perder contexto.

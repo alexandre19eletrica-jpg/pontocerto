@@ -29,17 +29,25 @@ class _ServiceOrdersPageState extends ConsumerState<ServiceOrdersPage> {
     if (session == null) {
       return const Scaffold(body: Center(child: Text('Sem sessao ativa')));
     }
+    final isAccountant = session.role == Role.accountant;
+    final canManageOrders =
+        session.role == Role.owner || session.role == Role.manager;
 
     final orders = ref.watch(serviceOrdersProvider);
+    final visibleOrders = isAccountant
+        ? orders.where((o) => o.status == ServiceOrderStatus.completed).toList()
+        : orders;
     final employees = ref.watch(employeesProvider).where((e) => e.ativo).toList()
       ..sort((a, b) => a.nomeCompleto.compareTo(b.nomeCompleto));
     final tasks = ref.watch(tasksProvider);
     final clients = ref.watch(clientsProvider);
-    final openCount = orders.where((o) => o.status == ServiceOrderStatus.open).length;
-    final inProgressCount = orders
+    final openCount = visibleOrders
+        .where((o) => o.status == ServiceOrderStatus.open)
+        .length;
+    final inProgressCount = visibleOrders
         .where((o) => o.status == ServiceOrderStatus.inProgress)
         .length;
-    final completedCount = orders
+    final completedCount = visibleOrders
         .where((o) => o.status == ServiceOrderStatus.completed)
         .length;
 
@@ -47,7 +55,9 @@ class _ServiceOrdersPageState extends ConsumerState<ServiceOrdersPage> {
       header: AppWorkspaceHeader(
         title: 'Ordens de servico',
         subtitle:
-            'Camada operacional em volta das tarefas para organizar atendimento, responsavel, visita em campo e fechamento do servico.',
+            isAccountant
+                ? 'Consulta das ordens finalizadas da empresa ativa da carteira para apoio ao fluxo fiscal.'
+                : 'Camada operacional em volta das tarefas para organizar atendimento, responsavel, visita em campo e fechamento do servico.',
         chips: const [
           AppHeaderChip('ERP de servicos'),
           AppHeaderChip('Ligada a cliente e tarefa'),
@@ -62,8 +72,10 @@ class _ServiceOrdersPageState extends ConsumerState<ServiceOrdersPage> {
               AppWorkspaceCard(
                 title: 'Resumo operacional',
                 subtitle:
-                    'Visao rapida das ordens abertas, em andamento e finalizadas.',
-                trailing: session.role == Role.employee
+                    isAccountant
+                        ? 'Consulta somente leitura das ordens finalizadas da empresa ativa.'
+                        : 'Visao rapida das ordens abertas, em andamento e finalizadas.',
+                trailing: !canManageOrders
                     ? null
                     : TextButton.icon(
                         onPressed: () =>
@@ -93,27 +105,40 @@ class _ServiceOrdersPageState extends ConsumerState<ServiceOrdersPage> {
                   ],
                 ),
               ),
+              if (isAccountant) ...[
+                const SizedBox(height: 16),
+                const AppWorkspaceCard(
+                  title: 'Consulta do contador',
+                  subtitle:
+                      'Nesta rota o contador visualiza apenas ordens finalizadas da empresa ativa, sem alterar a operacao.',
+                  child: SizedBox.shrink(),
+                ),
+              ],
               const SizedBox(height: 16),
               AppWorkspaceCard(
                 title: 'Fila de atendimento',
                 subtitle:
-                    'Ordens ligadas a cliente, tarefa e responsavel para organizar atendimento, visita em campo e fechamento.',
-                child: orders.isEmpty
-                    ? const Text(
-                        'Nenhuma ordem de servico criada ainda.',
+                    isAccountant
+                        ? 'Ordens finalizadas ligadas a cliente, tarefa e responsavel, prontas para consulta do contador.'
+                        : 'Ordens ligadas a cliente, tarefa e responsavel para organizar atendimento, visita em campo e fechamento.',
+                child: visibleOrders.isEmpty
+                    ? Text(
+                        isAccountant
+                            ? 'Nenhuma ordem finalizada encontrada para a empresa ativa.'
+                            : 'Nenhuma ordem de servico criada ainda.',
                         style: TextStyle(color: AppBrandColors.softText),
                       )
                     : Column(
                         children: [
-                          for (final order in orders) ...[
+                          for (final order in visibleOrders) ...[
                             _OrderTile(
                               order: order,
-                              canManage: session.role != Role.employee,
+                              canManage: canManageOrders,
                               onStatusChanged: (status) =>
                                   _updateStatus(order, status),
                               onEditNotes: () =>
                                   _openNotesDialog(order),
-                              onDelete: session.role == Role.employee
+                              onDelete: !canManageOrders
                                   ? null
                                   : () => _confirmDelete(order),
                             ),

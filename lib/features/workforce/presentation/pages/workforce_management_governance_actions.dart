@@ -439,6 +439,238 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
     }
   }
 
+  Future<void> _saveWorkforceCompetenceObligations({
+    required Session sessao,
+    required String competence,
+    required _WorkforceCompetenceObligations obligations,
+  }) async {
+    if (_parseCompetence(competence) == null) {
+      _msg('Competencia invalida para obrigacoes trabalhistas.');
+      return;
+    }
+    try {
+      await FirebaseFirestore.instance
+          .collection('workforce_competence_obligations')
+          .doc('${sessao.companyId}_$competence')
+          .set({
+            'companyId': sessao.companyId,
+            'competence': competence,
+            ...obligations.toMap(),
+            'updatedByUserId': sessao.userId,
+            'updatedByUserName': sessao.nome,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+    } catch (_) {
+      _msg('Nao foi possivel salvar as obrigacoes trabalhistas.');
+    }
+  }
+
+  Future<void> _openWorkforceCompetenceNotesDialog({
+    required Session sessao,
+    required String competence,
+    required _WorkforceCompetenceObligations obligations,
+  }) async {
+    final controller = TextEditingController(text: obligations.notes);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Observacoes da competencia'),
+        content: TextField(
+          controller: controller,
+          minLines: 4,
+          maxLines: 8,
+          decoration: InputDecoration(
+            labelText: 'Observacoes ($competence)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _saveWorkforceCompetenceObligations(
+                sessao: sessao,
+                competence: competence,
+                obligations: obligations.copyWith(
+                  notes: controller.text.trim(),
+                ),
+              );
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+  }
+
+  Future<void> _openWorkforceEmployeeEventDialog({
+    required Session sessao,
+    required Employee employee,
+    required String competence,
+  }) async {
+    var selectedType = _workforceEmployeeEventTypeOptions.first.value;
+    final notesController = TextEditingController();
+    DateTime effectiveDate = DateTime.now();
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Registrar evento trabalhista'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: selectedType,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipo de evento',
+                  ),
+                  items: [
+                    for (final option in _workforceEmployeeEventTypeOptions)
+                      DropdownMenuItem(
+                        value: option.value,
+                        child: Text(option.label),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => selectedType = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Data efetiva'),
+                  subtitle: Text(_formatDate(effectiveDate)),
+                  trailing: const Icon(Icons.calendar_today_outlined),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                      initialDate: effectiveDate,
+                    );
+                    if (picked != null) {
+                      setDialogState(() => effectiveDate = picked);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  minLines: 3,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    labelText: 'Observacoes do evento',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final selectedOption = _workforceEmployeeEventTypeOptions
+                    .firstWhere((item) => item.value == selectedType);
+                final docId = FirebaseFirestore.instance
+                    .collection('workforce_employee_events')
+                    .doc()
+                    .id;
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('workforce_employee_events')
+                      .doc(docId)
+                      .set({
+                        'companyId': sessao.companyId,
+                        'employeeId': employee.id,
+                        'employeeName': employee.nomeCompleto,
+                        'competence': competence,
+                        'eventType': selectedOption.value,
+                        'eventLabel': selectedOption.label,
+                        'effectiveDate': Timestamp.fromDate(effectiveDate),
+                        'notes': notesController.text.trim(),
+                        'createdByUserId': sessao.userId,
+                        'createdByUserName': sessao.nome,
+                        'createdAt': FieldValue.serverTimestamp(),
+                      }, SetOptions(merge: true));
+                } catch (_) {
+                  _msg('Nao foi possivel registrar o evento trabalhista.');
+                  return;
+                }
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    notesController.dispose();
+  }
+
+  Future<void> _saveWorkforceEmployeeCompetenceSnapshot({
+    required Session sessao,
+    required Employee employee,
+    required String competence,
+    required int grossReferenceCents,
+    required int thirteenthProjectedCents,
+    required int vacationProjectedCents,
+    required int vacationBonusCents,
+    required int terminationProjectedCents,
+    required int thirteenthAvos,
+    required int vacationMonthsAccrued,
+    required bool terminationSignaled,
+    required Map<String, dynamic> thirteenthMemory,
+    required Map<String, dynamic> vacationMemory,
+    required Map<String, dynamic> terminationMemory,
+  }) async {
+    if (_parseCompetence(competence) == null) {
+      _msg('Competencia invalida para snapshot trabalhista.');
+      return;
+    }
+    try {
+      await FirebaseFirestore.instance
+          .collection('workforce_employee_competence_snapshots')
+          .doc('${sessao.companyId}_${employee.id}_$competence')
+          .set({
+            'companyId': sessao.companyId,
+            'employeeId': employee.id,
+            'employeeName': employee.nomeCompleto,
+            'competence': competence,
+            'grossReferenceCents': grossReferenceCents,
+            'thirteenthProjectedCents': thirteenthProjectedCents,
+            'vacationProjectedCents': vacationProjectedCents,
+            'vacationBonusCents': vacationBonusCents,
+            'terminationProjectedCents': terminationProjectedCents,
+            'thirteenthAvos': thirteenthAvos,
+            'vacationMonthsAccrued': vacationMonthsAccrued,
+            'terminationSignaled': terminationSignaled,
+            'thirteenthMemory': thirteenthMemory,
+            'vacationMemory': vacationMemory,
+            'terminationMemory': terminationMemory,
+            'updatedByUserId': sessao.userId,
+            'updatedByUserName': sessao.nome,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+      _msg('Snapshot trabalhista salvo para a competencia.');
+    } catch (_) {
+      _msg('Nao foi possivel salvar o snapshot trabalhista.');
+    }
+  }
+
   bool _isEligibleForThirteenth(Employee? employee, String competence) {
     if (employee == null || employee.admissionDate == null) {
       return false;

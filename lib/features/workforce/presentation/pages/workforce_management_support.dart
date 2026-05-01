@@ -93,6 +93,100 @@ class _WorkforceOperationalChecks {
   final String terminationNotes;
 }
 
+class _WorkforceCompetenceObligations {
+  const _WorkforceCompetenceObligations({
+    required this.admissionChecklistDone,
+    required this.payrollConferenceDone,
+    required this.vacationConferenceDone,
+    required this.thirteenthConferenceDone,
+    required this.terminationConferenceDone,
+    required this.fgtsGuideChecked,
+    required this.esocialPendingResolved,
+    required this.notes,
+  });
+
+  factory _WorkforceCompetenceObligations.fromMap(Map<String, dynamic> map) {
+    return _WorkforceCompetenceObligations(
+      admissionChecklistDone:
+          map['admissionChecklistDone'] as bool? ?? false,
+      payrollConferenceDone:
+          map['payrollConferenceDone'] as bool? ?? false,
+      vacationConferenceDone:
+          map['vacationConferenceDone'] as bool? ?? false,
+      thirteenthConferenceDone:
+          map['thirteenthConferenceDone'] as bool? ?? false,
+      terminationConferenceDone:
+          map['terminationConferenceDone'] as bool? ?? false,
+      fgtsGuideChecked: map['fgtsGuideChecked'] as bool? ?? false,
+      esocialPendingResolved:
+          map['esocialPendingResolved'] as bool? ?? false,
+      notes: map['notes']?.toString() ?? '',
+    );
+  }
+
+  final bool admissionChecklistDone;
+  final bool payrollConferenceDone;
+  final bool vacationConferenceDone;
+  final bool thirteenthConferenceDone;
+  final bool terminationConferenceDone;
+  final bool fgtsGuideChecked;
+  final bool esocialPendingResolved;
+  final String notes;
+
+  int get completedCount => [
+        admissionChecklistDone,
+        payrollConferenceDone,
+        vacationConferenceDone,
+        thirteenthConferenceDone,
+        terminationConferenceDone,
+        fgtsGuideChecked,
+        esocialPendingResolved,
+      ].where((item) => item).length;
+
+  int get totalCount => 7;
+
+  _WorkforceCompetenceObligations copyWith({
+    bool? admissionChecklistDone,
+    bool? payrollConferenceDone,
+    bool? vacationConferenceDone,
+    bool? thirteenthConferenceDone,
+    bool? terminationConferenceDone,
+    bool? fgtsGuideChecked,
+    bool? esocialPendingResolved,
+    String? notes,
+  }) {
+    return _WorkforceCompetenceObligations(
+      admissionChecklistDone:
+          admissionChecklistDone ?? this.admissionChecklistDone,
+      payrollConferenceDone:
+          payrollConferenceDone ?? this.payrollConferenceDone,
+      vacationConferenceDone:
+          vacationConferenceDone ?? this.vacationConferenceDone,
+      thirteenthConferenceDone:
+          thirteenthConferenceDone ?? this.thirteenthConferenceDone,
+      terminationConferenceDone:
+          terminationConferenceDone ?? this.terminationConferenceDone,
+      fgtsGuideChecked: fgtsGuideChecked ?? this.fgtsGuideChecked,
+      esocialPendingResolved:
+          esocialPendingResolved ?? this.esocialPendingResolved,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'admissionChecklistDone': admissionChecklistDone,
+      'payrollConferenceDone': payrollConferenceDone,
+      'vacationConferenceDone': vacationConferenceDone,
+      'thirteenthConferenceDone': thirteenthConferenceDone,
+      'terminationConferenceDone': terminationConferenceDone,
+      'fgtsGuideChecked': fgtsGuideChecked,
+      'esocialPendingResolved': esocialPendingResolved,
+      'notes': notes,
+    };
+  }
+}
+
 List<String> _stringListFromDynamic(dynamic value) {
   if (value is Iterable) {
     return value.map((item) => item.toString()).toList();
@@ -196,6 +290,182 @@ class _PayrollMonthDashboardLine {
   final int pendingEmployees;
   final int divergentEmployees;
   final bool isSelected;
+}
+
+class _LaborRealSnapshot {
+  const _LaborRealSnapshot({
+    required this.thirteenthAvos,
+    required this.vacationMonthsAccrued,
+    required this.vacationDaysLabel,
+    required this.acquisitionPeriodLabel,
+    required this.terminationStatusLabel,
+    required this.summaryLabel,
+    required this.alerts,
+  });
+
+  final int thirteenthAvos;
+  final int vacationMonthsAccrued;
+  final String vacationDaysLabel;
+  final String acquisitionPeriodLabel;
+  final String terminationStatusLabel;
+  final String summaryLabel;
+  final List<String> alerts;
+}
+
+class _WorkforceEmployeeEventTypeOption {
+  const _WorkforceEmployeeEventTypeOption({
+    required this.value,
+    required this.label,
+  });
+
+  final String value;
+  final String label;
+}
+
+const _workforceEmployeeEventTypeOptions = [
+  _WorkforceEmployeeEventTypeOption(
+    value: 'admission_review',
+    label: 'Revisao de admissao',
+  ),
+  _WorkforceEmployeeEventTypeOption(
+    value: 'vacation_notice',
+    label: 'Aviso de ferias',
+  ),
+  _WorkforceEmployeeEventTypeOption(
+    value: 'vacation_start',
+    label: 'Inicio de ferias',
+  ),
+  _WorkforceEmployeeEventTypeOption(
+    value: 'thirteenth_advance',
+    label: 'Adiantamento de 13o',
+  ),
+  _WorkforceEmployeeEventTypeOption(
+    value: 'thirteenth_final',
+    label: 'Fechamento de 13o',
+  ),
+  _WorkforceEmployeeEventTypeOption(
+    value: 'termination_notice',
+    label: 'Aviso de rescisao',
+  ),
+  _WorkforceEmployeeEventTypeOption(
+    value: 'termination_effective',
+    label: 'Rescisao efetivada',
+  ),
+];
+
+class _WorkforceEmployeeEvent {
+  const _WorkforceEmployeeEvent({
+    required this.id,
+    required this.companyId,
+    required this.employeeId,
+    required this.employeeName,
+    required this.competence,
+    required this.eventType,
+    required this.eventLabel,
+    required this.effectiveDate,
+    required this.notes,
+    required this.createdByUserName,
+    required this.createdAt,
+  });
+
+  factory _WorkforceEmployeeEvent.fromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) {
+    return _WorkforceEmployeeEvent(
+      id: id,
+      companyId: map['companyId']?.toString() ?? '',
+      employeeId: map['employeeId']?.toString() ?? '',
+      employeeName: map['employeeName']?.toString() ?? '',
+      competence: map['competence']?.toString() ?? '',
+      eventType: map['eventType']?.toString() ?? '',
+      eventLabel: map['eventLabel']?.toString() ?? '',
+      effectiveDate: map['effectiveDate'],
+      notes: map['notes']?.toString() ?? '',
+      createdByUserName: map['createdByUserName']?.toString() ?? '',
+      createdAt: map['createdAt'],
+    );
+  }
+
+  final String id;
+  final String companyId;
+  final String employeeId;
+  final String employeeName;
+  final String competence;
+  final String eventType;
+  final String eventLabel;
+  final dynamic effectiveDate;
+  final String notes;
+  final String createdByUserName;
+  final dynamic createdAt;
+}
+
+class _WorkforceEmployeeCompetenceSnapshot {
+  const _WorkforceEmployeeCompetenceSnapshot({
+    required this.employeeId,
+    required this.competence,
+    required this.grossReferenceCents,
+    required this.thirteenthProjectedCents,
+    required this.vacationProjectedCents,
+    required this.vacationBonusCents,
+    required this.terminationProjectedCents,
+    required this.thirteenthAvos,
+    required this.vacationMonthsAccrued,
+    required this.terminationSignaled,
+    required this.thirteenthMemory,
+    required this.vacationMemory,
+    required this.terminationMemory,
+    required this.updatedAt,
+    required this.updatedByUserName,
+  });
+
+  factory _WorkforceEmployeeCompetenceSnapshot.fromMap(
+    Map<String, dynamic> map,
+  ) {
+    return _WorkforceEmployeeCompetenceSnapshot(
+      employeeId: map['employeeId']?.toString() ?? '',
+      competence: map['competence']?.toString() ?? '',
+      grossReferenceCents: (map['grossReferenceCents'] as num?)?.toInt() ?? 0,
+      thirteenthProjectedCents:
+          (map['thirteenthProjectedCents'] as num?)?.toInt() ?? 0,
+      vacationProjectedCents:
+          (map['vacationProjectedCents'] as num?)?.toInt() ?? 0,
+      vacationBonusCents: (map['vacationBonusCents'] as num?)?.toInt() ?? 0,
+      terminationProjectedCents:
+          (map['terminationProjectedCents'] as num?)?.toInt() ?? 0,
+      thirteenthAvos: (map['thirteenthAvos'] as num?)?.toInt() ?? 0,
+      vacationMonthsAccrued:
+          (map['vacationMonthsAccrued'] as num?)?.toInt() ?? 0,
+      terminationSignaled: map['terminationSignaled'] as bool? ?? false,
+      thirteenthMemory:
+          (map['thirteenthMemory'] as Map?)?.cast<String, dynamic>() ??
+          const <String, dynamic>{},
+      vacationMemory:
+          (map['vacationMemory'] as Map?)?.cast<String, dynamic>() ??
+          const <String, dynamic>{},
+      terminationMemory:
+          (map['terminationMemory'] as Map?)?.cast<String, dynamic>() ??
+          const <String, dynamic>{},
+      updatedAt: map['updatedAt'],
+      updatedByUserName: map['updatedByUserName']?.toString() ?? '',
+    );
+  }
+
+  final String employeeId;
+  final String competence;
+  final int grossReferenceCents;
+  final int thirteenthProjectedCents;
+  final int vacationProjectedCents;
+  final int vacationBonusCents;
+  final int terminationProjectedCents;
+  final int thirteenthAvos;
+  final int vacationMonthsAccrued;
+  final bool terminationSignaled;
+  final Map<String, dynamic> thirteenthMemory;
+  final Map<String, dynamic> vacationMemory;
+  final Map<String, dynamic> terminationMemory;
+  final dynamic updatedAt;
+  final String updatedByUserName;
 }
 
 class _WorkforceFeatureSettings {

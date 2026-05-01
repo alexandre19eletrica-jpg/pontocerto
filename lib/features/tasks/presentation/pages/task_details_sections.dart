@@ -19,6 +19,7 @@ extension _TaskDetailsSections on TaskDetailsPage {
     required BuildContext context,
     required String titulo,
     required List<MaterialTarefa> lista,
+    required bool canManage,
     required VoidCallback onAdd,
     required VoidCallback onOpenCatalog,
     required void Function(int idx) onEdit,
@@ -35,16 +36,18 @@ extension _TaskDetailsSections on TaskDetailsPage {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-            TextButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add),
-              label: const Text('Adicionar'),
-            ),
-            TextButton.icon(
-              onPressed: onOpenCatalog,
-              icon: const Icon(Icons.inventory_2_outlined),
-              label: const Text('Banco'),
-            ),
+            if (canManage)
+              TextButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+                label: const Text('Adicionar'),
+              ),
+            if (canManage)
+              TextButton.icon(
+                onPressed: onOpenCatalog,
+                icon: const Icon(Icons.inventory_2_outlined),
+                label: const Text('Banco'),
+              ),
           ],
         ),
         if (lista.isEmpty)
@@ -62,14 +65,16 @@ extension _TaskDetailsSections on TaskDetailsPage {
               trailing: Wrap(
                 spacing: 4,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => onEdit(entry.key),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () => onDelete(entry.key),
-                  ),
+                  if (canManage)
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => onEdit(entry.key),
+                    ),
+                  if (canManage)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () => onDelete(entry.key),
+                    ),
                 ],
               ),
             ),
@@ -85,11 +90,13 @@ extension _TaskDetailsSections on TaskDetailsPage {
     TarefaItem tarefa,
     StatusTarefa novoStatus,
     String label,
+    {required bool enabled}
   ) {
     return ChoiceChip(
       label: Text(label),
       selected: tarefa.status == novoStatus,
-      onSelected: (_) async {
+      onSelected: enabled
+          ? (_) async {
         final exigeAprovacao =
             novoStatus == StatusTarefa.iniciado ||
             novoStatus == StatusTarefa.emAndamento ||
@@ -113,7 +120,8 @@ extension _TaskDetailsSections on TaskDetailsPage {
         await ref
             .read(tasksProvider.notifier)
             .updateById(tarefa.id, tarefa.copyWith(status: novoStatus));
-      },
+      }
+          : null,
     );
   }
 

@@ -367,37 +367,123 @@ extension _WorkforceManagementWorkspaceSections on _WorkforceManagementPageState
                         b.data()['createdAt'],
                       ).compareTo(_toDate(a.data()['createdAt'])),
                     );
-                  return AppWorkspaceCard(
-                    title: 'Documentos do registro',
-                    subtitle:
-                        'Arquivos opcionais ligados ao cadastro trabalhista do colaborador selecionado.',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (ordered.isEmpty)
-                          const Text('Nenhum documento enviado ainda.')
-                        else
-                          for (final doc in ordered.take(12))
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.attach_file_outlined),
-                              title: Text(
-                                doc.data()['label']?.toString() ??
-                                    'Documento do colaborador',
-                              ),
-                              subtitle: Text(
-                                doc.data()['fileName']?.toString() ??
-                                    'arquivo sem nome',
-                              ),
-                              trailing: IconButton(
-                                onPressed: () => _openUrl(
-                                  doc.data()['downloadUrl']?.toString(),
+                  final availableCategories = ordered
+                      .map(
+                        (doc) => doc.data()['category']?.toString().trim() ?? '',
+                      )
+                      .where((item) => item.isNotEmpty)
+                      .toSet();
+                  final missingCategories = _employeeRegistrationDocumentOptions
+                      .where(
+                        (item) => !availableCategories.contains(item.category),
+                      )
+                      .toList();
+                  final missingCoreData = <String>[
+                    if (selectedEmployee.documento.trim().isEmpty)
+                      'documento principal',
+                    if (selectedEmployee.admissionDate == null)
+                      'data de admissao',
+                    if (selectedEmployee.cargo?.trim().isEmpty ?? true)
+                      'cargo',
+                    if (selectedEmployee.endereco?.trim().isEmpty ?? true)
+                      'endereco',
+                    if (selectedEmployee.telefone?.trim().isEmpty ?? true)
+                      'telefone',
+                  ];
+                  final dossierStatus =
+                      missingCategories.isEmpty && missingCoreData.isEmpty;
+                  final missingSummary = [
+                    ...missingCoreData,
+                    ...missingCategories.map((item) => item.label),
+                  ];
+                  return Column(
+                    children: [
+                      AppWorkspaceCard(
+                        title: 'Dossie trabalhista do colaborador',
+                        subtitle:
+                            'Leitura do que ja existe no cadastro e do que ainda falta para um registro mais completo deste funcionario na empresa ativa.',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              children: [
+                                AppMetricCard(
+                                  label: 'Status',
+                                  value: dossierStatus
+                                      ? 'Completo'
+                                      : 'Pendente',
+                                  caption:
+                                      dossierStatus
+                                          ? 'Campos base e documentos principais presentes'
+                                          : 'Ainda faltam itens do registro',
                                 ),
-                                icon: const Icon(Icons.open_in_new_outlined),
-                              ),
+                                AppMetricCard(
+                                  label: 'Documentos enviados',
+                                  value: ordered.length.toString(),
+                                  caption: 'Arquivos na pasta do colaborador',
+                                ),
+                                AppMetricCard(
+                                  label: 'Obrigatorios faltando',
+                                  value: missingCategories.length.toString(),
+                                  caption:
+                                      'RG/CPF, CTPS, residencia e dados bancarios',
+                                ),
+                              ],
                             ),
-                      ],
-                    ),
+                            if (missingSummary.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                'Pendencias atuais: ${missingSummary.join(', ')}.',
+                                style: const TextStyle(
+                                  color: AppBrandColors.softText,
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      AppWorkspaceCard(
+                        title: 'Documentos do registro',
+                        subtitle:
+                            'Arquivos opcionais ligados ao cadastro trabalhista do colaborador selecionado.',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (ordered.isEmpty)
+                              const Text('Nenhum documento enviado ainda.')
+                            else
+                              for (final doc in ordered.take(12))
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(
+                                    Icons.attach_file_outlined,
+                                  ),
+                                  title: Text(
+                                    doc.data()['label']?.toString() ??
+                                        'Documento do colaborador',
+                                  ),
+                                  subtitle: Text(
+                                    doc.data()['fileName']?.toString() ??
+                                        'arquivo sem nome',
+                                  ),
+                                  trailing: IconButton(
+                                    onPressed: () => _openUrl(
+                                      doc.data()['downloadUrl']?.toString(),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.open_in_new_outlined,
+                                    ),
+                                  ),
+                                ),
+                          ],
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
