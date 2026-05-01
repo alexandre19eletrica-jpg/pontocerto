@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pontocerto/features/marketing/presentation/widgets/vendas_whatsapp_button.dart'
-    show kWhatsappBrandGreen;
+    show VendasWhatsappFooterButton, VendasWhatsappHeroSecondaryButton, kWhatsappBrandGreen;
 
 /// Paleta pensada para leitura em telas pequenas (Instagram / mobile).
 abstract final class VendasLandingTheme {
@@ -131,6 +131,7 @@ class VendasLandingHero extends StatelessWidget {
     required this.primaryLabel,
     this.secondaryLabel,
     this.onSecondary,
+    this.secondaryWhatsappMessage,
   });
 
   final bool compact;
@@ -142,6 +143,8 @@ class VendasLandingHero extends StatelessWidget {
   final String primaryLabel;
   final String? secondaryLabel;
   final VoidCallback? onSecondary;
+  /// Quando preenchido no Web, usa [Link] real (âncora) — evita bloqueio de navegação ao `wa.me`.
+  final String? secondaryWhatsappMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -278,36 +281,44 @@ class VendasLandingHero extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (secondaryLabel != null && onSecondary != null) ...[
+                        if (secondaryLabel != null &&
+                            (onSecondary != null || secondaryWhatsappMessage != null)) ...[
                           const SizedBox(height: 12),
-                          FilledButton.icon(
-                            onPressed: onSecondary,
-                            icon: const FaIcon(
-                              FontAwesomeIcons.whatsapp,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                            label: Text(
-                              secondaryLabel!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.2,
-                                fontSize: 14,
+                          if (secondaryWhatsappMessage != null)
+                            VendasWhatsappHeroSecondaryButton(
+                              compact: compact,
+                              label: secondaryLabel!,
+                              mensagemInicial: secondaryWhatsappMessage!,
+                            )
+                          else
+                            FilledButton.icon(
+                              onPressed: onSecondary,
+                              icon: const FaIcon(
+                                FontAwesomeIcons.whatsapp,
+                                size: 20,
                                 color: Colors.white,
                               ),
+                              label: Text(
+                                secondaryLabel!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.2,
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: kWhatsappBrandGreen,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(double.infinity, 52),
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                                surfaceTintColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
                             ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: kWhatsappBrandGreen,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(double.infinity, 52),
-                              elevation: 0,
-                              shadowColor: Colors.transparent,
-                              surfaceTintColor: Colors.transparent,
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                          ),
                         ],
                       ],
                     )
@@ -331,32 +342,40 @@ class VendasLandingHero extends StatelessWidget {
                             style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.3),
                           ),
                         ),
-                        if (secondaryLabel != null && onSecondary != null)
-                          FilledButton.icon(
-                            onPressed: onSecondary,
-                            icon: const FaIcon(
-                              FontAwesomeIcons.whatsapp,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                            label: Text(
-                              secondaryLabel!,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.2,
+                        if (secondaryLabel != null &&
+                            (onSecondary != null || secondaryWhatsappMessage != null))
+                          if (secondaryWhatsappMessage != null)
+                            VendasWhatsappHeroSecondaryButton(
+                              compact: compact,
+                              label: secondaryLabel!,
+                              mensagemInicial: secondaryWhatsappMessage!,
+                            )
+                          else
+                            FilledButton.icon(
+                              onPressed: onSecondary,
+                              icon: const FaIcon(
+                                FontAwesomeIcons.whatsapp,
+                                size: 20,
                                 color: Colors.white,
                               ),
+                              label: Text(
+                                secondaryLabel!,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: kWhatsappBrandGreen,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                                surfaceTintColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 17),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
                             ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: kWhatsappBrandGreen,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shadowColor: Colors.transparent,
-                              surfaceTintColor: Colors.transparent,
-                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 17),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                          ),
                       ],
                     ),
                 ],
@@ -1112,11 +1131,14 @@ class VendasLandingFooter extends StatelessWidget {
     required this.pricingLine,
     this.onEntrar,
     this.entrarLabel,
+    this.whatsappFooterPrefill,
   });
 
   final bool compact;
   final VoidCallback onInicio;
   final VoidCallback onWhatsapp;
+  /// Texto inicial do `wa.me` no rodapé (Web: [Link]); se null, mantém só [onWhatsapp].
+  final String? whatsappFooterPrefill;
   /// Uma linha com trial + valor + base de cobrança (por escritório vs por empresa).
   final String pricingLine;
   final VoidCallback? onEntrar;
@@ -1196,19 +1218,25 @@ class VendasLandingFooter extends StatelessWidget {
                       ),
                       child: Text(entrarLabel!, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                     ),
-                  TextButton.icon(
-                    onPressed: onWhatsapp,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(48, 48),
+                  if (whatsappFooterPrefill != null)
+                    VendasWhatsappFooterButton(
+                      mensagemInicial: whatsappFooterPrefill!,
+                      onFallback: onWhatsapp,
+                    )
+                  else
+                    TextButton.icon(
+                      onPressed: onWhatsapp,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(48, 48),
+                      ),
+                      icon: const FaIcon(
+                        FontAwesomeIcons.whatsapp,
+                        size: 20,
+                        color: kWhatsappBrandGreen,
+                      ),
+                      label: const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                     ),
-                    icon: const FaIcon(
-                      FontAwesomeIcons.whatsapp,
-                      size: 20,
-                      color: kWhatsappBrandGreen,
-                    ),
-                    label: const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                  ),
                 ],
               ),
               Padding(

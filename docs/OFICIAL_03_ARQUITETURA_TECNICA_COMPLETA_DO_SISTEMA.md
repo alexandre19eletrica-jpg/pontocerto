@@ -14,7 +14,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 - Flutter
 - operacao web-first para empresa, gestor e contador
 - app Android para funcionario e acessos moveis
-- abertura de **WhatsApp** (`wa.me`) em landings marketing: no **Web** usa implementacao especifica com **import condicional** (`dart.library.html`) e `window.open` na mesma virada do clique (`vendas_whatsapp_web_open_web.dart` vs stub); fora do Web continua `url_launcher` com `LaunchMode.externalApplication` — **nao** anteceder a abertura Web com `await canLaunchUrl` no fluxo deste botao (bloqueava pop-ups)
+- abertura de **WhatsApp** (`wa.me`) em landings marketing no **Web**: widget **`Link`** do `package:url_launcher/link.dart` com `LinkTarget.blank` (âncora real + `followLink`), usado em `VendasWhatsappButton`, hero secundário (`secondaryWhatsappMessage`), rodapé (`whatsappFooterPrefill` / `VendasWhatsappFooterButton`); **`scheduleWhatsappComercialSignals`** (após **`followLink`**) dispara FBQ/`sales_whatsapp_comercial` sem competir com a navegação. Fora do Web: `launchUrl` com `LaunchMode.externalApplication`. **`abrirWhatsappVendas`** no Web faz fallback por `launchUrl` onde não existe `Link`.
 
 ## 2. Backend
 

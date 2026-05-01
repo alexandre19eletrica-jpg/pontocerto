@@ -1,1 +1,0 @@
-void openWhatsappUrlOnWebImmediately(String url) {}
