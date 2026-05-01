@@ -14,7 +14,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 - Flutter
 - operacao web-first para empresa, gestor e contador
 - app Android para funcionario e acessos moveis
-- abertura de **WhatsApp** (`wa.me`) em landings marketing no **Web**: widget **`Link`** do `package:url_launcher/link.dart` com `LinkTarget.blank` (âncora real + `followLink`), usado em `VendasWhatsappButton`, hero secundário (`secondaryWhatsappMessage`), rodapé (`whatsappFooterPrefill` / `VendasWhatsappFooterButton`); **`scheduleWhatsappComercialSignals`** (após **`followLink`**) dispara FBQ/`sales_whatsapp_comercial` sem competir com a navegação. Fora do Web: `launchUrl` com `LaunchMode.externalApplication`. **`abrirWhatsappVendas`** no Web faz fallback por `launchUrl` onde não existe `Link`.
+- abertura de **WhatsApp** (`wa.me`) em landings marketing no **Web**: clique síncrono com `<a>` invisível — **`AnchorElement`** + **`click()`** na mesma stack do **`onPressed`** (`vendas_whatsapp_web_anchor_web.dart` vs stub); **FBQ / `sales_whatsapp_comercial`** apenas após **`Timer`(400 ms)** (`scheduleWhatsappComercialSignals` em `vendas_whatsapp_button.dart`), fora da stack do gesto, para não disputar com o browser nem com corrida Pixel/DOM. Nativo: `launchUrl`. O widget **`Link`** do `url_launcher` foi **descontinuado aqui**: no canvas Flutter pode falhar a sincronização entre sinal **`followLink`** e evento DOM (`viewId` / **`preventDefault`**), pelo que **não** aparecia navegação.
 
 ## 2. Backend
 

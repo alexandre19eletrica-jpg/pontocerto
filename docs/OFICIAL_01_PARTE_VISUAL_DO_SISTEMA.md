@@ -127,7 +127,7 @@ Ela tambem deve ser responsiva e adaptativa por ambiente:
 - imagens comerciais devem ter corte seguro, legenda/contexto quando necessario e nao podem quebrar a leitura em telas pequenas
 - CTAs principais devem continuar acessiveis no mobile e no desktop
 - copy e imagens da landing devem vender apenas o que o sistema real entrega hoje, sem prometer modulo, permissao ou integracao inexistente
-- nas landings publicas de vendas dirigidas a **empresa** e a **contador** (rotas dedicadas no marketing), os CTAs para **WhatsApp comercial** devem abrir a conversa de forma fiavel no **navegador** — o clique nao pode “morrer silenciosamente” por bloqueio de janela; uso do widget **`Link`** (`url_launcher`) no Flutter Web garante comportamento equivalente a um `<a href>` real
+- nas landings publicas de vendas dirigidas a **empresa** e a **contador** (rotas dedicadas no marketing), os CTAs para **WhatsApp comercial** devem abrir a conversa de forma fiavel no **navegador** — o clique nao pode “morrer silenciosamente” por bloqueio de janela; uso de **`AnchorElement` + `click()`** sintetico ligado ao `wa.me`, com eventos Pixel/callables **depois** de um pequeno atraso quando necessario (`vendas_whatsapp_button.dart`)
 
 Ela nao pode:
 

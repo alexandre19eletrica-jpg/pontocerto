@@ -160,8 +160,12 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                       onPrimary: _scrollToInvite,
                       primaryLabel: 'LIBERAR MEU CONTADOR AGORA',
                       secondaryLabel: 'Falar com alguém',
-                      secondaryWhatsappMessage:
-                          'Olá! Tenho empresa e quero entender o Ponto Certo (nota pelo celular + contador).',
+                      onSecondary: () {
+                        abrirWhatsappVendas(
+                          mensagemInicial:
+                              'Olá! Tenho empresa e quero entender o Ponto Certo (nota pelo celular + contador).',
+                        );
+                      },
                     ),
                     VendasTrustStrip(
                       compact: compact,
@@ -519,13 +523,11 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                     VendasLandingFooter(
                       compact: compact,
                       onInicio: () => context.go('/inicio'),
-                      whatsappFooterPrefill:
-                          'Olá! Tenho empresa e vi o Ponto Certo — quero tirar dúvidas.',
+                      pricingLine: '30 dias de teste grátis · R\$ 97,90/mês por empresa',
                       onWhatsapp: () => abrirWhatsappVendas(
                         mensagemInicial:
                             'Olá! Tenho empresa e vi o Ponto Certo — quero tirar dúvidas.',
                       ),
-                      pricingLine: '30 dias de teste grátis · R\$ 97,90/mês por empresa',
                     ),
                   ],
                 ),

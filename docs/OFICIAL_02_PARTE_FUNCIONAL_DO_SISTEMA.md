@@ -176,7 +176,7 @@ Se voltar erro:
 - o onboarding principal segue para o escritorio quando o fluxo nasce nesse modelo
 - os emails enviados para escritorio contabil e contador parceiro devem apresentar o sistema como iniciativa real de `Bonfim Alexandre Sousa Santos`, desenvolvedor do sistema e empresario dos ramos de obras, construcao civil e servicos eletricos
 - essa comunicacao deve explicar que o produto nasceu da dificuldade de emissao de notas, da desorganizacao operacional e do caos recorrente na gestao da propria empresa
-- o **WhatsApp comercial** (`wa.me`) nas landings empresa/contador deve abrir sempre que o visitante tocar nos botoes previstos; no **Web**, usar o widget oficial **`Link`** do `url_launcher` (**`followLink`**) ligado aos CTAs secundários e ao rodape; Meta Pixel (`Contact`) e `sales_whatsapp_comercial` disparam **após** o `followLink`, agendados, para nao impedir o navegador de seguir para o `wa.me`
+- o **WhatsApp comercial** (`wa.me`) nas landings empresa/contador deve abrir sempre que o visitante tocar nos botoes previstos; no **Web**, usar **`AnchorElement`** + **`click()`** no mesmo ciclo sintetico do `onPressed` (ver `vendas_whatsapp_web_anchor_web.dart`), evitando falhas silenciosas do **`Link`**/platform-view; Meta Pixel (`Contact`) e `sales_whatsapp_comercial` apenas após **atraso** (ex.: 400 ms) em `scheduleWhatsappComercialSignals`
 
 ## Funcionalidade de equipe oficial
 

@@ -4,7 +4,7 @@ Data: 29/04/2026
 
 ## Situacao
 
-- **WhatsApp (Web) nas landings empresa/contador (correcao evoluida)**: navegacao `wa.me` via widget **`Link`** (`url_launcher`) + texto pre-preenchido no hero/footer; FBQ/analytics **depois** do `followLink` (`scheduleWhatsappComercialSignals`); fallback `launchUrl` em `abrirWhatsappVendas` para Web onde nao haja Link.
+- **WhatsApp (Web) nas landings empresa/contador**: **`AnchorElement` + `click()`** síncrono (`vendas_whatsapp_web_anchor_*.dart`); Meta/analytics só após **400 ms** (`Timer`); removido **`Link`**/`followLink` (corrida DOM/`preventDefault`). Hero/rodape de novo só **`onSecondary`/`onWhatsapp`** → **`abrirWhatsappVendas`**.
 - **Registo 29/04/2026** (ver `REGISTRO_ATUALIZACOES` **2026-04-29**): marketing **WhatsApp comercial** com eventos no clique (Meta + `sales_whatsapp_comercial`); **carteira contador** com todos os vinculos e chips; **Functions** — email interno de novo cadastro para `fromEmail`; contador com **Trabalhista** (`/workforce`, `/employees`) e **inativar** funcionarios com regra Firestore (so `ativo`/`updatedAt`); **suprema** protegida contra inativacao indevida callables/UI; **deploy web** + rules/functions (retry se timeout). **Nenhum AAB** gerado nesta rodada. **Planeamento documental** (sem implementar produto): `docs/PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md` — certificadora + IBS/CBS em fases seguras.
 - **Pendencias proxima edicao**: `flutter build appbundle` e Play se necessario (versao acima da ultima publicada); repetir ou fraccionar deploy de **functions** se analise do CLI der timeout; funcoes que dependam de subida Android ficam **apos** AAB.
 

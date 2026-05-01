@@ -49,8 +49,12 @@ class VendasContadorPage extends StatelessWidget {
                   },
                   primaryLabel: 'QUERO ORGANIZAR MEU ESCRITÓRIO',
                   secondaryLabel: 'Falar com alguém',
-                  secondaryWhatsappMessage:
-                      'Olá! Sou contador e quero entender o Ponto Certo para minha carteira.',
+                  onSecondary: () {
+                    abrirWhatsappVendas(
+                      mensagemInicial:
+                          'Olá! Sou contador e quero entender o Ponto Certo para minha carteira.',
+                    );
+                  },
                 ),
                 VendasTrustStrip(
                   compact: compact,
@@ -235,8 +239,6 @@ class VendasContadorPage extends StatelessWidget {
                   onInicio: () => context.go('/inicio'),
                   onEntrar: () => context.go('/login-contador'),
                   entrarLabel: 'Entrar',
-                  whatsappFooterPrefill:
-                      'Olá! Sou contador e quero falar sobre o Ponto Certo.',
                   pricingLine: '30 dias de teste grátis · R\$ 97,90/mês por escritório',
                   onWhatsapp: () => abrirWhatsappVendas(
                     mensagemInicial: 'Olá! Sou contador e quero falar sobre o Ponto Certo.',
