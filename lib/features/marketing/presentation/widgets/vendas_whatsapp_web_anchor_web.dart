@@ -2,10 +2,10 @@
 
 import 'dart:html' as html;
 
-/// Abre `href` como clique sintético em `<a>` (confiável com gesto); evita corrida `Link`/platform-view.
+/// Abre `href` na mesma aba para evitar bloqueios silenciosos de nova aba no Web.
 void vendasWebOpenWaMeNewTabHref(String href) {
   final a = html.AnchorElement(href: href)
-    ..target = '_blank'
+    ..target = '_self'
     ..rel = 'noopener noreferrer';
   final host = html.document.body ?? html.document.documentElement;
   host?.append(a);
