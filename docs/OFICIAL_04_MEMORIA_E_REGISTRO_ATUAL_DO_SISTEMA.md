@@ -11,6 +11,8 @@ Projeto: Ponto Certo
 
 **Complemento adicional (fechamento trabalhista da competencia):** o modulo passou a salvar tambem um fechamento trabalhista consolidado dentro de `payroll_closures`, usando `laborClosure` e `laborLines` por competencia. Essa consolidacao deriva de snapshots do colaborador, eventos trabalhistas e checklist da competencia, com estados `pending_review`, `ready_for_close` e `closed`, sem abrir uma nova fonte de verdade separada para folha ou cadastro.
 
+**Complemento final desta frente (workflow real):** foram ligados workflows operacionais de **ferias**, **`13o`** e **rescisao** por colaborador, ainda dentro da mesma trilha de eventos/documentos ja existente. Tambem entrou a fila de **servicos prontos para NF** dentro do trabalhista, e o fechamento da folha passou a validar o estado do fechamento trabalhista salvo antes de permitir encerrar a competencia.
+
 ## Objetivo
 
 Este documento define onde o estado atual do sistema deve ser registrado e como manter essa memoria viva sem perder contexto.

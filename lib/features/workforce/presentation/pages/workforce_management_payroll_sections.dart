@@ -91,6 +91,105 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           employees: employees,
         ),
         const SizedBox(height: 12),
+        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('service_invoices')
+              .where('companyId', isEqualTo: sessao.companyId)
+              .snapshots(),
+          builder: (context, snapshot) {
+            final linkedTaskIds =
+                snapshot.data?.docs
+                    .map((doc) {
+                      final data = doc.data();
+                      final sourceTask = (data['sourceTask'] as Map?)
+                          ?.cast<String, dynamic>();
+                      return (sourceTask?['id']?.toString().trim() ??
+                          data['sourceTaskId']?.toString().trim() ??
+                          '');
+                    })
+                    .where((id) => id.isNotEmpty)
+                    .toSet() ??
+                <String>{};
+            final readyTasks =
+                tasks
+                    .where(
+                      (task) =>
+                          task.status == StatusTarefa.finalizado &&
+                          !linkedTaskIds.contains(task.id),
+                    )
+                    .toList()
+                  ..sort((a, b) {
+                    final aDate = a.dataExecucao ?? DateTime(2000);
+                    final bDate = b.dataExecucao ?? DateTime(2000);
+                    return bDate.compareTo(aDate);
+                  });
+            return AppWorkspaceCard(
+              title: 'Servicos prontos para NF',
+              subtitle:
+                  'Fila operacional da empresa ativa com servicos finalizados ainda sem nota vinculada.',
+              trailing: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/tasks'),
+                    icon: const Icon(Icons.assignment_turned_in_outlined),
+                    label: const Text('Tarefas'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: () => context.go('/fiscal'),
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    label: const Text('Ir para fiscal'),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      AppMetricCard(
+                        label: 'Prontos para NF',
+                        value: readyTasks.length.toString(),
+                        caption: 'Finalizados e sem nota vinculada',
+                      ),
+                      AppMetricCard(
+                        label: 'Valor potencial',
+                        value: _formatCurrency(
+                          readyTasks.fold<int>(
+                            0,
+                            (sum, task) => sum + (task.valorTotalCents ?? 0),
+                          ),
+                        ),
+                        caption: 'Soma dos servicos da fila atual',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (readyTasks.isEmpty)
+                    const Text(
+                      'Nenhum servico finalizado pendente de nota agora.',
+                    )
+                  else
+                    for (final task in readyTasks.take(6))
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.inventory_2_outlined),
+                        title: Text(task.nome),
+                        subtitle: Text(
+                          '${task.clienteNome.isEmpty ? 'Cliente nao informado' : task.clienteNome} | '
+                          '${_formatDate(task.dataExecucao)} | '
+                          '${_formatCurrency(task.valorTotalCents ?? 0)}',
+                        ),
+                      ),
+                ],
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
         _buildPayrollTopMetrics(
           competence: competence,
           payrollSummary: payrollSummary,
@@ -1061,6 +1160,322 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
               },
             ),
           if (selectedEmployee != null) const SizedBox(height: 12),
+          if (selectedEmployee != null)
+            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('workforce_employee_events')
+                  .where('companyId', isEqualTo: sessao.companyId)
+                  .where('employeeId', isEqualTo: selectedEmployee.id)
+                  .where('competence', isEqualTo: competence)
+                  .snapshots(),
+              builder: (context, eventsSnapshot) {
+                final events = [
+                  for (final doc in eventsSnapshot.data?.docs ?? const [])
+                    _WorkforceEmployeeEvent.fromMap(doc.id, doc.data()),
+                ];
+                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('payroll_documents')
+                      .where('companyId', isEqualTo: sessao.companyId)
+                      .where('employeeId', isEqualTo: selectedEmployee.id)
+                      .where('competence', isEqualTo: competence)
+                      .snapshots(),
+                  builder: (context, docsSnapshot) {
+                    final payrollDocs = docsSnapshot.data?.docs ?? const [];
+                    final docTypes = payrollDocs
+                        .map((doc) => doc.data()['type']?.toString() ?? '')
+                        .where((item) => item.isNotEmpty)
+                        .toSet();
+                    final thirteenthEligible = _isEligibleForThirteenth(
+                      selectedEmployee,
+                      competence,
+                    );
+                    return Column(
+                      children: [
+                        _buildWorkflowCard(
+                          title: 'Workflow de ferias',
+                          subtitle:
+                              'Aviso, inicio, pagamento, retorno e recibo do colaborador na competencia.',
+                          status: _workflowStatusLabel(
+                            requiredFlags: [
+                              _hasEvent(events, 'vacation_notice'),
+                              _hasEvent(events, 'vacation_start'),
+                              _hasEvent(events, 'vacation_payment'),
+                              docTypes.contains(
+                                _PayrollDocumentType.vacationReceipt.name,
+                              ),
+                            ],
+                          ),
+                          pendingItems: [
+                            if (!_hasEvent(events, 'vacation_notice'))
+                              'avisar ferias',
+                            if (!_hasEvent(events, 'vacation_start'))
+                              'registrar inicio',
+                            if (!_hasEvent(events, 'vacation_payment'))
+                              'registrar pagamento',
+                            if (!_hasEvent(events, 'vacation_return'))
+                              'registrar retorno',
+                            if (!docTypes.contains(
+                              _PayrollDocumentType.vacationReceipt.name,
+                            ))
+                              'gerar recibo de ferias',
+                          ],
+                          actions: [
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openPresetWorkforceEmployeeEventDialog(
+                                    sessao: sessao,
+                                    employee: selectedEmployee,
+                                    competence: competence,
+                                    eventType: 'vacation_notice',
+                                    eventLabel: 'Aviso de ferias',
+                                  ),
+                              icon: const Icon(
+                                Icons.notifications_active_outlined,
+                              ),
+                              label: const Text('Aviso'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openPresetWorkforceEmployeeEventDialog(
+                                    sessao: sessao,
+                                    employee: selectedEmployee,
+                                    competence: competence,
+                                    eventType: 'vacation_start',
+                                    eventLabel: 'Inicio de ferias',
+                                  ),
+                              icon: const Icon(Icons.flight_takeoff_outlined),
+                              label: const Text('Inicio'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openPresetWorkforceEmployeeEventDialog(
+                                    sessao: sessao,
+                                    employee: selectedEmployee,
+                                    competence: competence,
+                                    eventType: 'vacation_payment',
+                                    eventLabel: 'Pagamento de ferias',
+                                  ),
+                              icon: const Icon(
+                                Icons.account_balance_wallet_outlined,
+                              ),
+                              label: const Text('Pagamento'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openPresetWorkforceEmployeeEventDialog(
+                                    sessao: sessao,
+                                    employee: selectedEmployee,
+                                    competence: competence,
+                                    eventType: 'vacation_return',
+                                    eventLabel: 'Retorno de ferias',
+                                  ),
+                              icon: const Icon(Icons.keyboard_return_outlined),
+                              label: const Text('Retorno'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: canManagePayrollDocuments
+                                  ? () => _generateOperationalDocument(
+                                      context,
+                                      sessao: sessao,
+                                      companyData: companyData,
+                                      companySettings: companySettings,
+                                      employee: selectedEmployee,
+                                      payment: payment,
+                                      metrics: metrics,
+                                      type:
+                                          _PayrollDocumentType.vacationReceipt,
+                                      competence: competence,
+                                    )
+                                  : null,
+                              icon: const Icon(Icons.description_outlined),
+                              label: const Text('Recibo'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _buildWorkflowCard(
+                          title: 'Workflow de 13o',
+                          subtitle:
+                              'Adiantamento, fechamento/liquidacao e comprovacao documental do 13o.',
+                          status: _workflowStatusLabel(
+                            requiredFlags: [
+                              thirteenthEligible,
+                              _hasEvent(events, 'thirteenth_advance') ||
+                                  _hasEvent(events, 'thirteenth_final') ||
+                                  _hasEvent(events, 'thirteenth_settlement'),
+                              docTypes.contains(
+                                _PayrollDocumentType.thirteenthReceipt.name,
+                              ),
+                            ],
+                          ),
+                          pendingItems: [
+                            if (!thirteenthEligible)
+                              'colaborador ainda nao elegivel na competencia',
+                            if (thirteenthEligible &&
+                                !_hasEvent(events, 'thirteenth_advance'))
+                              'registrar adiantamento',
+                            if (thirteenthEligible &&
+                                !_hasEvent(events, 'thirteenth_final') &&
+                                !_hasEvent(events, 'thirteenth_settlement'))
+                              'registrar fechamento/liquidacao',
+                            if (thirteenthEligible &&
+                                !docTypes.contains(
+                                  _PayrollDocumentType.thirteenthReceipt.name,
+                                ))
+                              'gerar recibo de 13o',
+                          ],
+                          actions: [
+                            OutlinedButton.icon(
+                              onPressed: !thirteenthEligible
+                                  ? null
+                                  : () =>
+                                        _openPresetWorkforceEmployeeEventDialog(
+                                          sessao: sessao,
+                                          employee: selectedEmployee,
+                                          competence: competence,
+                                          eventType: 'thirteenth_advance',
+                                          eventLabel: 'Adiantamento de 13o',
+                                        ),
+                              icon: const Icon(Icons.payments_outlined),
+                              label: const Text('Adiantamento'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: !thirteenthEligible
+                                  ? null
+                                  : () =>
+                                        _openPresetWorkforceEmployeeEventDialog(
+                                          sessao: sessao,
+                                          employee: selectedEmployee,
+                                          competence: competence,
+                                          eventType: 'thirteenth_settlement',
+                                          eventLabel: 'Liquidacao de 13o',
+                                        ),
+                              icon: const Icon(Icons.done_all_outlined),
+                              label: const Text('Liquidacao'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed:
+                                  !thirteenthEligible ||
+                                      !canManagePayrollDocuments
+                                  ? null
+                                  : () => _generateOperationalDocument(
+                                      context,
+                                      sessao: sessao,
+                                      companyData: companyData,
+                                      companySettings: companySettings,
+                                      employee: selectedEmployee,
+                                      payment: payment,
+                                      metrics: metrics,
+                                      type: _PayrollDocumentType
+                                          .thirteenthReceipt,
+                                      competence: competence,
+                                    ),
+                              icon: const Icon(Icons.receipt_long_outlined),
+                              label: const Text('Recibo 13o'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _buildWorkflowCard(
+                          title: 'Workflow de rescisao',
+                          subtitle:
+                              'Aviso, efetivacao, liquidacao e termo final do desligamento quando aplicavel.',
+                          status: _workflowStatusLabel(
+                            requiredFlags: [
+                              _hasEvent(events, 'termination_notice') ||
+                                  _hasEvent(events, 'termination_effective'),
+                              _hasEvent(events, 'termination_settlement') ||
+                                  !_hasEvent(events, 'termination_effective'),
+                              docTypes.contains(
+                                    _PayrollDocumentType
+                                        .terminationStatement
+                                        .name,
+                                  ) ||
+                                  !_hasEvent(events, 'termination_effective'),
+                            ],
+                          ),
+                          pendingItems: [
+                            if (!_hasEvent(events, 'termination_notice') &&
+                                !_hasEvent(events, 'termination_effective'))
+                              'sem rescisao sinalizada nesta competencia',
+                            if (_hasEvent(events, 'termination_effective') &&
+                                !_hasEvent(events, 'termination_settlement'))
+                              'registrar liquidacao da rescisao',
+                            if (_hasEvent(events, 'termination_effective') &&
+                                !docTypes.contains(
+                                  _PayrollDocumentType
+                                      .terminationStatement
+                                      .name,
+                                ))
+                              'gerar termo de rescisao',
+                          ],
+                          actions: [
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openPresetWorkforceEmployeeEventDialog(
+                                    sessao: sessao,
+                                    employee: selectedEmployee,
+                                    competence: competence,
+                                    eventType: 'termination_notice',
+                                    eventLabel: 'Aviso de rescisao',
+                                  ),
+                              icon: const Icon(Icons.warning_amber_outlined),
+                              label: const Text('Aviso'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openPresetWorkforceEmployeeEventDialog(
+                                    sessao: sessao,
+                                    employee: selectedEmployee,
+                                    competence: competence,
+                                    eventType: 'termination_effective',
+                                    eventLabel: 'Rescisao efetivada',
+                                  ),
+                              icon: const Icon(Icons.person_off_outlined),
+                              label: const Text('Efetivar'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openPresetWorkforceEmployeeEventDialog(
+                                    sessao: sessao,
+                                    employee: selectedEmployee,
+                                    competence: competence,
+                                    eventType: 'termination_settlement',
+                                    eventLabel: 'Liquidacao de rescisao',
+                                  ),
+                              icon: const Icon(Icons.balance_outlined),
+                              label: const Text('Liquidacao'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: canManagePayrollDocuments
+                                  ? () => _generateOperationalDocument(
+                                      context,
+                                      sessao: sessao,
+                                      companyData: companyData,
+                                      companySettings: companySettings,
+                                      employee: selectedEmployee,
+                                      payment: payment,
+                                      metrics: metrics,
+                                      type: _PayrollDocumentType
+                                          .terminationStatement,
+                                      competence: competence,
+                                    )
+                                  : null,
+                              icon: const Icon(
+                                Icons.assignment_return_outlined,
+                              ),
+                              label: const Text('Termo'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          if (selectedEmployee != null) const SizedBox(height: 12),
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
                 .collection('payroll_documents')
@@ -1278,6 +1693,108 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildReadyForInvoiceFromTasksCard({
+    required Session sessao,
+    required List<TarefaItem> tasks,
+  }) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('service_invoices')
+          .where('companyId', isEqualTo: sessao.companyId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final linkedTaskIds =
+            snapshot.data?.docs
+                .map((doc) {
+                  final data = doc.data();
+                  final sourceTask = (data['sourceTask'] as Map?)
+                      ?.cast<String, dynamic>();
+                  return (sourceTask?['id']?.toString().trim() ??
+                      data['sourceTaskId']?.toString().trim() ??
+                      '');
+                })
+                .where((id) => id.isNotEmpty)
+                .toSet() ??
+            <String>{};
+        final readyTasks =
+            tasks
+                .where(
+                  (task) =>
+                      task.status == StatusTarefa.finalizado &&
+                      !linkedTaskIds.contains(task.id),
+                )
+                .toList()
+              ..sort((a, b) {
+                final aDate = a.dataExecucao ?? DateTime(2000);
+                final bDate = b.dataExecucao ?? DateTime(2000);
+                return bDate.compareTo(aDate);
+              });
+        return AppWorkspaceCard(
+          title: 'Servicos prontos para NF',
+          subtitle:
+              'Fila operacional da empresa ativa com servicos finalizados ainda sem nota vinculada.',
+          trailing: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => context.go('/tasks'),
+                icon: const Icon(Icons.assignment_turned_in_outlined),
+                label: const Text('Tarefas'),
+              ),
+              FilledButton.icon(
+                onPressed: () => context.go('/fiscal'),
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: const Text('Ir para fiscal'),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  AppMetricCard(
+                    label: 'Prontos para NF',
+                    value: readyTasks.length.toString(),
+                    caption: 'Finalizados e sem nota vinculada',
+                  ),
+                  AppMetricCard(
+                    label: 'Valor potencial',
+                    value: _formatCurrency(
+                      readyTasks.fold<int>(
+                        0,
+                        (sum, task) => sum + (task.valorTotalCents ?? 0),
+                      ),
+                    ),
+                    caption: 'Soma dos servicos da fila atual',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (readyTasks.isEmpty)
+                const Text('Nenhum servico finalizado pendente de nota agora.')
+              else
+                for (final task in readyTasks.take(6))
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.inventory_2_outlined),
+                    title: Text(task.nome),
+                    subtitle: Text(
+                      '${task.clienteNome.isEmpty ? 'Cliente nao informado' : task.clienteNome} | '
+                      '${_formatDate(task.dataExecucao)} | '
+                      '${_formatCurrency(task.valorTotalCents ?? 0)}',
+                    ),
+                  ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -2002,6 +2519,9 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
     var thirteenthEmployees = 0;
     var vacationAttentionEmployees = 0;
     var terminationEmployees = 0;
+    var incompleteThirteenthWorkflows = 0;
+    var incompleteVacationWorkflows = 0;
+    var incompleteTerminationWorkflows = 0;
     var thirteenthProjectedCents = 0;
     var vacationProjectedCents = 0;
     var vacationBonusCents = 0;
@@ -2016,6 +2536,26 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           employee.salaryAmountCents ??
           0;
       final employeeEvents = eventsByEmployeeId[employee.id] ?? const [];
+      final hasVacationNotice = employeeEvents.any(
+        (event) => event.eventType == 'vacation_notice',
+      );
+      final hasVacationStart = employeeEvents.any(
+        (event) => event.eventType == 'vacation_start',
+      );
+      final hasVacationPayment = employeeEvents.any(
+        (event) => event.eventType == 'vacation_payment',
+      );
+      final hasThirteenthSettlement = employeeEvents.any(
+        (event) =>
+            event.eventType == 'thirteenth_final' ||
+            event.eventType == 'thirteenth_settlement',
+      );
+      final hasTerminationEffective = employeeEvents.any(
+        (event) => event.eventType == 'termination_effective',
+      );
+      final hasTerminationSettlement = employeeEvents.any(
+        (event) => event.eventType == 'termination_settlement',
+      );
       final draft = _buildEmployeeCompetenceDraft(
         employee: employee,
         competence: competence,
@@ -2028,12 +2568,21 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
       }
       if (draft.thirteenthAvos > 0) {
         thirteenthEmployees += 1;
+        if (!hasThirteenthSettlement) {
+          incompleteThirteenthWorkflows += 1;
+        }
       }
       if (draft.vacationAttention) {
         vacationAttentionEmployees += 1;
+        if (!hasVacationNotice || !hasVacationStart || !hasVacationPayment) {
+          incompleteVacationWorkflows += 1;
+        }
       }
       if (draft.terminationSignaled) {
         terminationEmployees += 1;
+        if (!hasTerminationEffective || !hasTerminationSettlement) {
+          incompleteTerminationWorkflows += 1;
+        }
       }
       thirteenthProjectedCents += draft.thirteenthProjectedCents;
       vacationProjectedCents += draft.vacationProjectedCents;
@@ -2052,6 +2601,14 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
         'terminationSignaled': draft.terminationSignaled,
         'hasSavedSnapshot': hasSavedSnapshot,
         'eventCount': employeeEvents.length,
+        'vacationWorkflowDone':
+            !draft.vacationAttention ||
+            (hasVacationNotice && hasVacationStart && hasVacationPayment),
+        'thirteenthWorkflowDone':
+            draft.thirteenthAvos == 0 || hasThirteenthSettlement,
+        'terminationWorkflowDone':
+            !draft.terminationSignaled ||
+            (hasTerminationEffective && hasTerminationSettlement),
       });
     }
 
@@ -2064,6 +2621,9 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
       thirteenthEmployees: thirteenthEmployees,
       vacationAttentionEmployees: vacationAttentionEmployees,
       terminationEmployees: terminationEmployees,
+      incompleteThirteenthWorkflows: incompleteThirteenthWorkflows,
+      incompleteVacationWorkflows: incompleteVacationWorkflows,
+      incompleteTerminationWorkflows: incompleteTerminationWorkflows,
     );
     final canSaveClosure =
         sessao.role == Role.owner ||
@@ -2090,12 +2650,18 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
             'folha da competencia ainda nao foi conferida',
           if (thirteenthEmployees > 0 && !obligations.thirteenthConferenceDone)
             '13o ainda nao foi conferido nesta competencia',
+          if (incompleteThirteenthWorkflows > 0)
+            '$incompleteThirteenthWorkflows workflow(s) de 13o ainda incompleto(s)',
           if (vacationAttentionEmployees > 0 &&
               !obligations.vacationConferenceDone)
             'ferias em atencao ainda nao foram conferidas',
+          if (incompleteVacationWorkflows > 0)
+            '$incompleteVacationWorkflows workflow(s) de ferias ainda incompleto(s)',
           if (terminationEmployees > 0 &&
               !obligations.terminationConferenceDone)
             'rescisao em atencao ainda nao foi conferida',
+          if (incompleteTerminationWorkflows > 0)
+            '$incompleteTerminationWorkflows workflow(s) de rescisao ainda incompleto(s)',
         ];
         return AppWorkspaceCard(
           title: 'Fechamento trabalhista da competencia',
@@ -2231,6 +2797,315 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
     );
   }
 
+  Widget _buildEmployeeWorkflowBoard({
+    required BuildContext context,
+    required Session sessao,
+    required Map<String, dynamic> companyData,
+    required Map<String, dynamic> companySettings,
+    required Employee selectedEmployee,
+    required Payment? payment,
+    required _PayrollMetrics? metrics,
+    required String competence,
+    required bool canManagePayrollDocuments,
+    required bool thirteenthEligible,
+    required List<_WorkforceEmployeeEvent> events,
+    required List<QueryDocumentSnapshot<Map<String, dynamic>>> payrollDocs,
+  }) {
+    final docTypes = payrollDocs
+        .map((doc) => doc.data()['type']?.toString() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toSet();
+    return Column(
+      children: [
+        _buildWorkflowCard(
+          title: 'Workflow de ferias',
+          subtitle:
+              'Aviso, inicio, pagamento, retorno e recibo do colaborador na competencia.',
+          status: _workflowStatusLabel(
+            requiredFlags: [
+              _hasEvent(events, 'vacation_notice'),
+              _hasEvent(events, 'vacation_start'),
+              _hasEvent(events, 'vacation_payment'),
+              docTypes.contains(_PayrollDocumentType.vacationReceipt.name),
+            ],
+          ),
+          pendingItems: [
+            if (!_hasEvent(events, 'vacation_notice')) 'avisar ferias',
+            if (!_hasEvent(events, 'vacation_start')) 'registrar inicio',
+            if (!_hasEvent(events, 'vacation_payment')) 'registrar pagamento',
+            if (!_hasEvent(events, 'vacation_return')) 'registrar retorno',
+            if (!docTypes.contains(_PayrollDocumentType.vacationReceipt.name))
+              'gerar recibo de ferias',
+          ],
+          actions: [
+            OutlinedButton.icon(
+              onPressed: () => _openPresetWorkforceEmployeeEventDialog(
+                sessao: sessao,
+                employee: selectedEmployee,
+                competence: competence,
+                eventType: 'vacation_notice',
+                eventLabel: 'Aviso de ferias',
+              ),
+              icon: const Icon(Icons.notifications_active_outlined),
+              label: const Text('Aviso'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _openPresetWorkforceEmployeeEventDialog(
+                sessao: sessao,
+                employee: selectedEmployee,
+                competence: competence,
+                eventType: 'vacation_start',
+                eventLabel: 'Inicio de ferias',
+              ),
+              icon: const Icon(Icons.flight_takeoff_outlined),
+              label: const Text('Inicio'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _openPresetWorkforceEmployeeEventDialog(
+                sessao: sessao,
+                employee: selectedEmployee,
+                competence: competence,
+                eventType: 'vacation_payment',
+                eventLabel: 'Pagamento de ferias',
+              ),
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              label: const Text('Pagamento'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _openPresetWorkforceEmployeeEventDialog(
+                sessao: sessao,
+                employee: selectedEmployee,
+                competence: competence,
+                eventType: 'vacation_return',
+                eventLabel: 'Retorno de ferias',
+              ),
+              icon: const Icon(Icons.keyboard_return_outlined),
+              label: const Text('Retorno'),
+            ),
+            OutlinedButton.icon(
+              onPressed: canManagePayrollDocuments
+                  ? () => _generateOperationalDocument(
+                      context,
+                      sessao: sessao,
+                      companyData: companyData,
+                      companySettings: companySettings,
+                      employee: selectedEmployee,
+                      payment: payment,
+                      metrics: metrics,
+                      type: _PayrollDocumentType.vacationReceipt,
+                      competence: competence,
+                    )
+                  : null,
+              icon: const Icon(Icons.description_outlined),
+              label: const Text('Recibo'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildWorkflowCard(
+          title: 'Workflow de 13o',
+          subtitle:
+              'Adiantamento, fechamento/liquidacao e comprovacao documental do 13o.',
+          status: _workflowStatusLabel(
+            requiredFlags: [
+              thirteenthEligible,
+              _hasEvent(events, 'thirteenth_advance') ||
+                  _hasEvent(events, 'thirteenth_final') ||
+                  _hasEvent(events, 'thirteenth_settlement'),
+              docTypes.contains(_PayrollDocumentType.thirteenthReceipt.name),
+            ],
+          ),
+          pendingItems: [
+            if (!thirteenthEligible)
+              'colaborador ainda nao elegivel na competencia',
+            if (thirteenthEligible && !_hasEvent(events, 'thirteenth_advance'))
+              'registrar adiantamento',
+            if (thirteenthEligible &&
+                !_hasEvent(events, 'thirteenth_final') &&
+                !_hasEvent(events, 'thirteenth_settlement'))
+              'registrar fechamento/liquidacao',
+            if (thirteenthEligible &&
+                !docTypes.contains(_PayrollDocumentType.thirteenthReceipt.name))
+              'gerar recibo de 13o',
+          ],
+          actions: [
+            OutlinedButton.icon(
+              onPressed: !thirteenthEligible
+                  ? null
+                  : () => _openPresetWorkforceEmployeeEventDialog(
+                      sessao: sessao,
+                      employee: selectedEmployee,
+                      competence: competence,
+                      eventType: 'thirteenth_advance',
+                      eventLabel: 'Adiantamento de 13o',
+                    ),
+              icon: const Icon(Icons.payments_outlined),
+              label: const Text('Adiantamento'),
+            ),
+            OutlinedButton.icon(
+              onPressed: !thirteenthEligible
+                  ? null
+                  : () => _openPresetWorkforceEmployeeEventDialog(
+                      sessao: sessao,
+                      employee: selectedEmployee,
+                      competence: competence,
+                      eventType: 'thirteenth_settlement',
+                      eventLabel: 'Liquidacao de 13o',
+                    ),
+              icon: const Icon(Icons.done_all_outlined),
+              label: const Text('Liquidacao'),
+            ),
+            OutlinedButton.icon(
+              onPressed: !thirteenthEligible || !canManagePayrollDocuments
+                  ? null
+                  : () => _generateOperationalDocument(
+                      context,
+                      sessao: sessao,
+                      companyData: companyData,
+                      companySettings: companySettings,
+                      employee: selectedEmployee,
+                      payment: payment,
+                      metrics: metrics,
+                      type: _PayrollDocumentType.thirteenthReceipt,
+                      competence: competence,
+                    ),
+              icon: const Icon(Icons.receipt_long_outlined),
+              label: const Text('Recibo 13o'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildWorkflowCard(
+          title: 'Workflow de rescisao',
+          subtitle:
+              'Aviso, efetivacao, liquidacao e termo final do desligamento quando aplicavel.',
+          status: _workflowStatusLabel(
+            requiredFlags: [
+              _hasEvent(events, 'termination_notice') ||
+                  _hasEvent(events, 'termination_effective'),
+              _hasEvent(events, 'termination_settlement') ||
+                  !_hasEvent(events, 'termination_effective'),
+              docTypes.contains(
+                    _PayrollDocumentType.terminationStatement.name,
+                  ) ||
+                  !_hasEvent(events, 'termination_effective'),
+            ],
+          ),
+          pendingItems: [
+            if (!_hasEvent(events, 'termination_notice') &&
+                !_hasEvent(events, 'termination_effective'))
+              'sem rescisao sinalizada nesta competencia',
+            if (_hasEvent(events, 'termination_effective') &&
+                !_hasEvent(events, 'termination_settlement'))
+              'registrar liquidacao da rescisao',
+            if (_hasEvent(events, 'termination_effective') &&
+                !docTypes.contains(
+                  _PayrollDocumentType.terminationStatement.name,
+                ))
+              'gerar termo de rescisao',
+          ],
+          actions: [
+            OutlinedButton.icon(
+              onPressed: () => _openPresetWorkforceEmployeeEventDialog(
+                sessao: sessao,
+                employee: selectedEmployee,
+                competence: competence,
+                eventType: 'termination_notice',
+                eventLabel: 'Aviso de rescisao',
+              ),
+              icon: const Icon(Icons.warning_amber_outlined),
+              label: const Text('Aviso'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _openPresetWorkforceEmployeeEventDialog(
+                sessao: sessao,
+                employee: selectedEmployee,
+                competence: competence,
+                eventType: 'termination_effective',
+                eventLabel: 'Rescisao efetivada',
+              ),
+              icon: const Icon(Icons.person_off_outlined),
+              label: const Text('Efetivar'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _openPresetWorkforceEmployeeEventDialog(
+                sessao: sessao,
+                employee: selectedEmployee,
+                competence: competence,
+                eventType: 'termination_settlement',
+                eventLabel: 'Liquidacao de rescisao',
+              ),
+              icon: const Icon(Icons.balance_outlined),
+              label: const Text('Liquidacao'),
+            ),
+            OutlinedButton.icon(
+              onPressed: canManagePayrollDocuments
+                  ? () => _generateOperationalDocument(
+                      context,
+                      sessao: sessao,
+                      companyData: companyData,
+                      companySettings: companySettings,
+                      employee: selectedEmployee,
+                      payment: payment,
+                      metrics: metrics,
+                      type: _PayrollDocumentType.terminationStatement,
+                      competence: competence,
+                    )
+                  : null,
+              icon: const Icon(Icons.assignment_return_outlined),
+              label: const Text('Termo'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWorkflowCard({
+    required String title,
+    required String subtitle,
+    required String status,
+    required List<String> pendingItems,
+    required List<Widget> actions,
+  }) {
+    return AppWorkspaceCard(
+      title: title,
+      subtitle: subtitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _statusChip('Status', status, highlighted: status == 'Completo'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            pendingItems.isEmpty
+                ? 'Sem pendencias visiveis nesta trilha.'
+                : 'Pendencias: ${pendingItems.join('; ')}.',
+            style: const TextStyle(color: AppBrandColors.softText, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: actions),
+        ],
+      ),
+    );
+  }
+
+  bool _hasEvent(List<_WorkforceEmployeeEvent> events, String eventType) {
+    return events.any((event) => event.eventType == eventType);
+  }
+
+  String _workflowStatusLabel({required List<bool> requiredFlags}) {
+    if (requiredFlags.isEmpty) return 'Pendente';
+    if (requiredFlags.every((flag) => flag)) return 'Completo';
+    if (requiredFlags.any((flag) => flag)) return 'Em andamento';
+    return 'Pendente';
+  }
+
   String _resolveLaborCompetenceClosureStatus({
     required bool payrollClosed,
     required _WorkforceCompetenceObligations obligations,
@@ -2238,6 +3113,9 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
     required int thirteenthEmployees,
     required int vacationAttentionEmployees,
     required int terminationEmployees,
+    required int incompleteThirteenthWorkflows,
+    required int incompleteVacationWorkflows,
+    required int incompleteTerminationWorkflows,
   }) {
     final hasConferencePendencies =
         !obligations.payrollConferenceDone ||
@@ -2245,7 +3123,10 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
         (thirteenthEmployees > 0 && !obligations.thirteenthConferenceDone) ||
         (vacationAttentionEmployees > 0 &&
             !obligations.vacationConferenceDone) ||
-        (terminationEmployees > 0 && !obligations.terminationConferenceDone);
+        (terminationEmployees > 0 && !obligations.terminationConferenceDone) ||
+        incompleteThirteenthWorkflows > 0 ||
+        incompleteVacationWorkflows > 0 ||
+        incompleteTerminationWorkflows > 0;
     if (!hasConferencePendencies && missingSnapshotEmployees == 0) {
       return payrollClosed ? 'closed' : 'ready_for_close';
     }

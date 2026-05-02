@@ -326,6 +326,14 @@ const _workforceEmployeeEventTypeOptions = [
     label: 'Inicio de ferias',
   ),
   _WorkforceEmployeeEventTypeOption(
+    value: 'vacation_payment',
+    label: 'Pagamento de ferias',
+  ),
+  _WorkforceEmployeeEventTypeOption(
+    value: 'vacation_return',
+    label: 'Retorno de ferias',
+  ),
+  _WorkforceEmployeeEventTypeOption(
     value: 'thirteenth_advance',
     label: 'Adiantamento de 13o',
   ),
@@ -334,12 +342,20 @@ const _workforceEmployeeEventTypeOptions = [
     label: 'Fechamento de 13o',
   ),
   _WorkforceEmployeeEventTypeOption(
+    value: 'thirteenth_settlement',
+    label: 'Liquidacao de 13o',
+  ),
+  _WorkforceEmployeeEventTypeOption(
     value: 'termination_notice',
     label: 'Aviso de rescisao',
   ),
   _WorkforceEmployeeEventTypeOption(
     value: 'termination_effective',
     label: 'Rescisao efetivada',
+  ),
+  _WorkforceEmployeeEventTypeOption(
+    value: 'termination_settlement',
+    label: 'Liquidacao de rescisao',
   ),
 ];
 
