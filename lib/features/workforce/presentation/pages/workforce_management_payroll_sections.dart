@@ -100,8 +100,7 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
         const SizedBox(height: 12),
         AppWorkspaceCard(
           title: 'Modo de uso',
-          subtitle:
-              'Escolha se a tela fica mais simples ou mais completa.',
+          subtitle: 'Escolha se a tela fica mais simples ou mais completa.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -136,78 +135,78 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
                 spacing: 16,
                 runSpacing: 8,
                 children: [
-                    _featureToggle(
-                      label: 'Fechamento mensal',
-                      value: featureSettings.enablePayrollClosures,
-                      onChanged: canConfigureModule
-                          ? (value) => _saveWorkforceFeatureSettings(
-                              sessao,
-                              featureSettings.copyWith(
-                                enablePayrollClosures: value,
-                              ),
-                            )
-                          : (_) {},
-                    ),
-                    _featureToggle(
-                      label: 'Painel RH mensal',
-                      value: featureSettings.enableMonthlyDashboard,
-                      onChanged: canConfigureModule
-                          ? (value) => _saveWorkforceFeatureSettings(
-                              sessao,
-                              featureSettings.copyWith(
-                                enableMonthlyDashboard: value,
-                              ),
-                            )
-                          : (_) {},
-                    ),
-                    _featureToggle(
-                      label: 'Documentos avancados',
-                      value: featureSettings.enableAdvancedDocuments,
-                      onChanged: canConfigureModule
-                          ? (value) => _saveWorkforceFeatureSettings(
-                              sessao,
-                              featureSettings.copyWith(
-                                enableAdvancedDocuments: value,
-                              ),
-                            )
-                          : (_) {},
-                    ),
-                    _featureToggle(
-                      label: 'Contratos',
-                      value: featureSettings.enableContracts,
-                      onChanged: canConfigureModule
-                          ? (value) => _saveWorkforceFeatureSettings(
-                              sessao,
-                              featureSettings.copyWith(enableContracts: value),
-                            )
-                          : (_) {},
-                    ),
-                    _featureToggle(
-                      label: 'Confirmacao reforcada',
-                      value: featureSettings.requireClosureDoubleCheck,
-                      onChanged: canConfigureModule
-                          ? (value) => _saveWorkforceFeatureSettings(
-                              sessao,
-                              featureSettings.copyWith(
-                                requireClosureDoubleCheck: value,
-                              ),
-                            )
-                          : (_) {},
-                    ),
-                    _featureToggle(
-                      label: 'Aprovacao do dono',
-                      value: featureSettings.requireOwnerApprovalForClosure,
-                      onChanged: canConfigureModule
-                          ? (value) => _saveWorkforceFeatureSettings(
-                              sessao,
-                              featureSettings.copyWith(
-                                requireOwnerApprovalForClosure: value,
-                              ),
-                            )
-                          : (_) {},
-                    ),
-                  ],
-                ),
+                  _featureToggle(
+                    label: 'Fechamento mensal',
+                    value: featureSettings.enablePayrollClosures,
+                    onChanged: canConfigureModule
+                        ? (value) => _saveWorkforceFeatureSettings(
+                            sessao,
+                            featureSettings.copyWith(
+                              enablePayrollClosures: value,
+                            ),
+                          )
+                        : (_) {},
+                  ),
+                  _featureToggle(
+                    label: 'Painel RH mensal',
+                    value: featureSettings.enableMonthlyDashboard,
+                    onChanged: canConfigureModule
+                        ? (value) => _saveWorkforceFeatureSettings(
+                            sessao,
+                            featureSettings.copyWith(
+                              enableMonthlyDashboard: value,
+                            ),
+                          )
+                        : (_) {},
+                  ),
+                  _featureToggle(
+                    label: 'Documentos avancados',
+                    value: featureSettings.enableAdvancedDocuments,
+                    onChanged: canConfigureModule
+                        ? (value) => _saveWorkforceFeatureSettings(
+                            sessao,
+                            featureSettings.copyWith(
+                              enableAdvancedDocuments: value,
+                            ),
+                          )
+                        : (_) {},
+                  ),
+                  _featureToggle(
+                    label: 'Contratos',
+                    value: featureSettings.enableContracts,
+                    onChanged: canConfigureModule
+                        ? (value) => _saveWorkforceFeatureSettings(
+                            sessao,
+                            featureSettings.copyWith(enableContracts: value),
+                          )
+                        : (_) {},
+                  ),
+                  _featureToggle(
+                    label: 'Confirmacao reforcada',
+                    value: featureSettings.requireClosureDoubleCheck,
+                    onChanged: canConfigureModule
+                        ? (value) => _saveWorkforceFeatureSettings(
+                            sessao,
+                            featureSettings.copyWith(
+                              requireClosureDoubleCheck: value,
+                            ),
+                          )
+                        : (_) {},
+                  ),
+                  _featureToggle(
+                    label: 'Aprovacao do dono',
+                    value: featureSettings.requireOwnerApprovalForClosure,
+                    onChanged: canConfigureModule
+                        ? (value) => _saveWorkforceFeatureSettings(
+                            sessao,
+                            featureSettings.copyWith(
+                              requireOwnerApprovalForClosure: value,
+                            ),
+                          )
+                        : (_) {},
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               if (!canConfigureModule)
                 Align(
@@ -264,9 +263,7 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
                     onChanged: canConfigureModule
                         ? (value) => _saveWorkforceManagerPermissions(
                             sessao,
-                            managerPermissions.copyWith(
-                              allowContracts: value,
-                            ),
+                            managerPermissions.copyWith(allowContracts: value),
                           )
                         : (_) {},
                   ),
@@ -430,10 +427,7 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
                     if (item is Map)
                       item.map((key, value) => MapEntry(key.toString(), value)),
               ];
-              return _buildPayrollSnapshotCard(
-                data: data,
-                lineMaps: lineMaps,
-              );
+              return _buildPayrollSnapshotCard(data: data, lineMaps: lineMaps);
             },
           ),
         if (featureSettings.enablePayrollClosures)
@@ -528,567 +522,557 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
               ),
             ),
           ),
-            if (!featureSettings.enableAdvancedDocuments)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'Modo simples ativo: mantenha recibo e holerite; ligue documentos avancados se quiser comprovante de renda e fechamento operacional mais completo.',
-                ),
+          if (!featureSettings.enableAdvancedDocuments)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Modo simples ativo: mantenha recibo e holerite; ligue documentos avancados se quiser comprovante de renda e fechamento operacional mais completo.',
               ),
-            const SizedBox(height: 12),
-            StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('fiscal_competence_checks')
-                  .doc('${sessao.companyId}_$competence')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                final checkData = snapshot.data?.data() ?? <String, dynamic>{};
-                final operationalChecks = _WorkforceOperationalChecks.fromMap(
-                  checkData,
-                );
-                final thirteenthEligible = _isEligibleForThirteenth(
-                  selectedEmployee,
-                  competence,
-                );
-                final vacationAttention = _isVacationAttention(selectedEmployee);
-                final thirteenthReviewed = selectedEmployee != null &&
-                    operationalChecks.thirteenthReviewedEmployeeIds.contains(
-                      selectedEmployee.id,
-                    );
-                final vacationReviewed = selectedEmployee != null &&
-                    operationalChecks.vacationReviewedEmployeeIds.contains(
-                      selectedEmployee.id,
-                    );
-                return AppWorkspaceCard(
-                  title: 'Operacoes complementares',
-                  subtitle:
-                      'Conferencias manuais de 13o, ferias e outros pontos sensiveis da competencia.',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildOperationalStatusChips(
-                        thirteenthEligible: thirteenthEligible,
-                        thirteenthReviewed: thirteenthReviewed,
-                        vacationAttention: vacationAttention,
-                        vacationReviewed: vacationReviewed,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildOperationalReviewButtons(
-                        sessao: sessao,
-                        competence: competence,
-                        checks: operationalChecks,
-                        selectedEmployee: selectedEmployee,
-                        thirteenthReviewed: thirteenthReviewed,
-                        vacationReviewed: vacationReviewed,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildOperationalDocumentButtons(
-                        context: context,
-                        sessao: sessao,
-                        companyData: companyData,
-                        companySettings: companySettings,
-                        selectedEmployee: selectedEmployee,
-                        payment: payment,
-                        metrics: metrics,
-                        competence: competence,
-                        canManagePayrollDocuments: canManagePayrollDocuments,
-                        thirteenthEligible: thirteenthEligible,
-                      ),
-                      if (operationalChecks.terminationNotes.trim().isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            'Observacoes de rescisao da competencia: ${operationalChecks.terminationNotes}',
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
             ),
-            const SizedBox(height: 12),
-            StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('workforce_competence_obligations')
-                  .doc('${sessao.companyId}_$competence')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                final obligations =
-                    _WorkforceCompetenceObligations.fromMap(
-                      snapshot.data?.data() ?? <String, dynamic>{},
-                    );
-                final canEditObligations =
-                    sessao.role == Role.owner ||
-                    sessao.role == Role.manager ||
-                    sessao.role == Role.accountant;
-                return AppWorkspaceCard(
-                  title: 'Obrigacoes trabalhistas da competencia',
-                  subtitle:
-                      'Checklist por empresa ativa para acompanhar admissao, folha, ferias, 13o, rescisao, FGTS e pendencias do eSocial sem misturar clientes da carteira.',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 16,
-                        runSpacing: 16,
-                        children: [
-                          AppMetricCard(
-                            label: 'Checklist',
-                            value:
-                                '${obligations.completedCount}/${obligations.totalCount}',
-                            caption: 'Itens conferidos nesta competencia',
-                          ),
-                          AppMetricCard(
-                            label: 'Pendencias',
-                            value: (obligations.totalCount -
-                                    obligations.completedCount)
-                                .toString(),
-                            caption: 'Pontos ainda sem marcacao',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _buildCompetenceObligationToggle(
-                        label: 'Admissoes revisadas',
-                        value: obligations.admissionChecklistDone,
-                        enabled: canEditObligations,
-                        onChanged: (value) =>
-                            _saveWorkforceCompetenceObligations(
-                              sessao: sessao,
-                              competence: competence,
-                              obligations: obligations.copyWith(
-                                admissionChecklistDone: value,
-                              ),
-                            ),
-                      ),
-                      _buildCompetenceObligationToggle(
-                        label: 'Folha conferida',
-                        value: obligations.payrollConferenceDone,
-                        enabled: canEditObligations,
-                        onChanged: (value) =>
-                            _saveWorkforceCompetenceObligations(
-                              sessao: sessao,
-                              competence: competence,
-                              obligations: obligations.copyWith(
-                                payrollConferenceDone: value,
-                              ),
-                            ),
-                      ),
-                      _buildCompetenceObligationToggle(
-                        label: 'Ferias conferidas',
-                        value: obligations.vacationConferenceDone,
-                        enabled: canEditObligations,
-                        onChanged: (value) =>
-                            _saveWorkforceCompetenceObligations(
-                              sessao: sessao,
-                              competence: competence,
-                              obligations: obligations.copyWith(
-                                vacationConferenceDone: value,
-                              ),
-                            ),
-                      ),
-                      _buildCompetenceObligationToggle(
-                        label: '13o conferido',
-                        value: obligations.thirteenthConferenceDone,
-                        enabled: canEditObligations,
-                        onChanged: (value) =>
-                            _saveWorkforceCompetenceObligations(
-                              sessao: sessao,
-                              competence: competence,
-                              obligations: obligations.copyWith(
-                                thirteenthConferenceDone: value,
-                              ),
-                            ),
-                      ),
-                      _buildCompetenceObligationToggle(
-                        label: 'Rescisoes conferidas',
-                        value: obligations.terminationConferenceDone,
-                        enabled: canEditObligations,
-                        onChanged: (value) =>
-                            _saveWorkforceCompetenceObligations(
-                              sessao: sessao,
-                              competence: competence,
-                              obligations: obligations.copyWith(
-                                terminationConferenceDone: value,
-                              ),
-                            ),
-                      ),
-                      _buildCompetenceObligationToggle(
-                        label: 'FGTS/guia revisado',
-                        value: obligations.fgtsGuideChecked,
-                        enabled: canEditObligations,
-                        onChanged: (value) =>
-                            _saveWorkforceCompetenceObligations(
-                              sessao: sessao,
-                              competence: competence,
-                              obligations: obligations.copyWith(
-                                fgtsGuideChecked: value,
-                              ),
-                            ),
-                      ),
-                      _buildCompetenceObligationToggle(
-                        label: 'Pendencias eSocial resolvidas',
-                        value: obligations.esocialPendingResolved,
-                        enabled: canEditObligations,
-                        onChanged: (value) =>
-                            _saveWorkforceCompetenceObligations(
-                              sessao: sessao,
-                              competence: competence,
-                              obligations: obligations.copyWith(
-                                esocialPendingResolved: value,
-                              ),
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          onPressed: canEditObligations
-                              ? () => _openWorkforceCompetenceNotesDialog(
-                                    sessao: sessao,
-                                    competence: competence,
-                                    obligations: obligations,
-                                  )
-                              : null,
-                          icon: const Icon(Icons.edit_note_outlined),
-                          label: Text(
-                            obligations.notes.trim().isEmpty
-                                ? 'Registrar observacoes'
-                                : 'Editar observacoes',
-                          ),
+          const SizedBox(height: 12),
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('fiscal_competence_checks')
+                .doc('${sessao.companyId}_$competence')
+                .snapshots(),
+            builder: (context, snapshot) {
+              final checkData = snapshot.data?.data() ?? <String, dynamic>{};
+              final operationalChecks = _WorkforceOperationalChecks.fromMap(
+                checkData,
+              );
+              final thirteenthEligible = _isEligibleForThirteenth(
+                selectedEmployee,
+                competence,
+              );
+              final vacationAttention =
+                  selectedEmployee != null &&
+                  _isVacationAttention(selectedEmployee, competence);
+              final thirteenthReviewed =
+                  selectedEmployee != null &&
+                  operationalChecks.thirteenthReviewedEmployeeIds.contains(
+                    selectedEmployee.id,
+                  );
+              final vacationReviewed =
+                  selectedEmployee != null &&
+                  operationalChecks.vacationReviewedEmployeeIds.contains(
+                    selectedEmployee.id,
+                  );
+              return AppWorkspaceCard(
+                title: 'Operacoes complementares',
+                subtitle:
+                    'Conferencias manuais de 13o, ferias e outros pontos sensiveis da competencia.',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildOperationalStatusChips(
+                      thirteenthEligible: thirteenthEligible,
+                      thirteenthReviewed: thirteenthReviewed,
+                      vacationAttention: vacationAttention,
+                      vacationReviewed: vacationReviewed,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildOperationalReviewButtons(
+                      sessao: sessao,
+                      competence: competence,
+                      checks: operationalChecks,
+                      selectedEmployee: selectedEmployee,
+                      thirteenthReviewed: thirteenthReviewed,
+                      vacationReviewed: vacationReviewed,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildOperationalDocumentButtons(
+                      context: context,
+                      sessao: sessao,
+                      companyData: companyData,
+                      companySettings: companySettings,
+                      selectedEmployee: selectedEmployee,
+                      payment: payment,
+                      metrics: metrics,
+                      competence: competence,
+                      canManagePayrollDocuments: canManagePayrollDocuments,
+                      thirteenthEligible: thirteenthEligible,
+                    ),
+                    if (operationalChecks.terminationNotes.trim().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Observacoes de rescisao da competencia: ${operationalChecks.terminationNotes}',
                         ),
                       ),
-                      if (obligations.notes.trim().isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          obligations.notes,
-                          style: const TextStyle(
-                            color: AppBrandColors.softText,
-                            height: 1.4,
-                          ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('workforce_competence_obligations')
+                .doc('${sessao.companyId}_$competence')
+                .snapshots(),
+            builder: (context, snapshot) {
+              final obligations = _WorkforceCompetenceObligations.fromMap(
+                snapshot.data?.data() ?? <String, dynamic>{},
+              );
+              final canEditObligations =
+                  sessao.role == Role.owner ||
+                  sessao.role == Role.manager ||
+                  sessao.role == Role.accountant;
+              return AppWorkspaceCard(
+                title: 'Obrigacoes trabalhistas da competencia',
+                subtitle:
+                    'Checklist por empresa ativa para acompanhar admissao, folha, ferias, 13o, rescisao, FGTS e pendencias do eSocial sem misturar clientes da carteira.',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: [
+                        AppMetricCard(
+                          label: 'Checklist',
+                          value:
+                              '${obligations.completedCount}/${obligations.totalCount}',
+                          caption: 'Itens conferidos nesta competencia',
+                        ),
+                        AppMetricCard(
+                          label: 'Pendencias',
+                          value:
+                              (obligations.totalCount -
+                                      obligations.completedCount)
+                                  .toString(),
+                          caption: 'Pontos ainda sem marcacao',
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildCompetenceObligationToggle(
+                      label: 'Admissoes revisadas',
+                      value: obligations.admissionChecklistDone,
+                      enabled: canEditObligations,
+                      onChanged: (value) => _saveWorkforceCompetenceObligations(
+                        sessao: sessao,
+                        competence: competence,
+                        obligations: obligations.copyWith(
+                          admissionChecklistDone: value,
+                        ),
+                      ),
+                    ),
+                    _buildCompetenceObligationToggle(
+                      label: 'Folha conferida',
+                      value: obligations.payrollConferenceDone,
+                      enabled: canEditObligations,
+                      onChanged: (value) => _saveWorkforceCompetenceObligations(
+                        sessao: sessao,
+                        competence: competence,
+                        obligations: obligations.copyWith(
+                          payrollConferenceDone: value,
+                        ),
+                      ),
+                    ),
+                    _buildCompetenceObligationToggle(
+                      label: 'Ferias conferidas',
+                      value: obligations.vacationConferenceDone,
+                      enabled: canEditObligations,
+                      onChanged: (value) => _saveWorkforceCompetenceObligations(
+                        sessao: sessao,
+                        competence: competence,
+                        obligations: obligations.copyWith(
+                          vacationConferenceDone: value,
+                        ),
+                      ),
+                    ),
+                    _buildCompetenceObligationToggle(
+                      label: '13o conferido',
+                      value: obligations.thirteenthConferenceDone,
+                      enabled: canEditObligations,
+                      onChanged: (value) => _saveWorkforceCompetenceObligations(
+                        sessao: sessao,
+                        competence: competence,
+                        obligations: obligations.copyWith(
+                          thirteenthConferenceDone: value,
+                        ),
+                      ),
+                    ),
+                    _buildCompetenceObligationToggle(
+                      label: 'Rescisoes conferidas',
+                      value: obligations.terminationConferenceDone,
+                      enabled: canEditObligations,
+                      onChanged: (value) => _saveWorkforceCompetenceObligations(
+                        sessao: sessao,
+                        competence: competence,
+                        obligations: obligations.copyWith(
+                          terminationConferenceDone: value,
+                        ),
+                      ),
+                    ),
+                    _buildCompetenceObligationToggle(
+                      label: 'FGTS/guia revisado',
+                      value: obligations.fgtsGuideChecked,
+                      enabled: canEditObligations,
+                      onChanged: (value) => _saveWorkforceCompetenceObligations(
+                        sessao: sessao,
+                        competence: competence,
+                        obligations: obligations.copyWith(
+                          fgtsGuideChecked: value,
+                        ),
+                      ),
+                    ),
+                    _buildCompetenceObligationToggle(
+                      label: 'Pendencias eSocial resolvidas',
+                      value: obligations.esocialPendingResolved,
+                      enabled: canEditObligations,
+                      onChanged: (value) => _saveWorkforceCompetenceObligations(
+                        sessao: sessao,
+                        competence: competence,
+                        obligations: obligations.copyWith(
+                          esocialPendingResolved: value,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: canEditObligations
+                            ? () => _openWorkforceCompetenceNotesDialog(
+                                sessao: sessao,
+                                competence: competence,
+                                obligations: obligations,
+                              )
+                            : null,
+                        icon: const Icon(Icons.edit_note_outlined),
+                        label: Text(
+                          obligations.notes.trim().isEmpty
+                              ? 'Registrar observacoes'
+                              : 'Editar observacoes',
+                        ),
+                      ),
+                    ),
+                    if (obligations.notes.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        obligations.notes,
+                        style: const TextStyle(
+                          color: AppBrandColors.softText,
+                          height: 1.4,
+                        ),
+                      ),
                     ],
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            if (selectedEmployee != null)
-              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance
-                    .collection('workforce_employee_events')
-                    .where('companyId', isEqualTo: sessao.companyId)
-                    .where('employeeId', isEqualTo: selectedEmployee.id)
-                    .where('competence', isEqualTo: competence)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  final events = [
-                    for (final doc in snapshot.data?.docs ?? const [])
-                      _WorkforceEmployeeEvent.fromMap(doc.id, doc.data()),
-                  ]..sort(
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          if (selectedEmployee != null)
+            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('workforce_employee_events')
+                  .where('companyId', isEqualTo: sessao.companyId)
+                  .where('employeeId', isEqualTo: selectedEmployee.id)
+                  .where('competence', isEqualTo: competence)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final events =
+                    [
+                      for (final doc in snapshot.data?.docs ?? const [])
+                        _WorkforceEmployeeEvent.fromMap(doc.id, doc.data()),
+                    ]..sort(
                       (a, b) => _toDate(
                         b.effectiveDate,
                       ).compareTo(_toDate(a.effectiveDate)),
                     );
-                  final canRegisterEvents =
-                      sessao.role == Role.owner ||
-                      sessao.role == Role.manager ||
-                      sessao.role == Role.accountant;
-                  final terminationSignaled =
-                      !selectedEmployee.ativo ||
-                      events.any(
-                        (event) =>
-                            event.eventType == 'termination_notice' ||
-                            event.eventType == 'termination_effective',
-                      );
-                  return AppWorkspaceCard(
-                    title: 'Eventos trabalhistas do colaborador',
-                    subtitle:
-                        'Registro por competencia e empresa ativa para ferias, 13o, admissao e rescisao, sem duplicar o cadastro-base do funcionario.',
-                    trailing: OutlinedButton.icon(
-                      onPressed: canRegisterEvents
-                          ? () => _openWorkforceEmployeeEventDialog(
-                                sessao: sessao,
-                                employee: selectedEmployee,
-                                competence: competence,
-                              )
-                          : null,
-                      icon: const Icon(Icons.event_note_outlined),
-                      label: const Text('Registrar evento'),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (events.isEmpty)
-                          const Text(
-                            'Nenhum evento trabalhista registrado nesta competencia para o colaborador selecionado.',
-                          )
-                        else
-                          for (final event in events)
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.event_available_outlined),
-                              title: Text(event.eventLabel),
-                              subtitle: Text(
-                                'Data efetiva: ${_formatDate(_toDate(event.effectiveDate))}\n'
-                                'Lancado por: ${event.createdByUserName.isEmpty ? '-' : event.createdByUserName}'
-                                '${event.notes.trim().isEmpty ? '' : '\nObs: ${event.notes}'}',
-                              ),
-                              isThreeLine: event.notes.trim().isNotEmpty,
-                            ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            if (selectedEmployee != null) const SizedBox(height: 12),
-            if (selectedEmployee != null)
-              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance
-                    .collection('workforce_employee_events')
-                    .where('companyId', isEqualTo: sessao.companyId)
-                    .where('employeeId', isEqualTo: selectedEmployee.id)
-                    .where('competence', isEqualTo: competence)
-                    .snapshots(),
-                builder: (context, eventSnapshot) {
-                  final events = [
-                    for (final doc in eventSnapshot.data?.docs ?? const [])
-                      _WorkforceEmployeeEvent.fromMap(doc.id, doc.data()),
-                  ];
-                  final laborSnapshot = _buildLaborRealSnapshot(
-                    employee: selectedEmployee,
-                    competence: competence,
-                  );
-                  final grossReferenceCents =
-                      payment?.valorCents ??
-                      metrics?.suggestedGrossCents ??
-                      selectedEmployee.salaryAmountCents ??
-                      0;
-                  final terminationSignaled =
-                      !selectedEmployee.ativo ||
-                      events.any(
-                        (event) =>
-                            event.eventType == 'termination_notice' ||
-                            event.eventType == 'termination_effective',
-                      );
-                  final thirteenthProjectedCents =
-                      ((grossReferenceCents *
-                                  laborSnapshot.thirteenthAvos) /
-                              12)
-                          .round();
-                  final vacationProjectedCents =
-                      ((grossReferenceCents *
-                                  laborSnapshot.vacationMonthsAccrued) /
-                              12)
-                          .round();
-                  final vacationBonusCents =
-                      (vacationProjectedCents / 3).round();
-                  final terminationProjectedCents = terminationSignaled
-                      ? grossReferenceCents +
-                            thirteenthProjectedCents +
-                            vacationProjectedCents +
-                            vacationBonusCents
-                      : 0;
-                  final thirteenthMemory = <String, dynamic>{
-                    'referenceBaseCents': grossReferenceCents,
-                    'avos': laborSnapshot.thirteenthAvos,
-                    'formula':
-                        'base x avos / 12',
-                    'projectedCents': thirteenthProjectedCents,
-                  };
-                  final vacationMemory = <String, dynamic>{
-                    'referenceBaseCents': grossReferenceCents,
-                    'monthsAccrued': laborSnapshot.vacationMonthsAccrued,
-                    'formula':
-                        'base x meses / 12 + 1/3 constitucional',
-                    'projectedCents': vacationProjectedCents,
-                    'bonusCents': vacationBonusCents,
-                    'totalProjectedCents':
-                        vacationProjectedCents + vacationBonusCents,
-                  };
-                  final terminationMemory = <String, dynamic>{
-                    'terminationSignaled': terminationSignaled,
-                    'formula':
-                        terminationSignaled
-                            ? 'base + 13o projetado + ferias projetadas + 1/3'
-                            : 'sem evento de rescisao na competencia',
-                    'projectedCents': terminationProjectedCents,
-                  };
-                  return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance
-                        .collection('workforce_employee_competence_snapshots')
-                        .doc(
-                          '${sessao.companyId}_${selectedEmployee.id}_$competence',
-                        )
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      final data = snapshot.data?.data();
-                      final savedSnapshot = data == null
-                          ? null
-                          : _WorkforceEmployeeCompetenceSnapshot.fromMap(data);
-                      final canSaveSnapshot =
-                          sessao.role == Role.owner ||
-                          sessao.role == Role.manager ||
-                          sessao.role == Role.accountant;
-                      return AppWorkspaceCard(
-                        title: 'Snapshot trabalhista da competencia',
-                        subtitle:
-                            'Fotografia calculada da competencia para este colaborador, derivada do vinculo atual e dos eventos registrados, sem substituir cadastro ou folha.',
-                        trailing: FilledButton.icon(
-                          onPressed: canSaveSnapshot
-                              ? () => _saveWorkforceEmployeeCompetenceSnapshot(
-                                    sessao: sessao,
-                                    employee: selectedEmployee,
-                                    competence: competence,
-                                    grossReferenceCents: grossReferenceCents,
-                                    thirteenthProjectedCents:
-                                        thirteenthProjectedCents,
-                                    vacationProjectedCents:
-                                        vacationProjectedCents,
-                                    vacationBonusCents: vacationBonusCents,
-                                    terminationProjectedCents:
-                                        terminationProjectedCents,
-                                    thirteenthAvos:
-                                        laborSnapshot.thirteenthAvos,
-                                    vacationMonthsAccrued:
-                                        laborSnapshot.vacationMonthsAccrued,
-                                    terminationSignaled:
-                                        terminationSignaled,
-                                    thirteenthMemory: thirteenthMemory,
-                                    vacationMemory: vacationMemory,
-                                    terminationMemory: terminationMemory,
-                                  )
-                              : null,
-                          icon: const Icon(Icons.save_outlined),
-                          label: Text(
-                            savedSnapshot == null ? 'Salvar snapshot' : 'Atualizar snapshot',
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              spacing: 16,
-                              runSpacing: 16,
-                              children: [
-                                AppMetricCard(
-                                  label: 'Base referencia',
-                                  value: _formatCurrency(grossReferenceCents),
-                                  caption: 'Pagamento atual ou base sugerida',
-                                ),
-                                AppMetricCard(
-                                  label: '13o projetado',
-                                  value: _formatCurrency(
-                                    thirteenthProjectedCents,
-                                  ),
-                                  caption:
-                                      '${laborSnapshot.thirteenthAvos}/12 avos na competencia',
-                                ),
-                                AppMetricCard(
-                                  label: 'Ferias projetadas',
-                                  value: _formatCurrency(
-                                    vacationProjectedCents +
-                                        vacationBonusCents,
-                                  ),
-                                  caption:
-                                      '${laborSnapshot.vacationMonthsAccrued}/12 meses + 1/3',
-                                ),
-                                AppMetricCard(
-                                  label: 'Rescisao projetada',
-                                  value: _formatCurrency(
-                                    terminationProjectedCents,
-                                  ),
-                                  caption: terminationSignaled
-                                      ? 'Evento de rescisao sinalizado'
-                                      : 'Sem rescisao sinalizada',
-                                ),
-                              ],
-                            ),
-                            if (savedSnapshot != null) ...[
-                              const SizedBox(height: 12),
-                              Text(
-                                'Ultimo snapshot salvo por ${savedSnapshot.updatedByUserName.isEmpty ? '-' : savedSnapshot.updatedByUserName} em ${_formatDateTime(_toDate(savedSnapshot.updatedAt))}.',
-                                style: const TextStyle(
-                                  color: AppBrandColors.softText,
-                                  height: 1.4,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildSnapshotMemoryBlock(
-                                title: 'Memoria 13o',
-                                lines: [
-                                  'Base: ${_formatCurrency((savedSnapshot.thirteenthMemory['referenceBaseCents'] as num?)?.toInt() ?? 0)}',
-                                  'Avos: ${(savedSnapshot.thirteenthMemory['avos'] as num?)?.toInt() ?? 0}/12',
-                                  'Formula: ${savedSnapshot.thirteenthMemory['formula'] ?? '-'}',
-                                  'Projetado: ${_formatCurrency((savedSnapshot.thirteenthMemory['projectedCents'] as num?)?.toInt() ?? 0)}',
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              _buildSnapshotMemoryBlock(
-                                title: 'Memoria ferias',
-                                lines: [
-                                  'Base: ${_formatCurrency((savedSnapshot.vacationMemory['referenceBaseCents'] as num?)?.toInt() ?? 0)}',
-                                  'Meses aquisitivos: ${(savedSnapshot.vacationMemory['monthsAccrued'] as num?)?.toInt() ?? 0}/12',
-                                  'Formula: ${savedSnapshot.vacationMemory['formula'] ?? '-'}',
-                                  'Ferias projetadas: ${_formatCurrency((savedSnapshot.vacationMemory['projectedCents'] as num?)?.toInt() ?? 0)}',
-                                  '1/3 constitucional: ${_formatCurrency((savedSnapshot.vacationMemory['bonusCents'] as num?)?.toInt() ?? 0)}',
-                                  'Total projetado: ${_formatCurrency((savedSnapshot.vacationMemory['totalProjectedCents'] as num?)?.toInt() ?? 0)}',
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              _buildSnapshotMemoryBlock(
-                                title: 'Memoria rescisao',
-                                lines: [
-                                  'Evento sinalizado: ${(savedSnapshot.terminationMemory['terminationSignaled'] as bool? ?? false) ? 'Sim' : 'Nao'}',
-                                  'Formula: ${savedSnapshot.terminationMemory['formula'] ?? '-'}',
-                                  'Projetado: ${_formatCurrency((savedSnapshot.terminationMemory['projectedCents'] as num?)?.toInt() ?? 0)}',
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            if (selectedEmployee != null) const SizedBox(height: 12),
-            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('payroll_documents')
-                  .where('companyId', isEqualTo: sessao.companyId)
-                  .where('employeeId', isEqualTo: selectedEmployee?.id ?? '')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                final docs = snapshot.data?.docs ?? const [];
-                final ordered = [...docs]
-                  ..sort(
-                    (a, b) => _toDate(
-                      b.data()['createdAt'],
-                    ).compareTo(_toDate(a.data()['createdAt'])),
-                  );
+                final canRegisterEvents =
+                    sessao.role == Role.owner ||
+                    sessao.role == Role.manager ||
+                    sessao.role == Role.accountant;
+                final terminationSignaled =
+                    !selectedEmployee.ativo ||
+                    events.any(
+                      (event) =>
+                          event.eventType == 'termination_notice' ||
+                          event.eventType == 'termination_effective',
+                    );
                 return AppWorkspaceCard(
-                  title: 'Historico de documentos',
+                  title: 'Eventos trabalhistas do colaborador',
                   subtitle:
-                      'Ultimos documentos gerados para o colaborador selecionado.',
+                      'Registro por competencia e empresa ativa para ferias, 13o, admissao e rescisao, sem duplicar o cadastro-base do funcionario.',
+                  trailing: OutlinedButton.icon(
+                    onPressed: canRegisterEvents
+                        ? () => _openWorkforceEmployeeEventDialog(
+                            sessao: sessao,
+                            employee: selectedEmployee,
+                            competence: competence,
+                          )
+                        : null,
+                    icon: const Icon(Icons.event_note_outlined),
+                    label: const Text('Registrar evento'),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (ordered.isEmpty)
-                        const Text('Nenhum documento gerado ainda.')
+                      if (events.isEmpty)
+                        const Text(
+                          'Nenhum evento trabalhista registrado nesta competencia para o colaborador selecionado.',
+                        )
                       else
-                        for (final doc in ordered.take(10))
-                          _buildGeneratedDocumentTile(
-                            doc.data(),
-                            icon: Icons.description_outlined,
+                        for (final event in events)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.event_available_outlined),
+                            title: Text(event.eventLabel),
+                            subtitle: Text(
+                              'Data efetiva: ${_formatDate(_toDate(event.effectiveDate))}\n'
+                              'Lancado por: ${event.createdByUserName.isEmpty ? '-' : event.createdByUserName}'
+                              '${event.notes.trim().isEmpty ? '' : '\nObs: ${event.notes}'}',
+                            ),
+                            isThreeLine: event.notes.trim().isNotEmpty,
                           ),
                     ],
                   ),
                 );
               },
             ),
-          ],
+          if (selectedEmployee != null) const SizedBox(height: 12),
+          if (selectedEmployee != null)
+            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('workforce_employee_events')
+                  .where('companyId', isEqualTo: sessao.companyId)
+                  .where('employeeId', isEqualTo: selectedEmployee.id)
+                  .where('competence', isEqualTo: competence)
+                  .snapshots(),
+              builder: (context, eventSnapshot) {
+                final events = [
+                  for (final doc in eventSnapshot.data?.docs ?? const [])
+                    _WorkforceEmployeeEvent.fromMap(doc.id, doc.data()),
+                ];
+                final laborSnapshot = _buildLaborRealSnapshot(
+                  employee: selectedEmployee,
+                  competence: competence,
+                );
+                final grossReferenceCents =
+                    payment?.valorCents ??
+                    metrics?.suggestedGrossCents ??
+                    selectedEmployee.salaryAmountCents ??
+                    0;
+                final terminationSignaled =
+                    !selectedEmployee.ativo ||
+                    events.any(
+                      (event) =>
+                          event.eventType == 'termination_notice' ||
+                          event.eventType == 'termination_effective',
+                    );
+                final thirteenthProjectedCents =
+                    ((grossReferenceCents * laborSnapshot.thirteenthAvos) / 12)
+                        .round();
+                final vacationProjectedCents =
+                    ((grossReferenceCents *
+                                laborSnapshot.vacationMonthsAccrued) /
+                            12)
+                        .round();
+                final vacationBonusCents = (vacationProjectedCents / 3).round();
+                final terminationProjectedCents = terminationSignaled
+                    ? grossReferenceCents +
+                          thirteenthProjectedCents +
+                          vacationProjectedCents +
+                          vacationBonusCents
+                    : 0;
+                final thirteenthMemory = <String, dynamic>{
+                  'referenceBaseCents': grossReferenceCents,
+                  'avos': laborSnapshot.thirteenthAvos,
+                  'formula': 'base x avos / 12',
+                  'projectedCents': thirteenthProjectedCents,
+                };
+                final vacationMemory = <String, dynamic>{
+                  'referenceBaseCents': grossReferenceCents,
+                  'monthsAccrued': laborSnapshot.vacationMonthsAccrued,
+                  'formula': 'base x meses / 12 + 1/3 constitucional',
+                  'projectedCents': vacationProjectedCents,
+                  'bonusCents': vacationBonusCents,
+                  'totalProjectedCents':
+                      vacationProjectedCents + vacationBonusCents,
+                };
+                final terminationMemory = <String, dynamic>{
+                  'terminationSignaled': terminationSignaled,
+                  'formula': terminationSignaled
+                      ? 'base + 13o projetado + ferias projetadas + 1/3'
+                      : 'sem evento de rescisao na competencia',
+                  'projectedCents': terminationProjectedCents,
+                };
+                return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('workforce_employee_competence_snapshots')
+                      .doc(
+                        '${sessao.companyId}_${selectedEmployee.id}_$competence',
+                      )
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    final data = snapshot.data?.data();
+                    final savedSnapshot = data == null
+                        ? null
+                        : _WorkforceEmployeeCompetenceSnapshot.fromMap(data);
+                    final canSaveSnapshot =
+                        sessao.role == Role.owner ||
+                        sessao.role == Role.manager ||
+                        sessao.role == Role.accountant;
+                    return AppWorkspaceCard(
+                      title: 'Snapshot trabalhista da competencia',
+                      subtitle:
+                          'Fotografia calculada da competencia para este colaborador, derivada do vinculo atual e dos eventos registrados, sem substituir cadastro ou folha.',
+                      trailing: FilledButton.icon(
+                        onPressed: canSaveSnapshot
+                            ? () => _saveWorkforceEmployeeCompetenceSnapshot(
+                                sessao: sessao,
+                                employee: selectedEmployee,
+                                competence: competence,
+                                grossReferenceCents: grossReferenceCents,
+                                thirteenthProjectedCents:
+                                    thirteenthProjectedCents,
+                                vacationProjectedCents: vacationProjectedCents,
+                                vacationBonusCents: vacationBonusCents,
+                                terminationProjectedCents:
+                                    terminationProjectedCents,
+                                thirteenthAvos: laborSnapshot.thirteenthAvos,
+                                vacationMonthsAccrued:
+                                    laborSnapshot.vacationMonthsAccrued,
+                                terminationSignaled: terminationSignaled,
+                                thirteenthMemory: thirteenthMemory,
+                                vacationMemory: vacationMemory,
+                                terminationMemory: terminationMemory,
+                              )
+                            : null,
+                        icon: const Icon(Icons.save_outlined),
+                        label: Text(
+                          savedSnapshot == null
+                              ? 'Salvar snapshot'
+                              : 'Atualizar snapshot',
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 16,
+                            children: [
+                              AppMetricCard(
+                                label: 'Base referencia',
+                                value: _formatCurrency(grossReferenceCents),
+                                caption: 'Pagamento atual ou base sugerida',
+                              ),
+                              AppMetricCard(
+                                label: '13o projetado',
+                                value: _formatCurrency(
+                                  thirteenthProjectedCents,
+                                ),
+                                caption:
+                                    '${laborSnapshot.thirteenthAvos}/12 avos na competencia',
+                              ),
+                              AppMetricCard(
+                                label: 'Ferias projetadas',
+                                value: _formatCurrency(
+                                  vacationProjectedCents + vacationBonusCents,
+                                ),
+                                caption:
+                                    '${laborSnapshot.vacationMonthsAccrued}/12 meses + 1/3',
+                              ),
+                              AppMetricCard(
+                                label: 'Rescisao projetada',
+                                value: _formatCurrency(
+                                  terminationProjectedCents,
+                                ),
+                                caption: terminationSignaled
+                                    ? 'Evento de rescisao sinalizado'
+                                    : 'Sem rescisao sinalizada',
+                              ),
+                            ],
+                          ),
+                          if (savedSnapshot != null) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              'Ultimo snapshot salvo por ${savedSnapshot.updatedByUserName.isEmpty ? '-' : savedSnapshot.updatedByUserName} em ${_formatDateTime(_toDate(savedSnapshot.updatedAt))}.',
+                              style: const TextStyle(
+                                color: AppBrandColors.softText,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildSnapshotMemoryBlock(
+                              title: 'Memoria 13o',
+                              lines: [
+                                'Base: ${_formatCurrency((savedSnapshot.thirteenthMemory['referenceBaseCents'] as num?)?.toInt() ?? 0)}',
+                                'Avos: ${(savedSnapshot.thirteenthMemory['avos'] as num?)?.toInt() ?? 0}/12',
+                                'Formula: ${savedSnapshot.thirteenthMemory['formula'] ?? '-'}',
+                                'Projetado: ${_formatCurrency((savedSnapshot.thirteenthMemory['projectedCents'] as num?)?.toInt() ?? 0)}',
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _buildSnapshotMemoryBlock(
+                              title: 'Memoria ferias',
+                              lines: [
+                                'Base: ${_formatCurrency((savedSnapshot.vacationMemory['referenceBaseCents'] as num?)?.toInt() ?? 0)}',
+                                'Meses aquisitivos: ${(savedSnapshot.vacationMemory['monthsAccrued'] as num?)?.toInt() ?? 0}/12',
+                                'Formula: ${savedSnapshot.vacationMemory['formula'] ?? '-'}',
+                                'Ferias projetadas: ${_formatCurrency((savedSnapshot.vacationMemory['projectedCents'] as num?)?.toInt() ?? 0)}',
+                                '1/3 constitucional: ${_formatCurrency((savedSnapshot.vacationMemory['bonusCents'] as num?)?.toInt() ?? 0)}',
+                                'Total projetado: ${_formatCurrency((savedSnapshot.vacationMemory['totalProjectedCents'] as num?)?.toInt() ?? 0)}',
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _buildSnapshotMemoryBlock(
+                              title: 'Memoria rescisao',
+                              lines: [
+                                'Evento sinalizado: ${(savedSnapshot.terminationMemory['terminationSignaled'] as bool? ?? false) ? 'Sim' : 'Nao'}',
+                                'Formula: ${savedSnapshot.terminationMemory['formula'] ?? '-'}',
+                                'Projetado: ${_formatCurrency((savedSnapshot.terminationMemory['projectedCents'] as num?)?.toInt() ?? 0)}',
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          if (selectedEmployee != null) const SizedBox(height: 12),
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('payroll_documents')
+                .where('companyId', isEqualTo: sessao.companyId)
+                .where('employeeId', isEqualTo: selectedEmployee?.id ?? '')
+                .snapshots(),
+            builder: (context, snapshot) {
+              final docs = snapshot.data?.docs ?? const [];
+              final ordered = [...docs]
+                ..sort(
+                  (a, b) => _toDate(
+                    b.data()['createdAt'],
+                  ).compareTo(_toDate(a.data()['createdAt'])),
+                );
+              return AppWorkspaceCard(
+                title: 'Historico de documentos',
+                subtitle:
+                    'Ultimos documentos gerados para o colaborador selecionado.',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (ordered.isEmpty)
+                      const Text('Nenhum documento gerado ainda.')
+                    else
+                      for (final doc in ordered.take(10))
+                        _buildGeneratedDocumentTile(
+                          doc.data(),
+                          icon: Icons.description_outlined,
+                        ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ],
     );
   }
@@ -1190,19 +1174,16 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
     final vacationAttention = employees
         .where((employee) => _isVacationAttention(employee, competence))
         .length;
-    final admissionReview = employees
-        .where(_needsAdmissionReview)
-        .length;
+    final admissionReview = employees.where(_needsAdmissionReview).length;
     final missingCoreLaborData = employees
         .where(_hasMissingCoreLaborData)
         .length;
 
     return AppWorkspaceCard(
       title: 'Competencia trabalhista da empresa ativa',
-      subtitle:
-          sessao.role == Role.accountant
-              ? 'Leitura da empresa atualmente aberta na carteira do contador. Troque a empresa na carteira para revisar outro cliente sem misturar contexto.'
-              : 'Leitura trabalhista da empresa ativa nesta competencia, com foco em cadastro, 13o e ferias.',
+      subtitle: sessao.role == Role.accountant
+          ? 'Leitura da empresa atualmente aberta na carteira do contador. Troque a empresa na carteira para revisar outro cliente sem misturar contexto.'
+          : 'Leitura trabalhista da empresa ativa nesta competencia, com foco em cadastro, 13o e ferias.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1392,7 +1373,8 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           child: const Text('Fechamento PDF'),
         ),
         ElevatedButton(
-          onPressed: employees.isEmpty ||
+          onPressed:
+              employees.isEmpty ||
                   !canCreatePayments ||
                   (featureSettings.enablePayrollClosures && payrollClosed)
               ? null
@@ -1582,7 +1564,8 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
             'Pendencias: ${monthLine.pendingEmployees} | '
             'Divergencias: ${monthLine.divergentEmployees}',
             style: TextStyle(
-              color: monthLine.pendingEmployees > 0 ||
+              color:
+                  monthLine.pendingEmployees > 0 ||
                       monthLine.divergentEmployees > 0
                   ? const Color(0xFFB45F06)
                   : const Color(0xFF2E7D32),
@@ -1612,14 +1595,8 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           ? Wrap(
               spacing: 8,
               children: [
-                TextButton(
-                  onPressed: onReject,
-                  child: Text(rejectLabel),
-                ),
-                ElevatedButton(
-                  onPressed: onApprove,
-                  child: Text(approveLabel),
-                ),
+                TextButton(onPressed: onReject, child: Text(rejectLabel)),
+                ElevatedButton(onPressed: onApprove, child: Text(approveLabel)),
               ],
             )
           : const Text('Aguardando dono'),
@@ -1842,18 +1819,9 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
         DropdownButton<String>(
           value: _approvalHistoryFilter,
           items: const [
-            DropdownMenuItem(
-              value: 'Todos',
-              child: Text('Todos'),
-            ),
-            DropdownMenuItem(
-              value: 'Folha',
-              child: Text('Folha'),
-            ),
-            DropdownMenuItem(
-              value: 'Limpeza',
-              child: Text('Limpeza'),
-            ),
+            DropdownMenuItem(value: 'Todos', child: Text('Todos')),
+            DropdownMenuItem(value: 'Folha', child: Text('Folha')),
+            DropdownMenuItem(value: 'Limpeza', child: Text('Limpeza')),
             DropdownMenuItem(
               value: 'Configuracoes',
               child: Text('Configuracoes'),
@@ -1891,9 +1859,7 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
       dense: true,
       contentPadding: EdgeInsets.zero,
       leading: Icon(
-        event.action == 'close'
-            ? Icons.lock_outline
-            : Icons.lock_open_outlined,
+        event.action == 'close' ? Icons.lock_outline : Icons.lock_open_outlined,
       ),
       title: Text(
         event.action == 'close'
@@ -1946,7 +1912,8 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
   Widget _buildPayrollSummaryCard(_PayrollSummary payrollSummary) {
     return AppWorkspaceCard(
       title: 'Resumo da competencia',
-      subtitle: 'Panorama mensal da folha com conferencia rapida por colaborador.',
+      subtitle:
+          'Panorama mensal da folha com conferencia rapida por colaborador.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2017,9 +1984,7 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
         children: [
           DropdownButtonFormField<String>(
             initialValue: _employeeId,
-            decoration: const InputDecoration(
-              labelText: 'Funcionario',
-            ),
+            decoration: const InputDecoration(labelText: 'Funcionario'),
             items: [
               for (final employee in employees)
                 DropdownMenuItem(
@@ -2070,12 +2035,8 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
               AppHeaderChip(
                 'Ferias: ${laborSnapshot.vacationMonthsAccrued}/12 meses',
               ),
-              AppHeaderChip(
-                laborSnapshot.vacationDaysLabel,
-              ),
-              AppHeaderChip(
-                laborSnapshot.terminationStatusLabel,
-              ),
+              AppHeaderChip(laborSnapshot.vacationDaysLabel),
+              AppHeaderChip(laborSnapshot.terminationStatusLabel),
             ],
           ),
           const SizedBox(height: 10),
@@ -2090,10 +2051,7 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           Text(
             'Base trabalhista derivada da competencia $competence: '
             '${laborSnapshot.summaryLabel}',
-            style: const TextStyle(
-              color: AppBrandColors.softText,
-              height: 1.4,
-            ),
+            style: const TextStyle(color: AppBrandColors.softText, height: 1.4),
           ),
           if (laborSnapshot.alerts.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -2139,7 +2097,9 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
         acquisitionPeriodLabel: 'Competencia invalida',
         terminationStatusLabel: 'Sem rescisao sinalizada',
         summaryLabel: 'competencia invalida para leitura trabalhista',
-        alerts: ['Corrija a competencia para calcular avos e periodo aquisitivo.'],
+        alerts: [
+          'Corrija a competencia para calcular avos e periodo aquisitivo.',
+        ],
       );
     }
 
@@ -2184,8 +2144,9 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
       vacationDaysLabel: '$vacationDays dia(s) projetados',
       acquisitionPeriodLabel:
           '${_formatDate(acquisitionStart)} a ${_formatDate(acquisitionEnd)}',
-      terminationStatusLabel:
-          employee.ativo ? 'Sem rescisao sinalizada' : 'Rescisao em atencao',
+      terminationStatusLabel: employee.ativo
+          ? 'Sem rescisao sinalizada'
+          : 'Rescisao em atencao',
       summaryLabel:
           '$thirteenthAvos/12 avos de 13o e $vacationMonthsAccrued/12 meses do periodo aquisitivo atual',
       alerts: alerts,
@@ -2201,7 +2162,8 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
     for (var month = 1; month <= competenceEnd.month; month++) {
       final monthEnd = DateTime(competenceEnd.year, month + 1, 0);
       final referenceDay = DateTime(competenceEnd.year, month, 15);
-      if (!admission.isAfter(referenceDay) && !monthEnd.isAfter(competenceEnd)) {
+      if (!admission.isAfter(referenceDay) &&
+          !monthEnd.isAfter(competenceEnd)) {
         avos += 1;
       }
     }
@@ -2276,19 +2238,18 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
       runSpacing: 8,
       children: [
         ElevatedButton.icon(
-          onPressed: selectedEmployee == null ||
+          onPressed:
+              selectedEmployee == null ||
                   !canCreatePayments ||
                   (enablePayrollClosures && payrollClosed)
               ? null
-              : () => _openPayrollDialog(
-                  selectedEmployee,
-                  metrics: metrics,
-                ),
+              : () => _openPayrollDialog(selectedEmployee, metrics: metrics),
           icon: const Icon(Icons.add_card_outlined),
           label: const Text('Lancar pagamento'),
         ),
         ElevatedButton.icon(
-          onPressed: employees.isEmpty ||
+          onPressed:
+              employees.isEmpty ||
                   !canCreatePayments ||
                   (enablePayrollClosures && payrollClosed)
               ? null
@@ -2409,13 +2370,13 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           onPressed: selectedEmployee == null
               ? null
               : () => _toggleOperationalEmployeeReview(
-                    sessao: sessao,
-                    competence: competence,
-                    checks: checks,
-                    employeeId: selectedEmployee.id,
-                    target: _OperationalReviewTarget.thirteenth,
-                    reviewed: !thirteenthReviewed,
-                  ),
+                  sessao: sessao,
+                  competence: competence,
+                  checks: checks,
+                  employeeId: selectedEmployee.id,
+                  target: _OperationalReviewTarget.thirteenth,
+                  reviewed: !thirteenthReviewed,
+                ),
           icon: const Icon(Icons.task_alt_outlined),
           label: Text(
             thirteenthReviewed ? 'Desmarcar 13' : 'Marcar 13 conferido',
@@ -2425,17 +2386,15 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           onPressed: selectedEmployee == null
               ? null
               : () => _toggleOperationalEmployeeReview(
-                    sessao: sessao,
-                    competence: competence,
-                    checks: checks,
-                    employeeId: selectedEmployee.id,
-                    target: _OperationalReviewTarget.vacation,
-                    reviewed: !vacationReviewed,
-                  ),
+                  sessao: sessao,
+                  competence: competence,
+                  checks: checks,
+                  employeeId: selectedEmployee.id,
+                  target: _OperationalReviewTarget.vacation,
+                  reviewed: !vacationReviewed,
+                ),
           icon: const Icon(Icons.beach_access_outlined),
-          label: Text(
-            vacationReviewed ? 'Desmarcar ferias' : 'Marcar ferias',
-          ),
+          label: Text(vacationReviewed ? 'Desmarcar ferias' : 'Marcar ferias'),
         ),
       ],
     );
@@ -2458,21 +2417,22 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
       runSpacing: 8,
       children: [
         OutlinedButton.icon(
-          onPressed: selectedEmployee == null ||
+          onPressed:
+              selectedEmployee == null ||
                   !canManagePayrollDocuments ||
                   !thirteenthEligible
               ? null
               : () => _generateOperationalDocument(
-                    context,
-                    sessao: sessao,
-                    companyData: companyData,
-                    companySettings: companySettings,
-                    employee: selectedEmployee,
-                    payment: payment,
-                    metrics: metrics,
-                    type: _PayrollDocumentType.thirteenthReceipt,
-                    competence: competence,
-                  ),
+                  context,
+                  sessao: sessao,
+                  companyData: companyData,
+                  companySettings: companySettings,
+                  employee: selectedEmployee,
+                  payment: payment,
+                  metrics: metrics,
+                  type: _PayrollDocumentType.thirteenthReceipt,
+                  competence: competence,
+                ),
           icon: const Icon(Icons.payments_outlined),
           label: const Text('Recibo 13 salario'),
         ),
@@ -2480,16 +2440,16 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           onPressed: selectedEmployee == null || !canManagePayrollDocuments
               ? null
               : () => _generateOperationalDocument(
-                    context,
-                    sessao: sessao,
-                    companyData: companyData,
-                    companySettings: companySettings,
-                    employee: selectedEmployee,
-                    payment: payment,
-                    metrics: metrics,
-                    type: _PayrollDocumentType.vacationReceipt,
-                    competence: competence,
-                  ),
+                  context,
+                  sessao: sessao,
+                  companyData: companyData,
+                  companySettings: companySettings,
+                  employee: selectedEmployee,
+                  payment: payment,
+                  metrics: metrics,
+                  type: _PayrollDocumentType.vacationReceipt,
+                  competence: competence,
+                ),
           icon: const Icon(Icons.luggage_outlined),
           label: const Text('Recibo ferias'),
         ),
@@ -2497,16 +2457,16 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           onPressed: selectedEmployee == null || !canManagePayrollDocuments
               ? null
               : () => _generateOperationalDocument(
-                    context,
-                    sessao: sessao,
-                    companyData: companyData,
-                    companySettings: companySettings,
-                    employee: selectedEmployee,
-                    payment: payment,
-                    metrics: metrics,
-                    type: _PayrollDocumentType.terminationStatement,
-                    competence: competence,
-                  ),
+                  context,
+                  sessao: sessao,
+                  companyData: companyData,
+                  companySettings: companySettings,
+                  employee: selectedEmployee,
+                  payment: payment,
+                  metrics: metrics,
+                  type: _PayrollDocumentType.terminationStatement,
+                  competence: competence,
+                ),
           icon: const Icon(Icons.assignment_return_outlined),
           label: const Text('Termo rescisao'),
         ),
