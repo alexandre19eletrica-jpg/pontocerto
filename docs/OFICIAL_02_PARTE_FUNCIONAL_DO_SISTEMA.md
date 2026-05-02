@@ -1,6 +1,6 @@
 # Parte Funcional Oficial do Sistema
 
-Data base: 23/04/2026
+Data base: 02/05/2026
 Projeto: Ponto Certo
 
 ## Objetivo
@@ -14,7 +14,7 @@ O Ponto Certo e um sistema multiempresa com operacao principal web e app operaci
 
 Versao local atual de referencia:
 
-- `1.0.78+1048`
+- `1.0.87+1058`
 
 Na frente comercial publica atual, o contato principal priorizado e o **escritorio contabil**.
 

@@ -1,11 +1,11 @@
 # Memoria e Registro Atual Oficial do Sistema
 
-Data base: 29/04/2026
+Data base: 02/05/2026
 Projeto: Ponto Certo
 
-**Registo recente (29/04/2026):** ver `registro_continuidade/REGISTRO_ATUALIZACOES.md` (**2026-04-29**): marketing WhatsApp comercial (Meta + `sales_whatsapp_comercial`), carteira contador com todos os vinculos, Functions (email interno → `fromEmail`), sessao contador em Trabalhista + inativar funcionarios, regras Firestore para patch `ativo`/`updatedAt`, protecao **suprema** (sem AAB nesta rodada). **Planeamento apenas (sem codigo de certificadora nem IBS/CBS):** [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md).
+**Registo recente (02/05/2026):** ver `registro_continuidade/REGISTRO_ATUALIZACOES.md` (**2026-05-02**): build Android gerada em **`1.0.87+1058`** (`pontocerto-1.0.87-1058.aab`), consolidacao final do fechamento trabalhista por competencia, correcao de build nas telas de governanca/folha/apoio do `Trabalhista`, regeneracao de `ESTADO_SISTEMA_VERIFICAVEL_GERADO.md` e alinhamento dos documentos oficiais para a versao atual.
 
-**Registo anterior (27–28/04/2026):** a governanca **Focus** (integracao, homologacao, matriz, automacao) concentra-se na **empresa suprema** na UI fiscal; as empresas concentram-se em **documentacao de provisionamento**, **cadastro**, **sincronizacao** e **emissao** — ver `registro_continuidade/REGISTRO_ATUALIZACOES.md` (secoes 2026-04-27 e 2026-04-28) e `PROMPT_ASSISTENTE_PONTO_CERTO.md`. Ultima versao Play referida no registo: **`1.0.84+1055`** (rodada 28/04); **29/04** nao gerou novo AAB.
+**Registo anterior (29/04/2026):** ver `registro_continuidade/REGISTRO_ATUALIZACOES.md` (**2026-04-29**): marketing WhatsApp comercial (Meta + `sales_whatsapp_comercial`), carteira contador com todos os vinculos, Functions (email interno → `fromEmail`), sessao contador em Trabalhista + inativar funcionarios, regras Firestore para patch `ativo`/`updatedAt`, protecao **suprema** (sem AAB naquela rodada). **Planeamento apenas (sem codigo de certificadora nem IBS/CBS):** [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md).
 
 **Complemento desta continuidade (Trabalhista/contador):** a rota do contador passou a refletir melhor a empresa **ativa** da carteira no `Trabalhista`, com apoio operacional em `Tarefas` e `Ordens de servico` apenas para itens **finalizados** e em **somente leitura**. O modulo trabalhista ganhou dossie do colaborador, checklist por competencia em `workforce_competence_obligations`, trilha de eventos em `workforce_employee_events` e snapshot com memoria de calculo por colaborador/competencia em `workforce_employee_competence_snapshots`. Essas estruturas sao apenas de conferencia/trilha e **nao** substituem as fontes de verdade ja validadas: `users`, `employee_registration_documents` e `payments`.
 
@@ -218,7 +218,7 @@ O que **nao** entra como “funcionalidade nova” nos OFICIAL: pormenores de re
 - notificacoes administrativas de cadastro passaram a ser parte obrigatoria do fluxo de escritorio, empresa e vinculo de contador
 - a entrada comercial publica passou a operar com teste real gratis de 30 dias no sistema inteiro, sem cobranca de implantacao, exigindo contador indicado pela empresa; o fluxo correto agora e: primeiro cadastro do escritorio contabil e depois cadastro da empresa indicada
 - o escritorio contabil passou a ter assinatura base prevista de R$ 97,90 por mes, com opcao de isencao comercial por parceria aprovada
-- versao local atual de referencia: `1.0.78+1048`
+- versao local atual de referencia: `1.0.87+1058`
 - esta secao da rodada foi consolidada documentalmente e tecnicamente ate 23/04/2026
 - documentacao oficial do assistente (OFICIAL) distingue **fonte humana** (Markdown) de **fonte em runtime** (strings + Firestore no `index.ts`); ver `OFICIAL_02`
 

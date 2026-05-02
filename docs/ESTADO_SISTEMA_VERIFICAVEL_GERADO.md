@@ -6,14 +6,14 @@
 
 | Chave | Valor |
 |--------|--------|
-| Gerado em (UTC) | 2026-04-26T04:52:56.988824Z |
-| Versao no `pubspec.yaml` | `1.0.78+1048` |
+| Gerado em (UTC) | 2026-05-02T16:53:54.426878Z |
+| Versao no `pubspec.yaml` | `1.0.87+1058` |
 | Projecto Firebase (`.firebaserc` default) | `pontocerto-e1dab` |
 | Site Hosting (`firebase.json`) | `pontocerto-e1dab` |
 | URL publica do Hosting | https://pontocerto-e1dab.web.app |
 | Dominio de producao (registo operacional) | https://gestao-ponto-certo.com |
 | Cloud Functions runtime (`firebase.json`) | `nodejs22` |
-| Commit (git) | `28a777e` |
+| Commit (git) | `34b5221` |
 
 ## O que e "tempo real" na pratica
 

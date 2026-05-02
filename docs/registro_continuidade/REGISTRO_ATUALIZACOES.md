@@ -6,6 +6,13 @@ Regra de projeto: `.cursor/rules/documentacao-git-e-registro.mdc`.
 Este arquivo e o log operacional resumido do que foi publicado (web/functions/app).  
 Atualize sempre que entrar qualquer mudanca em producao.
 
+## 2026-05-02
+
+- **Trabalhista / fechamento por competencia**: rodada consolidada com ajuste final do fechamento trabalhista por competencia, incluindo correcao de build e alinhamento das telas de governanca, secoes da folha e apoio operacional. Arquivos centrais: `lib/features/workforce/presentation/pages/workforce_management_governance_actions.dart`, `lib/features/workforce/presentation/pages/workforce_management_payroll_sections.dart`, `lib/features/workforce/presentation/pages/workforce_management_support.dart`.
+- **AAB Android**: gerado com sucesso o artefacto `pontocerto-1.0.87-1058.aab`, correspondente a `pubspec.yaml` `1.0.87+1058`.
+- **GitHub / estado do repositorio**: antes deste registo o repositório local estava limpo e em sincronizacao com `origin/master`; nesta rodada foram atualizados os documentos oficiais e o estado verificavel para refletir o commit `34b5221` e a versao atual.
+- **Documentacao oficial**: `ESTADO_SISTEMA_VERIFICAVEL_GERADO.md` foi regenerado em `02/05/2026`, e os documentos `OFICIAL_02`, `OFICIAL_03`, `OFICIAL_04`, `README_OFICIAL_DOCUMENTACAO.md` e `CONTINUIDADE_ATUAL.md` foram alinhados para apontar a versao `1.0.87+1058` e esta rodada como referencia vigente.
+
 ## 2026-04-29
 
 - **Trabalhista / contador / empresa ativa**: o contador passou a operar `Tarefas` e `Ordens de servico` da **empresa ativa da carteira** em modo **somente leitura** e focado em itens **finalizados**, para apoiar a conferencia antes da emissao fiscal sem abrir gestao operacional indevida. Rotas liberadas em `session.dart`; telas ajustadas em `tasks_page.dart`, `task_details_page.dart`, `task_details_sections.dart` e `service_orders_page.dart`.

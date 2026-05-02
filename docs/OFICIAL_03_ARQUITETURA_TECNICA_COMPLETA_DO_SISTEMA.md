@@ -1,6 +1,6 @@
 # Arquitetura Tecnica Completa do Sistema
 
-Data base: 23/04/2026
+Data base: 02/05/2026
 Projeto: Ponto Certo
 
 ## Objetivo
@@ -39,7 +39,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 
 Versao local atual de referencia:
 
-- `1.0.78+1048`
+- `1.0.87+1058`
 
 ## Estrutura tecnica de acesso
 
