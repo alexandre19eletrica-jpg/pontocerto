@@ -9,6 +9,8 @@ Projeto: Ponto Certo
 
 **Complemento desta continuidade (Trabalhista/contador):** a rota do contador passou a refletir melhor a empresa **ativa** da carteira no `Trabalhista`, com apoio operacional em `Tarefas` e `Ordens de servico` apenas para itens **finalizados** e em **somente leitura**. O modulo trabalhista ganhou dossie do colaborador, checklist por competencia em `workforce_competence_obligations`, trilha de eventos em `workforce_employee_events` e snapshot com memoria de calculo por colaborador/competencia em `workforce_employee_competence_snapshots`. Essas estruturas sao apenas de conferencia/trilha e **nao** substituem as fontes de verdade ja validadas: `users`, `employee_registration_documents` e `payments`.
 
+**Complemento adicional (fechamento trabalhista da competencia):** o modulo passou a salvar tambem um fechamento trabalhista consolidado dentro de `payroll_closures`, usando `laborClosure` e `laborLines` por competencia. Essa consolidacao deriva de snapshots do colaborador, eventos trabalhistas e checklist da competencia, com estados `pending_review`, `ready_for_close` e `closed`, sem abrir uma nova fonte de verdade separada para folha ou cadastro.
+
 ## Objetivo
 
 Este documento define onde o estado atual do sistema deve ser registrado e como manter essa memoria viva sem perder contexto.

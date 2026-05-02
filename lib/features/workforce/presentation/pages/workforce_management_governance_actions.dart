@@ -1,6 +1,7 @@
 part of 'workforce_management_page.dart';
 
-extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState {
+extension _WorkforceManagementGovernanceActions
+    on _WorkforceManagementPageState {
   Future<void> _saveWorkforceFeatureSettings(
     Session sessao,
     _WorkforceFeatureSettings settings,
@@ -321,10 +322,7 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
                       value: 'manual',
                       child: Text('Assinatura manual no sistema'),
                     ),
-                    DropdownMenuItem(
-                      value: 'gov_br',
-                      child: Text('Gov.br'),
-                    ),
+                    DropdownMenuItem(value: 'gov_br', child: Text('Gov.br')),
                     DropdownMenuItem(
                       value: 'digital_certificate',
                       child: Text('Certificado digital'),
@@ -408,16 +406,18 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
     required bool reviewed,
   }) async {
     final updatedIds = switch (target) {
-      _OperationalReviewTarget.thirteenth => reviewed
-          ? {...checks.thirteenthReviewedEmployeeIds, employeeId}.toList()
-          : checks.thirteenthReviewedEmployeeIds
-                .where((id) => id != employeeId)
-                .toList(),
-      _OperationalReviewTarget.vacation => reviewed
-          ? {...checks.vacationReviewedEmployeeIds, employeeId}.toList()
-          : checks.vacationReviewedEmployeeIds
-                .where((id) => id != employeeId)
-                .toList(),
+      _OperationalReviewTarget.thirteenth =>
+        reviewed
+            ? {...checks.thirteenthReviewedEmployeeIds, employeeId}.toList()
+            : checks.thirteenthReviewedEmployeeIds
+                  .where((id) => id != employeeId)
+                  .toList(),
+      _OperationalReviewTarget.vacation =>
+        reviewed
+            ? {...checks.vacationReviewedEmployeeIds, employeeId}.toList()
+            : checks.vacationReviewedEmployeeIds
+                  .where((id) => id != employeeId)
+                  .toList(),
     };
     try {
       await FirebaseFirestore.instance
@@ -479,9 +479,7 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
           controller: controller,
           minLines: 4,
           maxLines: 8,
-          decoration: InputDecoration(
-            labelText: 'Observacoes ($competence)',
-          ),
+          decoration: InputDecoration(labelText: 'Observacoes ($competence)'),
         ),
         actions: [
           TextButton(
@@ -671,6 +669,79 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
     }
   }
 
+  Future<void> _saveWorkforceLaborCompetenceClosure({
+    required Session sessao,
+    required String competence,
+    required String status,
+    required _WorkforceCompetenceObligations obligations,
+    required int totalEmployees,
+    required int employeesWithSnapshot,
+    required int missingSnapshotEmployees,
+    required int thirteenthEmployees,
+    required int vacationAttentionEmployees,
+    required int terminationEmployees,
+    required int thirteenthProjectedCents,
+    required int vacationProjectedCents,
+    required int vacationBonusCents,
+    required int terminationProjectedCents,
+    required List<Map<String, dynamic>> lines,
+  }) async {
+    if (_parseCompetence(competence) == null) {
+      _msg('Competencia invalida para fechamento trabalhista.');
+      return;
+    }
+    try {
+      await FirebaseFirestore.instance
+          .collection('payroll_closures')
+          .doc('${sessao.companyId}_$competence')
+          .set({
+            'companyId': sessao.companyId,
+            'competence': competence,
+            'laborClosure': {
+              'status': status,
+              'totalEmployees': totalEmployees,
+              'employeesWithSnapshot': employeesWithSnapshot,
+              'missingSnapshotEmployees': missingSnapshotEmployees,
+              'thirteenthEmployees': thirteenthEmployees,
+              'vacationAttentionEmployees': vacationAttentionEmployees,
+              'terminationEmployees': terminationEmployees,
+              'thirteenthProjectedCents': thirteenthProjectedCents,
+              'vacationProjectedCents': vacationProjectedCents,
+              'vacationBonusCents': vacationBonusCents,
+              'terminationProjectedCents': terminationProjectedCents,
+              'obligationsCompletedCount': obligations.completedCount,
+              'obligationsTotalCount': obligations.totalCount,
+              'notes': obligations.notes,
+              'updatedByUserId': sessao.userId,
+              'updatedByUserName': sessao.nome,
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+            'laborLines': lines,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+      await _writeAuditLog(
+        sessao: sessao,
+        module: 'workforce',
+        action: 'labor_competence_closure_save',
+        entityPath: 'payroll_closures',
+        entityId: '${sessao.companyId}_$competence',
+        after: {
+          'competence': competence,
+          'status': status,
+          'totalEmployees': totalEmployees,
+          'employeesWithSnapshot': employeesWithSnapshot,
+          'missingSnapshotEmployees': missingSnapshotEmployees,
+          'thirteenthEmployees': thirteenthEmployees,
+          'vacationAttentionEmployees': vacationAttentionEmployees,
+          'terminationEmployees': terminationEmployees,
+        },
+      );
+      _msg('Fechamento trabalhista salvo para a competencia.');
+    } catch (_) {
+      _msg('Nao foi possivel salvar o fechamento trabalhista.');
+    }
+  }
+
   bool _isEligibleForThirteenth(Employee? employee, String competence) {
     if (employee == null || employee.admissionDate == null) {
       return false;
@@ -698,7 +769,9 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
         color: highlighted ? const Color(0xFFE3F2FD) : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: highlighted ? const Color(0xFF64B5F6) : const Color(0xFFE0E0E0),
+          color: highlighted
+              ? const Color(0xFF64B5F6)
+              : const Color(0xFFE0E0E0),
         ),
       ),
       child: Text(
@@ -1448,7 +1521,8 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
       );
       await openPdfBytes(
         bytes: await pdf.save(),
-        filename: 'nota-trabalhista-${DateTime.now().millisecondsSinceEpoch}.pdf',
+        filename:
+            'nota-trabalhista-${DateTime.now().millisecondsSinceEpoch}.pdf',
       );
     } catch (_) {
       _msg('Nao foi possivel gerar o PDF da nota.');
@@ -1505,10 +1579,11 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
     String employeeId,
     String competence,
   ) {
-    return _paymentsForCompetence(payments, employeeId, competence).fold<int>(
-      0,
-      (total, payment) => total + payment.valorCents,
-    );
+    return _paymentsForCompetence(
+      payments,
+      employeeId,
+      competence,
+    ).fold<int>(0, (total, payment) => total + payment.valorCents);
   }
 
   bool _isPayrollCovered({
@@ -1880,6 +1955,19 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
             if (item is Map)
               item.map((key, value) => MapEntry(key.toString(), value)),
       ];
+      final laborClosureRaw = data['laborClosure'];
+      final laborClosure = laborClosureRaw is Map
+          ? _WorkforceLaborCompetenceClosure.fromMap(
+              laborClosureRaw.cast<String, dynamic>(),
+            )
+          : null;
+      final laborLinesRaw = data['laborLines'];
+      final laborLines = <Map<String, dynamic>>[
+        if (laborLinesRaw is List)
+          for (final item in laborLinesRaw)
+            if (item is Map)
+              item.map((key, value) => MapEntry(key.toString(), value)),
+      ];
 
       pdf.addPage(
         pw.MultiPage(
@@ -1938,6 +2026,46 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
               text:
                   'Divergencias: ${(data['divergentEmployees'] as num?)?.toInt() ?? 0}',
             ),
+            if (laborClosure != null) ...[
+              pw.SizedBox(height: 14),
+              pw.Text(
+                'Fechamento trabalhista consolidado',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Bullet(
+                text:
+                    'Status: ${laborClosure.status == 'closed'
+                        ? 'Fechado'
+                        : laborClosure.status == 'ready_for_close'
+                        ? 'Pronto para fechar'
+                        : 'Pendente de conferencia'}',
+              ),
+              pw.Bullet(
+                text:
+                    'Snapshots salvos: ${laborClosure.employeesWithSnapshot}/${laborClosure.totalEmployees}',
+              ),
+              pw.Bullet(
+                text:
+                    'Checklist: ${laborClosure.obligationsCompletedCount}/${laborClosure.obligationsTotalCount}',
+              ),
+              pw.Bullet(
+                text:
+                    '13o projetado: ${_formatCurrency(laborClosure.thirteenthProjectedCents)}',
+              ),
+              pw.Bullet(
+                text:
+                    'Ferias + 1/3 projetados: ${_formatCurrency(laborClosure.vacationProjectedCents + laborClosure.vacationBonusCents)}',
+              ),
+              pw.Bullet(
+                text:
+                    'Rescisao projetada: ${_formatCurrency(laborClosure.terminationProjectedCents)}',
+              ),
+              pw.Bullet(
+                text:
+                    'Observacao: ${laborClosure.notes.trim().isEmpty ? '-' : laborClosure.notes}',
+              ),
+            ],
             pw.SizedBox(height: 14),
             pw.Text(
               'Conferencia por funcionario',
@@ -1984,18 +2112,67 @@ extension _WorkforceManagementGovernanceActions on _WorkforceManagementPageState
                 ),
               ),
             ),
+            if (laborLines.isNotEmpty) ...[
+              pw.SizedBox(height: 14),
+              pw.Text(
+                'Conferencia trabalhista por colaborador',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 8),
+              ...laborLines
+                  .take(12)
+                  .map(
+                    (line) => pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 8),
+                      child: pw.Container(
+                        padding: const pw.EdgeInsets.all(8),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(
+                            color: (line['hasSavedSnapshot'] as bool? ?? false)
+                                ? PdfColors.green300
+                                : PdfColors.orange300,
+                          ),
+                        ),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              line['employeeName']?.toString() ?? '-',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.Text(
+                              'Base: ${_formatCurrency((line['grossReferenceCents'] as num?)?.toInt() ?? 0)} | '
+                              '13o: ${_formatCurrency((line['thirteenthProjectedCents'] as num?)?.toInt() ?? 0)}',
+                            ),
+                            pw.Text(
+                              'Ferias + 1/3: ${_formatCurrency(((line['vacationProjectedCents'] as num?)?.toInt() ?? 0) + ((line['vacationBonusCents'] as num?)?.toInt() ?? 0))} | '
+                              'Rescisao: ${_formatCurrency((line['terminationProjectedCents'] as num?)?.toInt() ?? 0)}',
+                            ),
+                            pw.Text(
+                              (line['hasSavedSnapshot'] as bool? ?? false)
+                                  ? 'Snapshot: salvo'
+                                  : 'Snapshot: pendente',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+            ],
           ],
         ),
       );
 
       await openPdfBytes(
         bytes: await pdf.save(),
-        filename: 'fechamento-trabalhista-${DateTime.now().millisecondsSinceEpoch}.pdf',
+        filename:
+            'fechamento-trabalhista-${DateTime.now().millisecondsSinceEpoch}.pdf',
       );
       _msg('Relatorio de fechamento gerado em PDF.');
     } catch (_) {
       _msg('Nao foi possivel gerar o PDF do fechamento.');
     }
   }
-
 }

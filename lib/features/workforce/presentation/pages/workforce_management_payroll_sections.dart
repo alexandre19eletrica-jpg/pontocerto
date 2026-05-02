@@ -431,6 +431,58 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
             },
           ),
         if (featureSettings.enablePayrollClosures)
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('workforce_competence_obligations')
+                .doc('${sessao.companyId}_$competence')
+                .snapshots(),
+            builder: (context, obligationsSnapshot) {
+              final obligations = _WorkforceCompetenceObligations.fromMap(
+                obligationsSnapshot.data?.data() ?? const <String, dynamic>{},
+              );
+              return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance
+                    .collection('workforce_employee_events')
+                    .where('companyId', isEqualTo: sessao.companyId)
+                    .where('competence', isEqualTo: competence)
+                    .snapshots(),
+                builder: (context, eventsSnapshot) {
+                  final events = [
+                    for (final doc in eventsSnapshot.data?.docs ?? const [])
+                      _WorkforceEmployeeEvent.fromMap(doc.id, doc.data()),
+                  ];
+                  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance
+                        .collection('workforce_employee_competence_snapshots')
+                        .where('companyId', isEqualTo: sessao.companyId)
+                        .where('competence', isEqualTo: competence)
+                        .snapshots(),
+                    builder: (context, snapshotData) {
+                      final savedSnapshots = {
+                        for (final doc in snapshotData.data?.docs ?? const [])
+                          doc.data()['employeeId']?.toString() ??
+                              '': _WorkforceEmployeeCompetenceSnapshot.fromMap(
+                            doc.data(),
+                          ),
+                      }..remove('');
+                      return _buildLaborCompetenceClosureCard(
+                        sessao: sessao,
+                        competence: competence,
+                        payrollClosed: payrollClosed,
+                        employees: employees,
+                        payrollSummary: payrollSummary,
+                        payments: payments,
+                        obligations: obligations,
+                        events: events,
+                        savedSnapshots: savedSnapshots,
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        if (featureSettings.enablePayrollClosures)
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
                 .collection('payroll_closures')
@@ -848,59 +900,21 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
                   for (final doc in eventSnapshot.data?.docs ?? const [])
                     _WorkforceEmployeeEvent.fromMap(doc.id, doc.data()),
                 ];
-                final laborSnapshot = _buildLaborRealSnapshot(
-                  employee: selectedEmployee,
-                  competence: competence,
-                );
                 final grossReferenceCents =
                     payment?.valorCents ??
                     metrics?.suggestedGrossCents ??
                     selectedEmployee.salaryAmountCents ??
                     0;
-                final terminationSignaled =
-                    !selectedEmployee.ativo ||
-                    events.any(
-                      (event) =>
-                          event.eventType == 'termination_notice' ||
-                          event.eventType == 'termination_effective',
-                    );
-                final thirteenthProjectedCents =
-                    ((grossReferenceCents * laborSnapshot.thirteenthAvos) / 12)
-                        .round();
-                final vacationProjectedCents =
-                    ((grossReferenceCents *
-                                laborSnapshot.vacationMonthsAccrued) /
-                            12)
-                        .round();
-                final vacationBonusCents = (vacationProjectedCents / 3).round();
-                final terminationProjectedCents = terminationSignaled
-                    ? grossReferenceCents +
-                          thirteenthProjectedCents +
-                          vacationProjectedCents +
-                          vacationBonusCents
-                    : 0;
-                final thirteenthMemory = <String, dynamic>{
-                  'referenceBaseCents': grossReferenceCents,
-                  'avos': laborSnapshot.thirteenthAvos,
-                  'formula': 'base x avos / 12',
-                  'projectedCents': thirteenthProjectedCents,
-                };
-                final vacationMemory = <String, dynamic>{
-                  'referenceBaseCents': grossReferenceCents,
-                  'monthsAccrued': laborSnapshot.vacationMonthsAccrued,
-                  'formula': 'base x meses / 12 + 1/3 constitucional',
-                  'projectedCents': vacationProjectedCents,
-                  'bonusCents': vacationBonusCents,
-                  'totalProjectedCents':
-                      vacationProjectedCents + vacationBonusCents,
-                };
-                final terminationMemory = <String, dynamic>{
-                  'terminationSignaled': terminationSignaled,
-                  'formula': terminationSignaled
-                      ? 'base + 13o projetado + ferias projetadas + 1/3'
-                      : 'sem evento de rescisao na competencia',
-                  'projectedCents': terminationProjectedCents,
-                };
+                final laborSnapshot = _buildLaborRealSnapshot(
+                  employee: selectedEmployee,
+                  competence: competence,
+                );
+                final competenceDraft = _buildEmployeeCompetenceDraft(
+                  employee: selectedEmployee,
+                  competence: competence,
+                  grossReferenceCents: grossReferenceCents,
+                  events: events,
+                );
                 return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance
                       .collection('workforce_employee_competence_snapshots')
@@ -927,20 +941,26 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
                                 sessao: sessao,
                                 employee: selectedEmployee,
                                 competence: competence,
-                                grossReferenceCents: grossReferenceCents,
+                                grossReferenceCents:
+                                    competenceDraft.grossReferenceCents,
                                 thirteenthProjectedCents:
-                                    thirteenthProjectedCents,
-                                vacationProjectedCents: vacationProjectedCents,
-                                vacationBonusCents: vacationBonusCents,
+                                    competenceDraft.thirteenthProjectedCents,
+                                vacationProjectedCents:
+                                    competenceDraft.vacationProjectedCents,
+                                vacationBonusCents:
+                                    competenceDraft.vacationBonusCents,
                                 terminationProjectedCents:
-                                    terminationProjectedCents,
-                                thirteenthAvos: laborSnapshot.thirteenthAvos,
+                                    competenceDraft.terminationProjectedCents,
+                                thirteenthAvos: competenceDraft.thirteenthAvos,
                                 vacationMonthsAccrued:
-                                    laborSnapshot.vacationMonthsAccrued,
-                                terminationSignaled: terminationSignaled,
-                                thirteenthMemory: thirteenthMemory,
-                                vacationMemory: vacationMemory,
-                                terminationMemory: terminationMemory,
+                                    competenceDraft.vacationMonthsAccrued,
+                                terminationSignaled:
+                                    competenceDraft.terminationSignaled,
+                                thirteenthMemory:
+                                    competenceDraft.thirteenthMemory,
+                                vacationMemory: competenceDraft.vacationMemory,
+                                terminationMemory:
+                                    competenceDraft.terminationMemory,
                               )
                             : null,
                         icon: const Icon(Icons.save_outlined),
@@ -959,31 +979,34 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
                             children: [
                               AppMetricCard(
                                 label: 'Base referencia',
-                                value: _formatCurrency(grossReferenceCents),
+                                value: _formatCurrency(
+                                  competenceDraft.grossReferenceCents,
+                                ),
                                 caption: 'Pagamento atual ou base sugerida',
                               ),
                               AppMetricCard(
                                 label: '13o projetado',
                                 value: _formatCurrency(
-                                  thirteenthProjectedCents,
+                                  competenceDraft.thirteenthProjectedCents,
                                 ),
                                 caption:
-                                    '${laborSnapshot.thirteenthAvos}/12 avos na competencia',
+                                    '${competenceDraft.thirteenthAvos}/12 avos na competencia',
                               ),
                               AppMetricCard(
                                 label: 'Ferias projetadas',
                                 value: _formatCurrency(
-                                  vacationProjectedCents + vacationBonusCents,
+                                  competenceDraft.vacationProjectedCents +
+                                      competenceDraft.vacationBonusCents,
                                 ),
                                 caption:
-                                    '${laborSnapshot.vacationMonthsAccrued}/12 meses + 1/3',
+                                    '${competenceDraft.vacationMonthsAccrued}/12 meses + 1/3',
                               ),
                               AppMetricCard(
                                 label: 'Rescisao projetada',
                                 value: _formatCurrency(
-                                  terminationProjectedCents,
+                                  competenceDraft.terminationProjectedCents,
                                 ),
-                                caption: terminationSignaled
+                                caption: competenceDraft.terminationSignaled
                                     ? 'Evento de rescisao sinalizado'
                                     : 'Sem rescisao sinalizada',
                               ),
@@ -1894,6 +1917,12 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
           ),
           const SizedBox(height: 10),
           _buildPayrollSnapshotChips(data),
+          if (data['laborClosure'] is Map) ...[
+            const SizedBox(height: 12),
+            _buildPayrollSavedLaborClosureBlock(
+              (data['laborClosure'] as Map).cast<String, dynamic>(),
+            ),
+          ],
           if (lineMaps.isNotEmpty) ...[
             const SizedBox(height: 12),
             const Text(
@@ -1907,6 +1936,331 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
         ],
       ),
     );
+  }
+
+  Widget _buildPayrollSavedLaborClosureBlock(Map<String, dynamic> data) {
+    final laborClosure = _WorkforceLaborCompetenceClosure.fromMap(data);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Fechamento trabalhista salvo',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _statusChip(
+              'Status',
+              _laborClosureStatusLabel(laborClosure.status),
+            ),
+            _statusChip(
+              'Snapshots',
+              '${laborClosure.employeesWithSnapshot}/${laborClosure.totalEmployees}',
+              highlighted: laborClosure.missingSnapshotEmployees == 0,
+            ),
+            _statusChip(
+              'Checklist',
+              '${laborClosure.obligationsCompletedCount}/${laborClosure.obligationsTotalCount}',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '13o: ${_formatCurrency(laborClosure.thirteenthProjectedCents)} | '
+          'Ferias + 1/3: ${_formatCurrency(laborClosure.vacationProjectedCents + laborClosure.vacationBonusCents)} | '
+          'Rescisao: ${_formatCurrency(laborClosure.terminationProjectedCents)}',
+        ),
+        if (laborClosure.notes.trim().isNotEmpty)
+          Text('Observacoes: ${laborClosure.notes}'),
+      ],
+    );
+  }
+
+  Widget _buildLaborCompetenceClosureCard({
+    required Session sessao,
+    required String competence,
+    required bool payrollClosed,
+    required List<Employee> employees,
+    required _PayrollSummary payrollSummary,
+    required List<Payment> payments,
+    required _WorkforceCompetenceObligations obligations,
+    required List<_WorkforceEmployeeEvent> events,
+    required Map<String, _WorkforceEmployeeCompetenceSnapshot> savedSnapshots,
+  }) {
+    final payrollLineByEmployeeId = {
+      for (final line in payrollSummary.lines) line.employeeId: line,
+    };
+    final eventsByEmployeeId = <String, List<_WorkforceEmployeeEvent>>{};
+    for (final event in events) {
+      eventsByEmployeeId.putIfAbsent(event.employeeId, () => []).add(event);
+    }
+    final draftLines = <Map<String, dynamic>>[];
+    var employeesWithSnapshot = 0;
+    var thirteenthEmployees = 0;
+    var vacationAttentionEmployees = 0;
+    var terminationEmployees = 0;
+    var thirteenthProjectedCents = 0;
+    var vacationProjectedCents = 0;
+    var vacationBonusCents = 0;
+    var terminationProjectedCents = 0;
+
+    for (final employee in employees) {
+      final payrollLine = payrollLineByEmployeeId[employee.id];
+      final payment = _findPayment(payments, employee.id, competence);
+      final grossReferenceCents =
+          payment?.valorCents ??
+          payrollLine?.suggestedGrossCents ??
+          employee.salaryAmountCents ??
+          0;
+      final employeeEvents = eventsByEmployeeId[employee.id] ?? const [];
+      final draft = _buildEmployeeCompetenceDraft(
+        employee: employee,
+        competence: competence,
+        grossReferenceCents: grossReferenceCents,
+        events: employeeEvents,
+      );
+      final hasSavedSnapshot = savedSnapshots.containsKey(employee.id);
+      if (hasSavedSnapshot) {
+        employeesWithSnapshot += 1;
+      }
+      if (draft.thirteenthAvos > 0) {
+        thirteenthEmployees += 1;
+      }
+      if (draft.vacationAttention) {
+        vacationAttentionEmployees += 1;
+      }
+      if (draft.terminationSignaled) {
+        terminationEmployees += 1;
+      }
+      thirteenthProjectedCents += draft.thirteenthProjectedCents;
+      vacationProjectedCents += draft.vacationProjectedCents;
+      vacationBonusCents += draft.vacationBonusCents;
+      terminationProjectedCents += draft.terminationProjectedCents;
+      draftLines.add({
+        'employeeId': draft.employeeId,
+        'employeeName': draft.employeeName,
+        'grossReferenceCents': draft.grossReferenceCents,
+        'thirteenthProjectedCents': draft.thirteenthProjectedCents,
+        'vacationProjectedCents': draft.vacationProjectedCents,
+        'vacationBonusCents': draft.vacationBonusCents,
+        'terminationProjectedCents': draft.terminationProjectedCents,
+        'thirteenthAvos': draft.thirteenthAvos,
+        'vacationMonthsAccrued': draft.vacationMonthsAccrued,
+        'terminationSignaled': draft.terminationSignaled,
+        'hasSavedSnapshot': hasSavedSnapshot,
+        'eventCount': employeeEvents.length,
+      });
+    }
+
+    final totalEmployees = employees.length;
+    final missingSnapshotEmployees = totalEmployees - employeesWithSnapshot;
+    final status = _resolveLaborCompetenceClosureStatus(
+      payrollClosed: payrollClosed,
+      obligations: obligations,
+      missingSnapshotEmployees: missingSnapshotEmployees,
+      thirteenthEmployees: thirteenthEmployees,
+      vacationAttentionEmployees: vacationAttentionEmployees,
+      terminationEmployees: terminationEmployees,
+    );
+    final canSaveClosure =
+        sessao.role == Role.owner ||
+        sessao.role == Role.manager ||
+        sessao.role == Role.accountant;
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('payroll_closures')
+          .doc('${sessao.companyId}_$competence')
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? const <String, dynamic>{};
+        final laborClosureMap = data['laborClosure'];
+        final savedClosure = laborClosureMap is Map
+            ? _WorkforceLaborCompetenceClosure.fromMap(
+                laborClosureMap.cast<String, dynamic>(),
+              )
+            : null;
+        final pendingReasons = <String>[
+          if (missingSnapshotEmployees > 0)
+            '$missingSnapshotEmployees colaborador(es) ainda sem snapshot salvo',
+          if (!obligations.payrollConferenceDone)
+            'folha da competencia ainda nao foi conferida',
+          if (thirteenthEmployees > 0 && !obligations.thirteenthConferenceDone)
+            '13o ainda nao foi conferido nesta competencia',
+          if (vacationAttentionEmployees > 0 &&
+              !obligations.vacationConferenceDone)
+            'ferias em atencao ainda nao foram conferidas',
+          if (terminationEmployees > 0 &&
+              !obligations.terminationConferenceDone)
+            'rescisao em atencao ainda nao foi conferida',
+        ];
+        return AppWorkspaceCard(
+          title: 'Fechamento trabalhista da competencia',
+          subtitle:
+              'Consolida 13o, ferias e rescisao da empresa ativa para esta competencia sem duplicar cadastro, folha ou documentos.',
+          trailing: FilledButton.icon(
+            onPressed: canSaveClosure
+                ? () => _saveWorkforceLaborCompetenceClosure(
+                    sessao: sessao,
+                    competence: competence,
+                    status: status,
+                    obligations: obligations,
+                    totalEmployees: totalEmployees,
+                    employeesWithSnapshot: employeesWithSnapshot,
+                    missingSnapshotEmployees: missingSnapshotEmployees,
+                    thirteenthEmployees: thirteenthEmployees,
+                    vacationAttentionEmployees: vacationAttentionEmployees,
+                    terminationEmployees: terminationEmployees,
+                    thirteenthProjectedCents: thirteenthProjectedCents,
+                    vacationProjectedCents: vacationProjectedCents,
+                    vacationBonusCents: vacationBonusCents,
+                    terminationProjectedCents: terminationProjectedCents,
+                    lines: draftLines,
+                  )
+                : null,
+            icon: const Icon(Icons.fact_check_outlined),
+            label: Text(
+              savedClosure == null
+                  ? 'Salvar fechamento'
+                  : 'Atualizar fechamento',
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  AppMetricCard(
+                    label: 'Status',
+                    value: _laborClosureStatusLabel(status),
+                    caption: payrollClosed
+                        ? 'Competencia da folha ja esta fechada'
+                        : 'Status trabalhista derivado das conferencias atuais',
+                  ),
+                  AppMetricCard(
+                    label: 'Snapshots salvos',
+                    value: '$employeesWithSnapshot/$totalEmployees',
+                    caption: '$missingSnapshotEmployees pendente(s)',
+                  ),
+                  AppMetricCard(
+                    label: '13o projetado',
+                    value: _formatCurrency(thirteenthProjectedCents),
+                    caption:
+                        '$thirteenthEmployees colaborador(es) elegivel(is)',
+                  ),
+                  AppMetricCard(
+                    label: 'Ferias projetadas',
+                    value: _formatCurrency(
+                      vacationProjectedCents + vacationBonusCents,
+                    ),
+                    caption:
+                        '$vacationAttentionEmployees colaborador(es) em atencao',
+                  ),
+                  AppMetricCard(
+                    label: 'Rescisao projetada',
+                    value: _formatCurrency(terminationProjectedCents),
+                    caption:
+                        '$terminationEmployees colaborador(es) com sinalizacao',
+                  ),
+                  AppMetricCard(
+                    label: 'Checklist',
+                    value:
+                        '${obligations.completedCount}/${obligations.totalCount}',
+                    caption: 'Obrigacoes da competencia marcadas',
+                  ),
+                ],
+              ),
+              if (savedClosure != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Ultimo fechamento salvo por ${savedClosure.updatedByUserName.isEmpty ? '-' : savedClosure.updatedByUserName} em ${_formatDateTime(_toDate(savedClosure.updatedAt))}.',
+                  style: const TextStyle(
+                    color: AppBrandColors.softText,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+              if (pendingReasons.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Pendencias para fechamento real: ${pendingReasons.join('; ')}.',
+                  style: const TextStyle(
+                    color: AppBrandColors.softText,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              if (draftLines.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Conferencia por colaborador',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                for (final line in draftLines.take(8))
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      (line['hasSavedSnapshot'] as bool? ?? false)
+                          ? Icons.verified_outlined
+                          : Icons.pending_actions_outlined,
+                    ),
+                    title: Text(line['employeeName']?.toString() ?? '-'),
+                    subtitle: Text(
+                      'Base: ${_formatCurrency((line['grossReferenceCents'] as num?)?.toInt() ?? 0)} | '
+                      '13o: ${_formatCurrency((line['thirteenthProjectedCents'] as num?)?.toInt() ?? 0)} | '
+                      'Ferias + 1/3: ${_formatCurrency(((line['vacationProjectedCents'] as num?)?.toInt() ?? 0) + ((line['vacationBonusCents'] as num?)?.toInt() ?? 0))}\n'
+                      'Rescisao: ${_formatCurrency((line['terminationProjectedCents'] as num?)?.toInt() ?? 0)} | '
+                      'Snapshot: ${(line['hasSavedSnapshot'] as bool? ?? false) ? 'salvo' : 'pendente'} | '
+                      'Eventos: ${(line['eventCount'] as num?)?.toInt() ?? 0}',
+                    ),
+                    isThreeLine: true,
+                  ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _resolveLaborCompetenceClosureStatus({
+    required bool payrollClosed,
+    required _WorkforceCompetenceObligations obligations,
+    required int missingSnapshotEmployees,
+    required int thirteenthEmployees,
+    required int vacationAttentionEmployees,
+    required int terminationEmployees,
+  }) {
+    final hasConferencePendencies =
+        !obligations.payrollConferenceDone ||
+        !obligations.admissionChecklistDone ||
+        (thirteenthEmployees > 0 && !obligations.thirteenthConferenceDone) ||
+        (vacationAttentionEmployees > 0 &&
+            !obligations.vacationConferenceDone) ||
+        (terminationEmployees > 0 && !obligations.terminationConferenceDone);
+    if (!hasConferencePendencies && missingSnapshotEmployees == 0) {
+      return payrollClosed ? 'closed' : 'ready_for_close';
+    }
+    return 'pending_review';
+  }
+
+  String _laborClosureStatusLabel(String status) {
+    switch (status) {
+      case 'closed':
+        return 'Fechado';
+      case 'ready_for_close':
+        return 'Pronto para fechar';
+      default:
+        return 'Pendente de conferencia';
+    }
   }
 
   Widget _buildPayrollSummaryCard(_PayrollSummary payrollSummary) {
@@ -2150,6 +2504,74 @@ extension _WorkforceManagementPayrollSections on _WorkforceManagementPageState {
       summaryLabel:
           '$thirteenthAvos/12 avos de 13o e $vacationMonthsAccrued/12 meses do periodo aquisitivo atual',
       alerts: alerts,
+    );
+  }
+
+  _WorkforceEmployeeCompetenceDraft _buildEmployeeCompetenceDraft({
+    required Employee employee,
+    required String competence,
+    required int grossReferenceCents,
+    required List<_WorkforceEmployeeEvent> events,
+  }) {
+    final laborSnapshot = _buildLaborRealSnapshot(
+      employee: employee,
+      competence: competence,
+    );
+    final terminationSignaled =
+        !employee.ativo ||
+        events.any(
+          (event) =>
+              event.eventType == 'termination_notice' ||
+              event.eventType == 'termination_effective',
+        );
+    final thirteenthProjectedCents =
+        ((grossReferenceCents * laborSnapshot.thirteenthAvos) / 12).round();
+    final vacationProjectedCents =
+        ((grossReferenceCents * laborSnapshot.vacationMonthsAccrued) / 12)
+            .round();
+    final vacationBonusCents = (vacationProjectedCents / 3).round();
+    final terminationProjectedCents = terminationSignaled
+        ? grossReferenceCents +
+              thirteenthProjectedCents +
+              vacationProjectedCents +
+              vacationBonusCents
+        : 0;
+    final thirteenthMemory = <String, dynamic>{
+      'referenceBaseCents': grossReferenceCents,
+      'avos': laborSnapshot.thirteenthAvos,
+      'formula': 'base x avos / 12',
+      'projectedCents': thirteenthProjectedCents,
+    };
+    final vacationMemory = <String, dynamic>{
+      'referenceBaseCents': grossReferenceCents,
+      'monthsAccrued': laborSnapshot.vacationMonthsAccrued,
+      'formula': 'base x meses / 12 + 1/3 constitucional',
+      'projectedCents': vacationProjectedCents,
+      'bonusCents': vacationBonusCents,
+      'totalProjectedCents': vacationProjectedCents + vacationBonusCents,
+    };
+    final terminationMemory = <String, dynamic>{
+      'terminationSignaled': terminationSignaled,
+      'formula': terminationSignaled
+          ? 'base + 13o projetado + ferias projetadas + 1/3'
+          : 'sem evento de rescisao na competencia',
+      'projectedCents': terminationProjectedCents,
+    };
+    return _WorkforceEmployeeCompetenceDraft(
+      employeeId: employee.id,
+      employeeName: employee.nomeCompleto,
+      grossReferenceCents: grossReferenceCents,
+      thirteenthProjectedCents: thirteenthProjectedCents,
+      vacationProjectedCents: vacationProjectedCents,
+      vacationBonusCents: vacationBonusCents,
+      terminationProjectedCents: terminationProjectedCents,
+      thirteenthAvos: laborSnapshot.thirteenthAvos,
+      vacationMonthsAccrued: laborSnapshot.vacationMonthsAccrued,
+      terminationSignaled: terminationSignaled,
+      vacationAttention: laborSnapshot.vacationMonthsAccrued >= 11,
+      thirteenthMemory: thirteenthMemory,
+      vacationMemory: vacationMemory,
+      terminationMemory: terminationMemory,
     );
   }
 
