@@ -61,6 +61,21 @@ class PlatformAdminService {
     await callable.call(<String, dynamic>{'officeId': officeId});
   }
 
+  Future<GovernanceRealRegistrationsResult> listGovernanceRealRegistrations() async {
+    final callable = _functions.httpsCallable('platformListGovernanceRealRegistrations');
+    final result = await callable.call();
+    final data = Map<String, dynamic>.from(result.data as Map);
+    final companies = (data['companies'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => GraduatedPublicCompanyRow.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+    final offices = (data['offices'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => GraduatedPublicOfficeRow.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+    return GovernanceRealRegistrationsResult(companies: companies, offices: offices);
+  }
+
   Future<IssuedTrialInvite> issueTrialInvite90Days({
     String? companyEmail,
     required String accountantEmail,
@@ -819,6 +834,94 @@ class StandaloneLightweightOfficeRow {
       source: map['source']?.toString() ?? '',
       linkedCompaniesCount: (map['linkedCompaniesCount'] as num?)?.toInt() ?? 0,
       linkedCompaniesInIndex: (map['linkedCompaniesInIndex'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class GovernanceRealRegistrationsResult {
+  const GovernanceRealRegistrationsResult({
+    required this.companies,
+    required this.offices,
+  });
+
+  final List<GraduatedPublicCompanyRow> companies;
+  final List<GraduatedPublicOfficeRow> offices;
+}
+
+/// Empresa que iniciou pela entrada publica leve e concluiu perfil (`directSignup` nao pendente).
+class GraduatedPublicCompanyRow {
+  const GraduatedPublicCompanyRow({
+    required this.companyId,
+    required this.companyName,
+    required this.directSignupSource,
+    required this.ownerUid,
+    required this.ownerEmail,
+    required this.ownerName,
+    required this.ownerLightweightResolved,
+    required this.accountantPendingStatus,
+    required this.updatedAtIso,
+  });
+
+  final String companyId;
+  final String companyName;
+  final String directSignupSource;
+  final String ownerUid;
+  final String ownerEmail;
+  final String ownerName;
+  final bool ownerLightweightResolved;
+  final String accountantPendingStatus;
+  final String updatedAtIso;
+
+  factory GraduatedPublicCompanyRow.fromMap(Map<String, dynamic> map) {
+    return GraduatedPublicCompanyRow(
+      companyId: map['companyId']?.toString() ?? '',
+      companyName: map['companyName']?.toString() ?? '',
+      directSignupSource: map['directSignupSource']?.toString() ?? '',
+      ownerUid: map['ownerUid']?.toString() ?? '',
+      ownerEmail: map['ownerEmail']?.toString() ?? '',
+      ownerName: map['ownerName']?.toString() ?? '',
+      ownerLightweightResolved: map['ownerLightweightResolved'] == true,
+      accountantPendingStatus: map['accountantPendingStatus']?.toString() ?? '',
+      updatedAtIso: map['updatedAtIso']?.toString() ?? '',
+    );
+  }
+}
+
+/// Escritorio que iniciou pelo pre-cadastro leve publico e concluiu perfil.
+class GraduatedPublicOfficeRow {
+  const GraduatedPublicOfficeRow({
+    required this.officeId,
+    required this.officeName,
+    required this.email,
+    required this.responsibleName,
+    required this.platformStatus,
+    required this.cnpj,
+    required this.linkedCompaniesCount,
+    required this.linkedCompaniesInIndex,
+    required this.updatedAtIso,
+  });
+
+  final String officeId;
+  final String officeName;
+  final String email;
+  final String responsibleName;
+  final String platformStatus;
+  final String cnpj;
+  final int linkedCompaniesCount;
+  final int linkedCompaniesInIndex;
+  final String updatedAtIso;
+
+  factory GraduatedPublicOfficeRow.fromMap(Map<String, dynamic> map) {
+    return GraduatedPublicOfficeRow(
+      officeId: map['officeId']?.toString() ?? '',
+      officeName: map['officeName']?.toString() ?? '',
+      email: map['email']?.toString() ?? '',
+      responsibleName: map['responsibleName']?.toString() ?? '',
+      platformStatus: map['platformStatus']?.toString() ?? '',
+      cnpj: map['cnpj']?.toString() ?? '',
+      linkedCompaniesCount: (map['linkedCompaniesCount'] as num?)?.toInt() ?? 0,
+      linkedCompaniesInIndex: (map['linkedCompaniesInIndex'] as num?)?.toInt() ?? 0,
+      updatedAtIso: map['updatedAtIso']?.toString() ?? '',
     );
   }
 }

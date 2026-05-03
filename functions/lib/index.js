@@ -8361,6 +8361,99 @@ exports.platformDeleteLightweightTestOffice = functions.https.onCall(async (data
     });
     return { ok: true, officeId };
 });
+exports.platformListGovernanceRealRegistrations = functions.https.onCall(async (_data, context) => {
+    const claims = assertClaims(context);
+    const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+    assertPlatformAdmin(claims, userProfile);
+    const PUBLIC_LIGHTWEIGHT_SOURCES = ['public_lightweight_signup', 'public_lightweight_access'];
+    const settingsSnap = await admin
+        .firestore()
+        .collection('company_settings')
+        .where('directSignup.source', 'in', PUBLIC_LIGHTWEIGHT_SOURCES)
+        .limit(200)
+        .get();
+    const companies = [];
+    for (const doc of settingsSnap.docs) {
+        const companyId = doc.id;
+        if (companyId === PUBLIC_DEMO_COMPANY_ID) {
+            continue;
+        }
+        const data = asRecord(doc.data());
+        const ds = asRecord(data.directSignup);
+        if (ds.lightweightProfilePending === true) {
+            continue;
+        }
+        const companyData = asRecord(data.companyData);
+        const pending = asRecord(data.accountantOnboardingPending);
+        const ownerSnap = await admin
+            .firestore()
+            .collection('users')
+            .where('companyId', '==', companyId)
+            .where('role', '==', 'OWNER')
+            .limit(1)
+            .get();
+        let ownerUid = '';
+        let ownerEmail = '';
+        let ownerName = '';
+        let ownerLightweightResolved = false;
+        if (!ownerSnap.empty) {
+            const od = ownerSnap.docs[0];
+            const ou = asRecord(od.data());
+            ownerUid = od.id;
+            ownerEmail = asTrimmedString(ou.email).toLowerCase();
+            ownerName = asTrimmedString(ou.nome);
+            ownerLightweightResolved = ou.lightweightProfilePending !== true;
+        }
+        companies.push({
+            companyId,
+            companyName: asTrimmedString(data.companyName) ||
+                asTrimmedString(companyData.nomeFantasia) ||
+                asTrimmedString(companyData.razaoSocial) ||
+                companyId,
+            directSignupSource: asTrimmedString(ds.source),
+            ownerUid,
+            ownerEmail,
+            ownerName,
+            ownerLightweightResolved,
+            accountantPendingStatus: asTrimmedString(pending.status),
+            updatedAtIso: timestampToIsoString(data.updatedAt),
+        });
+    }
+    companies.sort((a, b) => String(b['updatedAtIso'] ?? '').localeCompare(String(a['updatedAtIso'] ?? '')));
+    const officesSnap = await accountingOfficeRef()
+        .where('source', '==', 'public_lightweight_signup')
+        .limit(200)
+        .get();
+    const offices = [];
+    for (const doc of officesSnap.docs) {
+        const officeId = doc.id;
+        if (officeId === PUBLIC_DEMO_OFFICE_ID) {
+            continue;
+        }
+        const o = asRecord(doc.data());
+        if (o.lightweightProfilePending === true) {
+            continue;
+        }
+        const linked = await listCompanySettingsLinkedToOffice(officeId);
+        offices.push({
+            officeId,
+            officeName: asTrimmedString(o.officeName),
+            email: asTrimmedString(o.email).toLowerCase(),
+            responsibleName: asTrimmedString(o.responsibleName),
+            platformStatus: asTrimmedString(o.platformStatus) || 'active',
+            cnpj: onlyDigits(o.cnpj),
+            linkedCompaniesCount: Number(o.linkedCompaniesCount ?? 0) || 0,
+            linkedCompaniesInIndex: linked.length,
+            updatedAtIso: timestampToIsoString(o.updatedAt),
+        });
+    }
+    offices.sort((a, b) => String(b['updatedAtIso'] ?? '').localeCompare(String(a['updatedAtIso'] ?? '')));
+    return {
+        ok: true,
+        companies,
+        offices,
+    };
+});
 exports.platformGetCompanyFiscalStatus = functions.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
     const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);

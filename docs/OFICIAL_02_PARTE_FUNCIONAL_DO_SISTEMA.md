@@ -64,6 +64,8 @@ O painel supremo deve manter rastreio operacional para impedir cadastro ou cobra
 
 Regra funcional: a plataforma nao deve tratar o contador como se fosse owner alternativo. O contador vincula empresas ao proprio escritorio pelo fluxo dele.
 
+**Acompanhamento pos-teste (03/05/2026):** na **Governanca**, alem das filas de teste leve e do livro de demos, a plataforma lista **cadastros reais** que evoluiram do fluxo publico leve: empresas com `directSignup` de origem publica leve e **perfil leve ja concluido** (nao `lightweightProfilePending`), excluindo o workspace demo fixo; escritorios com origem `public_lightweight_signup` e perfil leve concluido, excluindo o escritorio demo fixo. Serve para acompanhar owner, pendencias de onboarding com contador e carteira do escritorio apos deixarem de ser “só teste”.
+
 ## Perfis oficiais
 
 ### Owner

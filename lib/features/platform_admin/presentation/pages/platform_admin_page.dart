@@ -68,6 +68,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   Future<List<StandaloneLightweightCompanyRow>>? _standaloneLightFuture;
   Future<List<PublicDemoAccessLedgerRow>>? _demoLedgerFuture;
   Future<List<StandaloneLightweightOfficeRow>>? _lightweightOfficesFuture;
+  Future<GovernanceRealRegistrationsResult>? _realRegistrationsFuture;
   Future<PlatformFiscalCompanyStatus>? _fiscalStatusFuture;
   String? _selectedCompanyId;
   String? _selectedAdminOfficeId;
@@ -85,10 +86,12 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       _standaloneLightFuture = _service.listStandaloneLightweightCompanies();
       _demoLedgerFuture = _service.listPublicDemoAccessLedger(limit: 200);
       _lightweightOfficesFuture = _service.listLightweightTestOffices();
+      _realRegistrationsFuture = _service.listGovernanceRealRegistrations();
     } else {
       _standaloneLightFuture = null;
       _demoLedgerFuture = null;
       _lightweightOfficesFuture = null;
+      _realRegistrationsFuture = null;
     }
   }
 
@@ -762,6 +765,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
           _service.listStandaloneLightweightCompanies();
       _demoLedgerFuture = _service.listPublicDemoAccessLedger(limit: 200);
       _lightweightOfficesFuture = _service.listLightweightTestOffices();
+      _realRegistrationsFuture = _service.listGovernanceRealRegistrations();
     });
   }
 
@@ -953,7 +957,11 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     final standalone = _standaloneLightFuture;
     final demos = _demoLedgerFuture;
     final offices = _lightweightOfficesFuture;
-    if (standalone == null || demos == null || offices == null) {
+    final realRegs = _realRegistrationsFuture;
+    if (standalone == null ||
+        demos == null ||
+        offices == null ||
+        realRegs == null) {
       return const Center(
         child: Text('Estado de governanca indisponivel.'),
       );
@@ -1044,6 +1052,90 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                         ),
                       ),
                     ),
+                ],
+              );
+            },
+          ),
+        ),
+        _folderCard(
+          title: 'Cadastro real (acompanhamento pos-teste)',
+          subtitle:
+              'Empresas e escritorios que comecaram na entrada publica leve mas ja tem perfil/conclusao suficiente no Firestore '
+              '(nao aparecem mais como teste pendente acima). Empresas: origens public_lightweight_signup ou public_lightweight_access. Escritorios: public_lightweight_signup concluido.',
+          initiallyExpanded: true,
+          child: FutureBuilder<GovernanceRealRegistrationsResult>(
+            future: realRegs,
+            builder: (context, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snap.hasError) {
+                return Text(AppErrorMapper.messageFrom(snap.error!));
+              }
+              final data = snap.data ??
+                  const GovernanceRealRegistrationsResult(
+                    companies: <GraduatedPublicCompanyRow>[],
+                    offices: <GraduatedPublicOfficeRow>[],
+                  );
+              if (data.companies.isEmpty && data.offices.isEmpty) {
+                return const Text(
+                  'Ainda sem registros: quando uma empresa ou escritorio de teste completar cadastro real, '
+                  'a entrada surge nesta lista automaticamente.',
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (data.companies.isNotEmpty) ...[
+                    const Text(
+                      'Empresas',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 6),
+                    for (final c in data.companies)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          c.companyName.isEmpty ? c.companyId : c.companyName,
+                        ),
+                        subtitle: Text(
+                          '${c.ownerEmail}\n${c.companyId}\nOrigem leve: ${c.directSignupSource}'
+                          '${c.accountantPendingStatus.isEmpty ? "" : "\nOnboarding contador: ${c.accountantPendingStatus}"}'
+                          '\nOwner cadastro sem pendencia leve: ${c.ownerLightweightResolved ? "sim" : "nao"}'
+                          '${c.updatedAtIso.isEmpty ? "" : "\ncompany_settings atualizado (ISO): ${c.updatedAtIso}"}',
+                        ),
+                        isThreeLine: true,
+                        trailing: TextButton(
+                          onPressed: () =>
+                              _selectCompanyInAdminPanel(c.companyId),
+                          child: const Text('Financeiro'),
+                        ),
+                      ),
+                    const SizedBox(height: 14),
+                  ],
+                  if (data.offices.isNotEmpty) ...[
+                    const Text(
+                      'Escritorios',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 6),
+                    for (final r in data.offices)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          r.officeName.isEmpty ? r.officeId : r.officeName,
+                        ),
+                        subtitle: Text(
+                          '${r.email}\nCNPJ cadastrado: ${r.cnpj.isEmpty ? "—" : r.cnpj}\n'
+                          '${r.officeId} · status ${r.platformStatus}\n'
+                          'Carteira (indice Firestore): ${r.linkedCompaniesInIndex} empresa(s)',
+                        ),
+                        isThreeLine: true,
+                      ),
+                  ],
                 ],
               );
             },

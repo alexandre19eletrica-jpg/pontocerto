@@ -3,6 +3,8 @@
 Data base: 02/05/2026
 Projeto: Ponto Certo
 
+**Registo (03/05/2026 — governanca cadastro real pos-teste + demo erro UX):** callable `platformListGovernanceRealRegistrations` lista empresas/escritorios que completaram perfil pos-entrada leve (excl. demo fixo); UI Governanca ganha cartao **Cadastro real (acompanhamento pos-teste)**. Pagina `/demo-*` (`PublicDemoAccessPage`): remover spinner quando falha, links para Firebase custom tokens + consola de contas de servico GCP do `projectId` actual. IAM em producao permanece obrigatorio: **Token Creator** da SA das Functions sobre **firebase-adminsdk**.
+
 **Registo (03/05/2026 — plataforma governanca):** novo submenu Plataforma > **Governanca** (`/platform-admin/governanca`): empresas com cadastro **leve** pendente (`lightweightProfilePending`) e livro anonimizado dos **acessos demo** (`platformListPublicDemoAccessLedger`). `platformListCompanies` faz **dedupe por `companyId`** (owner mais antigo). Demo publico grava documentos em `demo_access` com id `dv1_*` (hash IP + fingerprint leve navegador) para nao multiplicar unicos quando muda apenas o visitor de marketing. Indice novo `users`: `role` + `lightweightProfilePending`. Flutter: erro `functions/internal` continua a mostrar a mensagem do servidor quando existe (IAM/diagnostico). O **signBlob** em producao resolve-se na mesma obrigatorio com papel Token Creator sobre firebase-adminsdk.
 
 

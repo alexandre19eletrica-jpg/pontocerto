@@ -32,7 +32,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 #### Plataforma admin (governanca — 03/05/2026)
 
 - Rotas: `/platform-admin/governanca`; menu shell > Plataforma > **Governanca**.
-- Callables: `platformListStandaloneLightweightCompanies`, `platformListPublicDemoAccessLedger`, `platformListCompanies` (dedupe por `companyId`), `platformListLightweightTestOffices`, `platformDeleteLightweightTestCompany`, `platformDeleteLightweightTestOffice`.
+- Callables: `platformListStandaloneLightweightCompanies`, `platformListPublicDemoAccessLedger`, `platformListGovernanceRealRegistrations` (empresas `company_settings` com `directSignup.source` em `public_lightweight_signup` / `public_lightweight_access` e `lightweightProfilePending` falso, excl. `public_demo_workspace`; escritorios `accounting_offices` com `source == public_lightweight_signup` e perfil leve resolvido, excl. demo), `platformListCompanies` (dedupe por `companyId`), `platformListLightweightTestOffices`, `platformDeleteLightweightTestCompany`, `platformDeleteLightweightTestOffice`.
 - Indice composto Firestore: `users` — `role` + `lightweightProfilePending` (`firestore.indexes.json`).
 
 #### `platformUpdateDemoAccessConfig`
@@ -53,6 +53,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 
 - `createCustomToken` (demo: `publicOpenDemoAccess`) e `generatePasswordResetLink` podem falhar em producao quando a conta de servico que corre as Functions nao pode assinar blobs na conta firebase-adminsdk; nesse caso devolve-se `HttpsError` `failed-precondition` com orientacao IAM (`roles/iam.serviceAccountTokenCreator`), em vez de `internal` apenas com stack técnico.
 - Deteccao de falha IAM percorre tambem texto aninhado do erro SDK (`collectErrorTextDeep`).
+- Web: `PublicDemoAccessPage` deixa de manter spinner apos erro; oferece links para a documentacao de custom tokens e para a lista de contas IAM do projeto (via `firebase_options`).
 
 ## 3. Dados
 
