@@ -8143,14 +8143,8 @@ exports.platformListPublicDemoAccessLedger = functions.https.onCall(async (data,
         .map((doc) => {
         const item = asRecord(doc.data());
         const rolesRaw = item.roles ?? {};
+        /** Apenas contagens/datas/perfil demo: dados de rede e aparelho ficam só no Firestore para dedupe. */
         return {
-            docId: doc.id,
-            clientVisitorId: asTrimmedString(item.clientVisitorId),
-            marketingVisitorId: asTrimmedString(item.visitorId),
-            ipHashShort: asTrimmedString(item.ipHash).slice(0, 12),
-            deviceType: asTrimmedString(item.deviceType),
-            language: asTrimmedString(item.language),
-            screen: `${Number(item.screenWidth ?? 0)}x${Number(item.screenHeight ?? 0)}`,
             accessCount: Number(item.accessCount ?? 0) || 0,
             rolesCompany: rolesRaw && typeof rolesRaw === 'object' ? rolesRaw['company'] === true : false,
             rolesAccountant: rolesRaw && typeof rolesRaw === 'object'
@@ -8159,7 +8153,6 @@ exports.platformListPublicDemoAccessLedger = functions.https.onCall(async (data,
             lastSeenAtIso: timestampToIsoString(item.lastSeenAt),
             firstSeenAtIso: timestampToIsoString(item.firstSeenAt),
             dedupeVersion: Number(item.dedupeVersion ?? 0) || 0,
-            userAgentSnippet: asTrimmedString(item.userAgent).slice(0, 120),
         };
     })
         .sort((a, b) => String(b.lastSeenAtIso).localeCompare(String(a.lastSeenAtIso)))

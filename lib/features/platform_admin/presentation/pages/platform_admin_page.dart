@@ -913,7 +913,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
         return const AppWorkspaceHeader(
           title: 'Governanca de acessos',
           subtitle:
-              'Empresas em teste sem escritorio vinculado e registo anonimizado dos demos publicos (dedupe por IP e pela assinatura leve do dispositivo/navegador).',
+              'Empresas em teste sem escritorio vinculado e registos agregados de acesso aos demos publicos (dedupe tecnico apenas no servidor, sem exibir rede ou aparelho).',
           chips: [
             AppHeaderChip('Plataforma'),
             AppHeaderChip('Demo'),
@@ -1194,9 +1194,9 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
           ),
         ),
         _folderCard(
-          title: 'Livro de demos publicos (dedupe rede + navegador)',
+          title: 'Livro de demos publicos (somente contagens)',
           subtitle:
-              'Cada documento agrupa sessoes vindas da mesma origem tecnica para nao multiplicar contagem. Mostramos apenas trecho do hash de IP e do user-agent.',
+              'Cada entrada agrega sessoes com a mesma chave tecnica interna para nao multiplicar o numero de acessos — sem mostrar rede, navegador ou dispositivo.',
           initiallyExpanded: true,
           child: FutureBuilder<List<PublicDemoAccessLedgerRow>>(
             future: demos,
@@ -1213,7 +1213,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
               final rows = snap.data ?? const [];
               if (rows.isEmpty) {
                 return const Text(
-                  'Sem registos na colecao de demo (ou dados antigos apenas com IDs de visitor).',
+                  'Sem registos agregados de demo nesta vista.',
                 );
               }
               return Column(
@@ -1229,8 +1229,8 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                         ' · ${r.accessCount}x',
                       ),
                       subtitle: Text(
-                        'Ultimo acesso: ${r.lastSeenAtIso}\nip(hash parcial): ${r.ipHashShort}\n'
-                        '${r.deviceType} · tela ${r.screen} · ${r.language}',
+                        'Primeiro acesso: ${r.firstSeenAtIso}\n'
+                        'Ultimo acesso: ${r.lastSeenAtIso}',
                       ),
                       isThreeLine: true,
                     ),

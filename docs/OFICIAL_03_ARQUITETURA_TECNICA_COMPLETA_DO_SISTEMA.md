@@ -32,7 +32,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 #### Plataforma admin (governanca — 03/05/2026)
 
 - Rotas: `/platform-admin/governanca`; menu shell > Plataforma > **Governanca**.
-- Callables: `platformListStandaloneLightweightCompanies`, `platformListPublicDemoAccessLedger`, `platformListGovernanceRealRegistrations` (empresas `company_settings` com `directSignup.source` em `public_lightweight_signup` / `public_lightweight_access` e `lightweightProfilePending` falso, excl. `public_demo_workspace`; escritorios `accounting_offices` com `source == public_lightweight_signup` e perfil leve resolvido, excl. demo), `platformListCompanies` (dedupe por `companyId`), `platformListLightweightTestOffices`, `platformDeleteLightweightTestCompany`, `platformDeleteLightweightTestOffice`.
+- Callables: `platformListStandaloneLightweightCompanies`, `platformListPublicDemoAccessLedger` (devolve apenas contagens, perfis demo e datas de primeiro/ultimo acesso; **nao** expoe IP, hash, user-agent, visitorId ou dimensoes — dedupe continua no Firestore), `platformListGovernanceRealRegistrations` (empresas `company_settings` com `directSignup.source` em `public_lightweight_signup` / `public_lightweight_access` e `lightweightProfilePending` falso, excl. `public_demo_workspace`; escritorios `accounting_offices` com `source == public_lightweight_signup` e perfil leve resolvido, excl. demo), `platformListCompanies` (dedupe por `companyId`), `platformListLightweightTestOffices`, `platformDeleteLightweightTestCompany`, `platformDeleteLightweightTestOffice`.
 - Indice composto Firestore: `users` — `role` + `lightweightProfilePending` (`firestore.indexes.json`).
 
 #### `platformUpdateDemoAccessConfig`

@@ -748,56 +748,32 @@ class StandaloneLightweightCompanyRow {
   }
 }
 
-/// Linha anonimizada do livro de demo (IP apenas hash, UA truncado).
+/// Linha agregada do livro de demo (servidor deduplica por rede/navegador; estes campos não expõem isso).
 class PublicDemoAccessLedgerRow {
   const PublicDemoAccessLedgerRow({
-    required this.docId,
-    required this.clientVisitorId,
-    required this.marketingVisitorId,
-    required this.ipHashShort,
-    required this.deviceType,
-    required this.language,
-    required this.screen,
     required this.accessCount,
     required this.rolesCompany,
     required this.rolesAccountant,
     required this.lastSeenAtIso,
     required this.firstSeenAtIso,
     required this.dedupeVersion,
-    required this.userAgentSnippet,
   });
 
-  final String docId;
-  final String clientVisitorId;
-  final String marketingVisitorId;
-  final String ipHashShort;
-  final String deviceType;
-  final String language;
-  final String screen;
   final int accessCount;
   final bool rolesCompany;
   final bool rolesAccountant;
   final String lastSeenAtIso;
   final String firstSeenAtIso;
   final int dedupeVersion;
-  final String userAgentSnippet;
 
   factory PublicDemoAccessLedgerRow.fromMap(Map<String, dynamic> map) {
     return PublicDemoAccessLedgerRow(
-      docId: map['docId']?.toString() ?? '',
-      clientVisitorId: map['clientVisitorId']?.toString() ?? '',
-      marketingVisitorId: map['marketingVisitorId']?.toString() ?? '',
-      ipHashShort: map['ipHashShort']?.toString() ?? '',
-      deviceType: map['deviceType']?.toString() ?? '',
-      language: map['language']?.toString() ?? '',
-      screen: map['screen']?.toString() ?? '',
       accessCount: (map['accessCount'] as num?)?.toInt() ?? 0,
       rolesCompany: map['rolesCompany'] == true,
       rolesAccountant: map['rolesAccountant'] == true,
       lastSeenAtIso: map['lastSeenAtIso']?.toString() ?? '',
       firstSeenAtIso: map['firstSeenAtIso']?.toString() ?? '',
       dedupeVersion: (map['dedupeVersion'] as num?)?.toInt() ?? 0,
-      userAgentSnippet: map['userAgentSnippet']?.toString() ?? '',
     );
   }
 }
