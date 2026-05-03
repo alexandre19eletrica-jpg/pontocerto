@@ -2342,6 +2342,14 @@ function errorMessage(error, fallback) {
     const text = String(error ?? '').trim();
     return text || fallback;
 }
+/** createCustomToken / algumas operacoes Admin Auth exigem signBlob no runtime das Functions. */
+function isLikelyFirebaseAdminIamSigningError(error) {
+    const msg = errorMessage(error, '');
+    return (/signBlob/i.test(msg) ||
+        /SERVICE_ACCOUNT_TOKEN_CREATOR/i.test(msg) ||
+        /iam\.serviceaccounts\.sign/i.test(msg) ||
+        /Permission.*iam\.serviceAccounts/i.test(msg));
+}
 function runtimeIncidentRef(incidentId) {
     return admin.firestore().collection('runtime_incidents').doc(incidentId);
 }
@@ -6567,7 +6575,7 @@ async function provisionLightweightOfficeAccess(params) {
         });
         officeId = `office_${Date.now()}`;
     }
-    await accountingOfficeRef().doc(officeId).set({
+    await accountingOfficeRef().doc(officeId).set(omitUndefinedForFirestore({
         officeId,
         officeName,
         cnpj: '',
@@ -6593,8 +6601,8 @@ async function provisionLightweightOfficeAccess(params) {
         lightweightProfilePending: true,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
-    await admin.firestore().collection('users').doc(userRecord.uid).set({
+    }), { merge: true });
+    await admin.firestore().collection('users').doc(userRecord.uid).set(omitUndefinedForFirestore({
         companyId: officeId,
         currentCompanyId: officeId,
         companyName: officeName,
@@ -6609,7 +6617,7 @@ async function provisionLightweightOfficeAccess(params) {
         lightweightProfilePending: true,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
+    }), { merge: true });
     await admin.auth().setCustomUserClaims(userRecord.uid, {
         companyId: officeId,
         role: 'ACCOUNTANT',
@@ -6636,8 +6644,22 @@ async function provisionLightweightOfficeAccess(params) {
         });
         emailDispatched = true;
     }
-    catch (_) {
+    catch (err) {
         emailDispatched = false;
+        try {
+            const cfg = obterConfigEmail();
+            functions.logger.warn('Email acesso leve escritorio nao enviado', {
+                email,
+                missing: missingInviteConfig(cfg),
+                error: errorMessage(err, 'unknown'),
+            });
+        }
+        catch (_) {
+            functions.logger.warn('Email acesso leve escritorio nao enviado', {
+                email,
+                error: errorMessage(err, 'unknown'),
+            });
+        }
     }
     return {
         officeId,
@@ -9795,6 +9817,11 @@ exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
             message: msg,
             stack: error instanceof Error ? error.stack : undefined,
         });
+        if (isLikelyFirebaseAdminIamSigningError(error)) {
+            throw new functions.https.HttpsError('failed-precondition', 'O demo precisa de permissao IAM no Google Cloud: na conta de servico que executa as Cloud Functions, ' +
+                'conceda o papel "Token Creator de Conta de Servico" (roles/iam.serviceAccountTokenCreator) ' +
+                'sobre a conta firebase-adminsdk do projeto (veja firebase.google.com/docs/auth/admin/create-custom-tokens).');
+        }
         throw new functions.https.HttpsError('internal', `Demo indisponivel no momento: ${msg}`);
     }
 });
@@ -10815,43 +10842,61 @@ exports.publicSubmitAccountingOfficeSignup = functions.https.onCall(async (data)
     };
 });
 exports.publicCreateAccountantWorkspaceAccess = functions.https.onCall(async (data) => {
-    const officeName = asTrimmedString(data?.officeName) || 'Escritorio em configuracao';
-    const responsibleName = asTrimmedString(data?.responsibleName);
-    const email = asTrimmedString(data?.email).toLowerCase();
-    const password = String(data?.password ?? '').trim();
-    const confirmPassword = String(data?.confirmPassword ?? '').trim();
-    if (!responsibleName || !email) {
-        throw new functions.https.HttpsError('invalid-argument', 'Informe nome e email para criar o acesso do contador.');
+    try {
+        const officeName = asTrimmedString(data?.officeName) || 'Escritorio em configuracao';
+        const responsibleName = asTrimmedString(data?.responsibleName);
+        const email = asTrimmedString(data?.email).toLowerCase();
+        const password = String(data?.password ?? '').trim();
+        const confirmPassword = String(data?.confirmPassword ?? '').trim();
+        if (!responsibleName || !email) {
+            throw new functions.https.HttpsError('invalid-argument', 'Informe nome e email para criar o acesso do contador.');
+        }
+        if (password !== confirmPassword) {
+            throw new functions.https.HttpsError('invalid-argument', 'A confirmacao de senha nao confere.');
+        }
+        const result = await provisionLightweightOfficeAccess({
+            officeName,
+            responsibleName,
+            email,
+            password: password.length > 0 ? password : undefined,
+            source: 'public_lightweight_signup',
+        });
+        await notificarNovoCadastroAdministrativo({
+            signupType: 'office',
+            officeId: result.officeId,
+            officeName,
+            responsibleName,
+            responsibleEmail: email,
+        });
+        return {
+            ok: true,
+            officeId: result.officeId,
+            officeName,
+            email,
+            loginUrl: result.loginUrl,
+            emailDispatched: result.emailDispatched,
+            platformLinked: true,
+            message: result.emailDispatched
+                ? 'Acesso do contador criado. Enviamos o e-mail com criacao de senha, link web e orientacao da Play Store.'
+                : 'Acesso do contador criado. Entre no sistema e complete o perfil real do escritorio quando quiser.',
+        };
     }
-    if (password !== confirmPassword) {
-        throw new functions.https.HttpsError('invalid-argument', 'A confirmacao de senha nao confere.');
+    catch (error) {
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        const msg = errorMessage(error, 'unknown');
+        functions.logger.error('publicCreateAccountantWorkspaceAccess error', {
+            message: msg,
+            stack: error instanceof Error ? error.stack : undefined,
+        });
+        if (isLikelyFirebaseAdminIamSigningError(error)) {
+            throw new functions.https.HttpsError('failed-precondition', 'O pre-cadastro precisa de permissao IAM no Google Cloud: na conta de servico que executa as Cloud Functions, ' +
+                'conceda o papel "Token Creator de Conta de Servico" (roles/iam.serviceAccountTokenCreator) ' +
+                'sobre a conta firebase-adminsdk do projeto (necessario para links de redefinicao de senha).');
+        }
+        throw new functions.https.HttpsError('internal', `Nao foi possivel concluir o pre-cadastro do contador: ${msg}`);
     }
-    const result = await provisionLightweightOfficeAccess({
-        officeName,
-        responsibleName,
-        email,
-        password: password.length > 0 ? password : undefined,
-        source: 'public_lightweight_signup',
-    });
-    await notificarNovoCadastroAdministrativo({
-        signupType: 'office',
-        officeId: result.officeId,
-        officeName,
-        responsibleName,
-        responsibleEmail: email,
-    });
-    return {
-        ok: true,
-        officeId: result.officeId,
-        officeName,
-        email,
-        loginUrl: result.loginUrl,
-        emailDispatched: result.emailDispatched,
-        platformLinked: true,
-        message: result.emailDispatched
-            ? 'Acesso do contador criado. Enviamos o e-mail com criacao de senha, link web e orientacao da Play Store.'
-            : 'Acesso do contador criado. Entre no sistema e complete o perfil real do escritorio quando quiser.',
-    };
 });
 exports.accountantRegisterCompanyIndication = functions.https.onCall(async (data, context) => {
     const { uid } = assertAuth(context);

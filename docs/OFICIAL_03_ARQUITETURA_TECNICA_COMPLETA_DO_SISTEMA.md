@@ -37,6 +37,11 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 #### Entrada leve
 
 - `publicCreateCompanyWorkspaceAccess` e `publicCreateAccountantWorkspaceAccess` aceitam senha vazia no payload; o servidor gera senha interna e usa `generatePasswordResetLink` no fluxo de boas-vindas quando o correio envia.
+- `provisionLightweightOfficeAccess` sanitiza payloads Firestore (`omitUndefinedForFirestore`) em paralelo ao fluxo da empresa e regista falha de e-mail nos logs (`missingInviteConfig` + mensagem).
+
+#### IAM / Auth Admin (`signBlob`)
+
+- `createCustomToken` (demo: `publicOpenDemoAccess`) e `generatePasswordResetLink` podem falhar em producao quando a conta de servico que corre as Functions nao pode assinar blobs na conta firebase-adminsdk; nesse caso devolve-se `HttpsError` `failed-precondition` com orientacao IAM (`roles/iam.serviceAccountTokenCreator`), em vez de `internal` apenas com stack técnico.
 
 ## 3. Dados
 
