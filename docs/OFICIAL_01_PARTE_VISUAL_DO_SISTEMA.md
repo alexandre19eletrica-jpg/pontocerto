@@ -231,6 +231,7 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 - `/login-empresa`: link texto "Criar acesso da empresa" para o pre-cadastro.
 - `/vendas-empresa`: atalho texto "Sou contador — cadastro do escritorio" para `/cadastro-escritorio-contabil`.
 - `/vendas-empresa`: heroi alinhado ao pre-cadastro direto da empresa com contador opcional (sem obrigar escritorio primeiro).
+- `/vendas-empresa` e `/vendas-contador`: marcadores (**badges**) e subhead alinhados a mesma linha institucional (demonstracao gratuita antes de primeira adesao; ate trinta dias de uso avaliativo inicial apos adesao formal); card seguinte repetido sob titulo **Demonstracao gratuita do sistema**.
 - `/cadastro-empresa` (leve) e pre-cadastro comercial (`SalesPreRegistrationPage`): texto de confirmacao quando o envio por e-mail nao foi concluido.
 
 ## Regra de manutencao

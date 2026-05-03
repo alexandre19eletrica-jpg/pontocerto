@@ -3,6 +3,9 @@
 Data base: 02/05/2026
 Projeto: Ponto Certo
 
+**Registo (03/05/2026 — copy vendas empresa/contador demo + avaliacao):** `/vendas-empresa` e `/vendas-contador` alinham heroi (subhead e badges) e card **Demonstracao gratuita do sistema** com linguagem institucional unificada (demonstracao antes de adesao; trinta dias avaliativos apos adesao formal). Ver `OFICIAL_01`.
+
+
 **Registo (03/05/2026 — demo custom token fallback Secret):** apesar IAM `Token Creator` + `serviceAccountUser` em `firebase-adminsdk`, producao continuava com `signBlob` negado; `publicOpenDemoAccess` ganhou Secret **`ADMIN_SDK_AUTH_CERT_JSON`** (`defineSecret`), segunda app Admin com cert JSON e criacao local do token; mensagens IAM referenciam esse fallback operacional — chave gerada apenas fora do Git; `firebase functions:secrets:set` + redeploy.
 
 

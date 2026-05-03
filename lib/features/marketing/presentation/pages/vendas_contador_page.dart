@@ -31,17 +31,20 @@ class VendasContadorPage extends StatelessWidget {
                 ),
                 VendasLandingHero(
                   compact: compact,
-                  headline: 'Se a operação vive em áudio e mensagem solta, você não está no comando.',
-                  accentLine: 'Você está reagindo. E o escritório paga a conta.',
+                  headline:
+                      'Se a rotina vive em mensagens soltas perde-se o comando operacional.',
+                  accentLine:
+                      'Responder urgencia a urgencia desgasta tempo, clareza e reputacao juridico-contabil sem que o contrato reflita o esforco real cobrado pela carteira.',
                   subhead:
-                      'O Ponto Certo foi feito para você recuperar organização e controle: a empresa entra no fluxo '
-                      '(lança, anexa e emite onde o processo exige) e você fiscaliza com rastro — carteira, fiscal, '
-                      'documentos e faturamento no mesmo ritmo.',
+                      'O Ponto Certo reune operacao da empresa e trabalho do escritorio no mesmo ambiente: producao e documentos ficam registados onde o servico existe; '
+                      'o contador acompanha carteira fiscal, situacao fiscal e faturamento num so registo, sem depender apenas de troca informal por mensagens.'
+                      ' Avance primeiro pelo cadastro do escritorio (botao principal desta secao) ou inicie pela demonstracao gratuita seguinte em modo apenas navegacao, sem primeira adesao efectiva ate decidir.'
+                      ' Apos entrada formal garantimos ate trinta dias apenas para uso avaliativo inicial, ate condicao de cobranca acordada no passo comercial seguinte.',
                   badges: const [
-                    'Carteira com visão do que falta',
-                    'Fiscal com status e histórico',
-                    'Documentos com pedido fechado',
-                    '30 dias de teste grátis',
+                    'Demonstracao gratuita antes de primeira adesao',
+                    'Carteira fiscal e documentos com rasto',
+                    'Fiscal com status e linha do tempo',
+                    'Trinta dias de avaliacao apos primeira adesao',
                   ],
                   onPrimary: () {
                     context.go('/cadastro-escritorio-contabil');
@@ -69,13 +72,13 @@ class VendasContadorPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Teste o valor antes da conversa comercial',
+                          'Demonstracao gratuita do sistema',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Abra o demo do contador e veja sua carteira organizada com status fiscal, documentos e rotina em um fluxo que reduz cobranca solta e aumenta controle real.',
+                          'Modo demonstrativo: observe carteira, fiscal e faturamento sem gravar adesao efectiva do escritorio ate decidir avancar pelo cadastro.',
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(

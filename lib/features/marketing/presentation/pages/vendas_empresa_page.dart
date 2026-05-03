@@ -61,17 +61,18 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                   VendasLandingHero(
                     compact: compact,
                     headline:
-                        'Servico prestado com nota atrasada vira caixa travado.',
+                        'Servico prestado sem nota no prazo vira problema de caixa.',
                     accentLine:
-                        'Sua empresa precisa emitir com seguranca e manter a operacao organizada sem depender de improviso.',
+                        'Emitir com seguranca juridico-fiscal e manter tesouraria alinhada a producao custa menos do que reorganizar erro depois.',
                     subhead:
-                        'A empresa pode iniciar o pre-cadastro direto no sistema e completar os dados fiscais depois. '
-                        'Se ja tiver escritorio contabil, pode tambem indica-lo ao avancar — e o contador pode abrir o cadastro do escritorio pelo atalho abaixo.',
+                        'Comece na plataforma com o pre-cadastro da empresa e deixe a documentacao mais sensivel para quando seu escritorio calendarizar o fiscal.'
+                        ' Se ja opera com escritorio contabil externo, indique esse vinculo ao avancar; escritorios usam rota comercial propria dedicada a contadores.'
+                        ' Pode abrir antes a demonstracao seguinte (somente navegacao demonstrativa) ou avancar direto; apos primeira adesao formal, garantimos ate trinta dias para uso avaliativo antes de cobranca inicial acordada nos termos comerciais comunicados nessa fase.',
                     badges: const [
-                      'Pre-cadastro direto da empresa',
-                      'Emissao pelo celular ou computador',
-                      'Financeiro e documentos no mesmo fluxo',
-                      '30 dias de teste gratis',
+                      'Demonstracao gratuita antes de primeira adesao',
+                      'Pre-cadastro com complemento fiscal no seu ritmo',
+                      'Emissao no celular ou no computador',
+                      'Trinta dias de avaliacao apos primeira adesao',
                     ],
                     onPrimary: () => context.go('/cadastro-empresa'),
                     primaryLabel: 'COMEÇAR PRÉ-CADASTRO DA EMPRESA',
@@ -96,13 +97,13 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Veja o fluxo antes de decidir',
+                            'Demonstracao gratuita do sistema',
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w900),
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Abra o demo da empresa e veja como a rotina sai do improviso e entra num fluxo com emissao, financeiro e documentos organizados no mesmo ambiente.',
+                            'Use esta area para navegar em modo apenas demonstrativo: pode observar emissao, financeiro e documentacao sem iniciar primeira adesao empresarial no sistema.',
                           ),
                           const SizedBox(height: 12),
                           Align(
