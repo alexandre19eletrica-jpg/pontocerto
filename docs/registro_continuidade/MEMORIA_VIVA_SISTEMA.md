@@ -1,8 +1,20 @@
 ﻿# Memoria viva do sistema (operacional)
 
-Data (ultima edicao): 27/04/2026
+Data (ultima edicao): 02/05/2026
 
 Este documento consolida o que o sistema **promete**, como ele **funciona hoje**, e onde existem **desalinhamentos**/riscos. Ele complementa (nao substitui) `ESTADO_ATUAL_DO_SISTEMA.md` e deve ser atualizado quando mudancas relevantes entrarem.
+
+## Regra suprema operacional (02/05/2026)
+
+- Esta e a **regra suprema** para as proximas rodadas: o **Codex** cuida da **edicao de codigo, rules e documentacao tecnica**; o **operador** executa no proprio terminal os passos de `analyze`, `build`, `deploy`, `AAB` e `copia de artefacto`.
+- Ao fim de cada rodada, os comandos devem ser entregues **ja revisados, completos e prontos para PowerShell**, com prioridade explicita em **evitar erro de execucao** no terminal do operador.
+- Quando houver risco de ambiente, permissao, cache, caminho ou sintaxe, isso deve vir resolvido na forma do comando final entregue ao operador.
+- Neste ambiente, o padrao seguro e usar `--no-pub` em `flutter analyze` e `flutter build appbundle`, parar no primeiro erro e nunca seguir para `deploy` ou copia de artefacto quando o build falhar.
+- Comandos longos de PowerShell, principalmente `Copy-Item`, devem vir sem quebra interna de linha para evitar que parametros como `-Destination` sejam executados como se fossem outro comando.
+- O demo publico deve usar **dados ficticios controlados pelo sistema**, sem reaproveitar dados reais de empresa cliente em paginas de venda ou acessos publicos. A identidade padrao atual do demo e **empresa `Ponto Certo`** e **contador `Escritorio Ponto Certo`**, ambos em modo `demoReadOnly`.
+- As rotas publicas de acesso real precisam continuar acessiveis mesmo com sessao demo ativa, para que o lead consiga sair do modo demonstracao e entrar no pre-cadastro sem bloqueio.
+- Publicacao de backend e publicacao de web sao camadas diferentes: se a alteracao estiver na interface Flutter, `functions` nao bastam; precisa rebuild web + deploy de `hosting`.
+- Evidencia operacional de `03/05/2026`: houve `Deploy complete!` em `functions`, `flutter build appbundle --release --no-pub` bem-sucedido e `Copy-Item` concluido para `pontocerto-ULTIMA.aab`. Mesmo assim, as alteracoes de tela nao apareceram porque nao houve deploy de `hosting` nessa sequencia. Essa diferenca deve continuar explicita nas proximas rodadas.
 
 ## Governanca integracao Focus (atual, 27/04/2026)
 
@@ -288,3 +300,8 @@ Implementacao:
   - empresa ve o switch travado e o texto â€œAguardando validacao do contadorâ€
   - contador pode marcar â€œAtivo no emissorâ€
 
+- Regra suprema operacional vigente em 02/05/2026:
+  - Codex edita codigo, rules e documentacao tecnica
+  - operador executa analyze, build, deploy, AAB e limpeza
+  - comandos finais devem vir sempre em uma unica sequencia pronta para PowerShell
+  - Codex nao deve consumir o tempo operacional do usuario com tarefas pesadas por padrao

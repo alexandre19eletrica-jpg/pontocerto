@@ -11,7 +11,7 @@ const _line = Color(0xFFDCE5EF);
 
 void _irContratarTrialEscritorio(BuildContext context) {
   metaFbqTrackStartTrialEscritorio();
-  context.go('/cadastro-escritorio-contabil');
+  context.go('/cadastro-empresa');
 }
 
 class SalesPage extends StatefulWidget {
@@ -386,7 +386,7 @@ class _OriginSection extends StatelessWidget {
           SizedBox(height: 18),
           _QuoteBox(
             text:
-                'O problema não era o contador. Nem a empresa. Era a falta de um processo que obrigasse a informação a chegar certa.',
+                'O problema raramente era falta de boa vontade; era informacao dispersa sem um fluxo com padrao e prazo definidos.',
           ),
           SizedBox(height: 16),
           Text('E foi isso que eu construí.', style: _strongBodyStyle),
@@ -409,9 +409,9 @@ class _SolutionSection extends StatelessWidget {
       body:
           'O Ponto Certo não é um ERP cheio de função. É um fluxo que organiza a operação entre empresa e contador.',
       items: const [
-        'A empresa envia tudo no lugar certo',
-        'O contador recebe tudo organizado',
-        'As informações chegam completas e no tempo certo',
+        'Um unico lugar para registrar e acompanhar a operacao',
+        'Fluxo pensado tambem para o time contabil e fiscal',
+        'Informacoes chegam estruturadas e auditaveis',
       ],
       asset: 'assets/marketing/sales/contador-fiscal.png',
       imageLabel: 'Fiscal e rotina contábil',

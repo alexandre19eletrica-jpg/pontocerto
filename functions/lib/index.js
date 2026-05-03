@@ -541,7 +541,7 @@ function buildDefaultPublicSalesConfig(current) {
             title: asTrimmedString(planSolo.title) || 'Plano Solo',
             priceLabel: 'R$ 97,90/mes',
             priceCents: 9790,
-            implantationLabel: 'Teste real gratis por 30 dias. A empresa precisa indicar o contador para conduzir o cadastro.',
+            implantationLabel: 'Teste real gratuito por 30 dias, com operacao administrativa e fiscal organizadas desde o primeiro acesso.',
             implementationFeeCents: 0,
             checkoutUrl: asTrimmedString(planSolo.checkoutUrl) ||
                 'https://www.asaas.com/c/zl74djk2gu2sc88p',
@@ -551,7 +551,7 @@ function buildDefaultPublicSalesConfig(current) {
             title: asTrimmedString(planEquipe.title) || 'Plano Equipe',
             priceLabel: 'R$ 97,90/mes',
             priceCents: 9790,
-            implantationLabel: 'Teste real gratis por 30 dias. A empresa precisa indicar o contador para conduzir o cadastro.',
+            implantationLabel: 'Teste real gratuito por 30 dias. A entrada pelo web alinha empresa e escritorio no mesmo fluxo operacional.',
             implementationFeeCents: 0,
             checkoutUrl: asTrimmedString(planEquipe.checkoutUrl) ||
                 'https://www.asaas.com/c/twi5txqg1lcqq7gd',
@@ -610,10 +610,10 @@ function normalizePublicDemoProfile(value) {
 function buildDefaultDemoAccessConfig(current) {
     return {
         enabled: current.enabled !== false,
-        ownerUid: asTrimmedString(current.ownerUid) || PUBLIC_DEMO_OWNER_UID,
-        accountantUid: asTrimmedString(current.accountantUid) || PUBLIC_DEMO_ACCOUNTANT_UID,
-        ownerCompanyId: asTrimmedString(current.ownerCompanyId) || PUBLIC_DEMO_COMPANY_ID,
-        accountantCompanyId: asTrimmedString(current.accountantCompanyId) || PUBLIC_DEMO_COMPANY_ID,
+        ownerUid: PUBLIC_DEMO_OWNER_UID,
+        accountantUid: PUBLIC_DEMO_ACCOUNTANT_UID,
+        ownerCompanyId: PUBLIC_DEMO_COMPANY_ID,
+        accountantCompanyId: PUBLIC_DEMO_COMPANY_ID,
         ownerDisplayName: asTrimmedString(current.ownerDisplayName) || PUBLIC_DEMO_COMPANY_NAME,
         accountantDisplayName: asTrimmedString(current.accountantDisplayName) || PUBLIC_DEMO_OFFICE_NAME,
     };
@@ -702,6 +702,31 @@ async function ensurePublicDemoUser(params) {
 async function ensurePublicDemoAuthUser(params) {
     try {
         const user = await admin.auth().getUser(params.uid);
+        const currentEmail = asTrimmedString(user.email).toLowerCase();
+        const desiredEmail = params.email.toLowerCase();
+        if (currentEmail !== desiredEmail || asTrimmedString(user.displayName) !== params.displayName) {
+            try {
+                await admin.auth().updateUser(user.uid, {
+                    email: params.email,
+                    displayName: params.displayName,
+                    disabled: false,
+                    emailVerified: true,
+                });
+            }
+            catch (error) {
+                const typed = error;
+                if (typed.code === 'auth/email-already-exists') {
+                    const userByEmail = await admin.auth().getUserByEmail(params.email);
+                    await admin.auth().updateUser(userByEmail.uid, {
+                        displayName: params.displayName,
+                        disabled: false,
+                        emailVerified: true,
+                    });
+                    return userByEmail.uid;
+                }
+                throw error;
+            }
+        }
         return user.uid;
     }
     catch (error) {
@@ -856,17 +881,6 @@ async function buildPublicDemoAccessSummary() {
         companyUnique,
         accountantUnique,
     };
-}
-async function resolvePublicDemoCompanyId(params) {
-    const preferredCompanyId = asTrimmedString(params.preferredCompanyId);
-    if (preferredCompanyId) {
-        return preferredCompanyId;
-    }
-    const fallbackCompanyId = asTrimmedString(params.fallbackCompanyId);
-    if (fallbackCompanyId) {
-        return fallbackCompanyId;
-    }
-    return PUBLIC_DEMO_COMPANY_ID;
 }
 async function ensurePublicEmployeeTesterCompany() {
     const settingsRef = admin
@@ -6664,13 +6678,14 @@ async function createOrUpdateAccountingOffice(params) {
     const responsibleName = params.responsibleName.trim();
     const phone = params.phone.trim();
     const email = params.email.trim().toLowerCase();
-    const password = String(params.password ?? '');
+    const rawPassword = String(params.password ?? '').trim();
+    const password = rawPassword.length >= 8 ? rawPassword : gerarSenhaTemporaria();
     const address = params.address.trim();
     const city = params.city.trim();
     const state = params.state.trim().toUpperCase();
     const billingChoice = params.billingChoice.trim().toLowerCase() === 'company' ? 'company' : 'office';
     const notes = params.notes.trim();
-    if (!officeName || cnpj.length !== 14 || !responsibleName || !phone || !email || !password) {
+    if (!officeName || cnpj.length !== 14 || !responsibleName || !phone || !email || !address || !city || !state) {
         throw new functions.https.HttpsError('invalid-argument', 'Preencha os dados obrigatorios do escritorio.');
     }
     const existingOfficeSnap = await accountingOfficeRef()
@@ -9542,17 +9557,7 @@ exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
     if (config.enabled !== true) {
         throw new functions.https.HttpsError('failed-precondition', 'O acesso demo publico esta desativado no momento.');
     }
-    const companyId = await resolvePublicDemoCompanyId({
-        preferredCompanyId: profile === 'accountant'
-            ? asTrimmedString(config.accountantCompanyId)
-            : asTrimmedString(config.ownerCompanyId),
-        fallbackCompanyId: profile === 'accountant'
-            ? asTrimmedString(config.ownerCompanyId)
-            : '',
-    });
-    if (!companyId) {
-        throw new functions.https.HttpsError('failed-precondition', `CompanyId demo nao configurado para ${profile}.`);
-    }
+    const companyId = PUBLIC_DEMO_COMPANY_ID;
     const visitorId = asTrimmedString(data?.visitorId);
     if (!visitorId) {
         throw new functions.https.HttpsError('invalid-argument', 'visitorId obrigatorio para acesso demo.');
@@ -9564,9 +9569,7 @@ exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
     const language = asTrimmedString(data?.language).slice(0, 32);
     const screenWidth = Number(data?.screenWidth ?? 0) || 0;
     const screenHeight = Number(data?.screenHeight ?? 0) || 0;
-    const uid = profile === 'accountant'
-        ? asTrimmedString(config.accountantUid) || PUBLIC_DEMO_ACCOUNTANT_UID
-        : asTrimmedString(config.ownerUid) || PUBLIC_DEMO_OWNER_UID;
+    const uid = profile === 'accountant' ? PUBLIC_DEMO_ACCOUNTANT_UID : PUBLIC_DEMO_OWNER_UID;
     const role = profile === 'accountant' ? 'ACCOUNTANT' : 'OWNER';
     const displayName = profile === 'accountant'
         ? asTrimmedString(config.accountantDisplayName) || PUBLIC_DEMO_OFFICE_NAME
@@ -9650,6 +9653,8 @@ exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
         companyId,
         role,
         employeeId: authUid,
+        demoReadOnly: true,
+        demoProfile: profile,
     });
     const summary = await buildPublicDemoAccessSummary();
     return {
@@ -9685,28 +9690,6 @@ exports.platformUpdateDemoAccessConfig = functions.https.onCall(async (data, con
         ? asRecord(nested)
         : d;
     const nextConfig = buildDefaultDemoAccessConfig(clientConfig);
-    const ownerCompanyId = asTrimmedString(nextConfig.ownerCompanyId);
-    const accountantCompanyId = asTrimmedString(nextConfig.accountantCompanyId);
-    if (ownerCompanyId) {
-        const ownerCompanySnap = await admin
-            .firestore()
-            .collection('company_settings')
-            .doc(ownerCompanyId)
-            .get();
-        if (!ownerCompanySnap.exists) {
-            throw new functions.https.HttpsError('invalid-argument', 'ownerCompanyId do demo empresa nao encontrado.');
-        }
-    }
-    if (accountantCompanyId) {
-        const accountantCompanySnap = await admin
-            .firestore()
-            .collection('company_settings')
-            .doc(accountantCompanyId)
-            .get();
-        if (!accountantCompanySnap.exists) {
-            throw new functions.https.HttpsError('invalid-argument', 'accountantCompanyId do demo contador nao encontrado.');
-        }
-    }
     await demoAccessConfigRef().set({
         ...nextConfig,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -9916,33 +9899,57 @@ exports.publicCreateSalesPreRegistration = functions.https.onCall(async (data) =
             : existing.docs[0].data().createdAt ?? admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
     const emailCfg = obterConfigEmail();
-    await enviarEmailPreCadastroPlano({
-        email: customerEmail,
-        nome: customerName,
-        planTitle: asTrimmedString(plan.title),
-        checkoutUrl,
-        implementationMode,
-        implementationLabel: asTrimmedString(plan.implantationLabel),
-        partnerInviteUrl: partnerInviteUrl,
-        fromEmail: emailCfg.fromEmail,
-        sendgridKey: emailCfg.sendgridKey,
-        smtpUser: emailCfg.smtpUser,
-        smtpAppPassword: emailCfg.smtpAppPassword,
-    });
-    if (implementationMode === 'accountant') {
-        await enviarEmailConviteContadorParceiro({
-            email: accountantEmail,
-            accountantName,
-            customerName,
-            customerEmail,
+    let precadastroEmpresaEmailOk = false;
+    let conviteParceiroEmailOk = false;
+    try {
+        await enviarEmailPreCadastroPlano({
+            email: customerEmail,
+            nome: customerName,
             planTitle: asTrimmedString(plan.title),
             checkoutUrl,
-            inviteUrl: partnerInviteUrl,
+            implementationMode,
+            implementationLabel: asTrimmedString(plan.implantationLabel),
+            partnerInviteUrl: partnerInviteUrl,
             fromEmail: emailCfg.fromEmail,
             sendgridKey: emailCfg.sendgridKey,
             smtpUser: emailCfg.smtpUser,
             smtpAppPassword: emailCfg.smtpAppPassword,
         });
+        precadastroEmpresaEmailOk = true;
+    }
+    catch (error) {
+        functions.logger.warn('Falha ao enviar email de pre-cadastro para a empresa', {
+            leadId: leadRef.id,
+            customerEmail,
+            missing: missingInviteConfig(emailCfg),
+            error: errorMessage(error, 'unknown'),
+        });
+    }
+    if (implementationMode === 'accountant') {
+        try {
+            await enviarEmailConviteContadorParceiro({
+                email: accountantEmail,
+                accountantName,
+                customerName,
+                customerEmail,
+                planTitle: asTrimmedString(plan.title),
+                checkoutUrl,
+                inviteUrl: partnerInviteUrl,
+                fromEmail: emailCfg.fromEmail,
+                sendgridKey: emailCfg.sendgridKey,
+                smtpUser: emailCfg.smtpUser,
+                smtpAppPassword: emailCfg.smtpAppPassword,
+            });
+            conviteParceiroEmailOk = true;
+        }
+        catch (error) {
+            functions.logger.warn('Falha ao enviar email de convite ao parceiro contabil', {
+                leadId: leadRef.id,
+                accountantEmail,
+                missing: missingInviteConfig(emailCfg),
+                error: errorMessage(error, 'unknown'),
+            });
+        }
     }
     try {
         await provisionLightweightOfficeAccess({
@@ -9987,6 +9994,8 @@ exports.publicCreateSalesPreRegistration = functions.https.onCall(async (data) =
         leadId: leadRef.id,
         checkoutUrl,
         partnerInviteUrl,
+        precadastroEmpresaEmailOk,
+        conviteParceiroEmailOk,
     };
 });
 exports.publicGetAccountantPartnerInvite = functions.https.onCall(async (data) => {
@@ -10681,10 +10690,10 @@ exports.publicCreateAccountantWorkspaceAccess = functions.https.onCall(async (da
     const officeName = asTrimmedString(data?.officeName) || 'Escritorio em configuracao';
     const responsibleName = asTrimmedString(data?.responsibleName);
     const email = asTrimmedString(data?.email).toLowerCase();
-    const password = String(data?.password ?? '');
-    const confirmPassword = String(data?.confirmPassword ?? '');
-    if (!responsibleName || !email || !password) {
-        throw new functions.https.HttpsError('invalid-argument', 'Informe nome, email e senha para criar o acesso do contador.');
+    const password = String(data?.password ?? '').trim();
+    const confirmPassword = String(data?.confirmPassword ?? '').trim();
+    if (!responsibleName || !email) {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe nome e email para criar o acesso do contador.');
     }
     if (password !== confirmPassword) {
         throw new functions.https.HttpsError('invalid-argument', 'A confirmacao de senha nao confere.');
@@ -10693,7 +10702,7 @@ exports.publicCreateAccountantWorkspaceAccess = functions.https.onCall(async (da
         officeName,
         responsibleName,
         email,
-        password,
+        password: password.length > 0 ? password : undefined,
         source: 'public_lightweight_signup',
     });
     await notificarNovoCadastroAdministrativo({
@@ -11015,9 +11024,10 @@ exports.publicRegisterCompanyDirectSignup = functions.https.onCall(async (data) 
     const accountantEmail = asTrimmedString(data?.accountantEmail).toLowerCase();
     const registrySnapshot = asRecord(data?.registrySnapshot);
     const trialInviteToken = asTrimmedString(data?.trialInviteToken);
-    if (!ownerEmail || !ownerPassword || !ownerName || !legalName || !tradeName) {
+    if (!ownerEmail || !ownerName || !legalName || !tradeName) {
         throw new functions.https.HttpsError('invalid-argument', 'Preencha os dados obrigatorios do responsavel e da empresa.');
     }
+    const effectiveOwnerPassword = ownerPassword.trim().length > 0 ? ownerPassword : gerarSenhaTemporaria();
     const companyEmail = companyEmailRaw || ownerEmail;
     if (cnpj.length !== 14) {
         throw new functions.https.HttpsError('invalid-argument', 'CNPJ invalido.');
@@ -11107,7 +11117,7 @@ exports.publicRegisterCompanyDirectSignup = functions.https.onCall(async (data) 
         }
         previousLightweightCompanyId = asTrimmedString(existingUser.companyId);
         await admin.auth().updateUser(ownerRecord.uid, {
-            password: ownerPassword,
+            password: effectiveOwnerPassword,
             displayName: ownerName,
         });
     }
@@ -11117,7 +11127,7 @@ exports.publicRegisterCompanyDirectSignup = functions.https.onCall(async (data) 
             try {
                 ownerRecord = await admin.auth().createUser({
                     email: ownerEmail,
-                    password: ownerPassword,
+                    password: effectiveOwnerPassword,
                     displayName: ownerName,
                     emailVerified: false,
                 });
@@ -11399,12 +11409,12 @@ exports.publicRegisterCompanyDirectSignup = functions.https.onCall(async (data) 
 });
 exports.publicCreateCompanyWorkspaceAccess = functions.https.onCall(async (data) => {
     const ownerEmail = asTrimmedString(data?.ownerEmail).toLowerCase();
-    const ownerPassword = String(data?.ownerPassword ?? '');
-    const confirmPassword = String(data?.confirmPassword ?? '');
+    const ownerPassword = String(data?.ownerPassword ?? '').trim();
+    const confirmPassword = String(data?.confirmPassword ?? '').trim();
     const ownerName = asTrimmedString(data?.ownerName);
     const companyName = asTrimmedString(data?.companyName) || 'Empresa em configuracao';
-    if (!ownerEmail || !ownerPassword || !ownerName) {
-        throw new functions.https.HttpsError('invalid-argument', 'Informe nome, email e senha para criar o acesso da empresa.');
+    if (!ownerEmail || !ownerName) {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe nome e email para criar o acesso da empresa.');
     }
     if (ownerPassword !== confirmPassword) {
         throw new functions.https.HttpsError('invalid-argument', 'A confirmacao de senha nao confere.');
@@ -11413,7 +11423,7 @@ exports.publicCreateCompanyWorkspaceAccess = functions.https.onCall(async (data)
         ownerEmail,
         ownerName,
         companyName,
-        password: ownerPassword,
+        password: ownerPassword.length > 0 ? ownerPassword : undefined,
         source: 'public_lightweight_access',
     });
     await notificarNovoCadastroAdministrativo({

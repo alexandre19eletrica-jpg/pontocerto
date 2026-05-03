@@ -49,6 +49,9 @@ class PublicDemoAccessService {
   }) async {
     final callable = _functions.httpsCallable('publicOpenDemoAccess');
     final tracking = await _analytics.currentTrackingPayload();
+    try {
+      await _auth.signOut();
+    } catch (_) {}
     final response = await callable.call(<String, dynamic>{
       'profile': profile,
       'pagePath': pagePath,
@@ -62,8 +65,16 @@ class PublicDemoAccessService {
         message: 'Token demo ausente.',
       );
     }
-    await _auth.signOut();
-    await _auth.signInWithCustomToken(customToken);
+    try {
+      await _auth.signOut();
+    } catch (_) {}
+    try {
+      await _auth.signInWithCustomToken(customToken);
+    } on FirebaseAuthException {
+      await _auth.signOut();
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      await _auth.signInWithCustomToken(customToken);
+    }
     return PublicDemoAccessResult.fromMap(data);
   }
 

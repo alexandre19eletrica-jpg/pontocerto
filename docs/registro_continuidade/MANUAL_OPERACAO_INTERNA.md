@@ -6,6 +6,26 @@ Data: 22/03/2026
 
 Orientar a operacao minima do sistema sem depender de memoria informal.
 
+## Regra suprema
+
+- Esta e a **regra suprema** do fluxo operacional atual.
+- O **Codex** edita o codigo, as rules e a documentacao tecnica.
+- O **operador** executa no proprio terminal os comandos finais da rodada.
+- Esses comandos devem ser entregues pelo Codex **sem ambiguidade, sem depender de ajuste manual desnecessario e ja revisados para evitar erro na execucao**.
+- Neste ambiente, `flutter analyze` e `flutter build appbundle` devem sair com `--no-pub` por padrao para evitar falha externa do `pub.dev` ao decodificar advisories.
+- A sequencia final deve **parar no primeiro erro** e **nao continuar** para `deploy`, copia de artefacto ou limpeza dependente quando uma etapa anterior falhar.
+- `Copy-Item` so deve rodar se o `.aab` existir.
+- Linhas com `Copy-Item` e comandos longos do PowerShell devem ser entregues em **uma unica linha fisica**, sem quebra manual no meio dos parametros.
+- Quando houver demo publico no fluxo, a saida para o acesso real deve ser tratada como rota publica e nao pode depender de logout manual do operador.
+- Se a rodada mexer em interface Flutter (`lib/`, landings, rotas, shell, paginas, copy), e obrigatorio publicar `hosting`. `firebase deploy --only functions` sozinho nao sobe a atualizacao visual.
+- Caso confirmado em `03/05/2026`: `firebase deploy --only functions` pode concluir com sucesso e ainda assim deixar a web antiga no ar. Esse comando sobe backend; para publicar interface Flutter web e preciso `build web` + `firebase deploy --only hosting` (ou `hosting,functions`).
+- O pacote operacional minimo a entregar ao final de cada rodada e:
+  - `analyze`
+  - `build`
+  - `deploy`
+  - `AAB`
+  - `copiar artefacto`
+
 ## Fluxos centrais
 
 ### 1. Cliente e tarefa
@@ -48,12 +68,24 @@ Orientar a operacao minima do sistema sem depender de memoria informal.
 ## Rotina recomendada por rodada
 
 1. atualizar ou revisar `CONTINUIDADE_ATUAL.md`
-2. rodar `powershell -ExecutionPolicy Bypass -File .\scripts\guard_flutter_cycle.ps1 -Mode validate-only` antes de abrir nova frente grande ou fechar refatoracao estrutural
-3. usar `powershell -ExecutionPolicy Bypass -File .\scripts\guard_flutter_cycle.ps1 -Mode web-fast` para build web rapido e `-Mode appbundle-fast` para Android rapido quando a validacao ja estiver limpa
-4. se algo falhar, corrigir na mesma rodada e rerodar a guarda; nao empilhar avisos, erros de analise ou quebras estruturais para depois
-5. usar `scripts/check_core_consistency.ps1` apenas como apoio quando o ambiente estiver instavel ou como fallback textual
-6. revisar os arquivos centrais alterados
-7. atualizar documentos de continuidade se a arquitetura mudou
+2. o Codex edita o codigo e, ao fim da rodada, entrega os comandos prontos para o operador executar no outro terminal
+3. rodar `analyze`, `build`, `deploy`, `AAB` e `copia do artefacto` conforme a necessidade da rodada
+4. usar `powershell -ExecutionPolicy Bypass -File .\scripts\guard_flutter_cycle.ps1 -Mode validate-only` antes de abrir nova frente grande ou fechar refatoracao estrutural
+5. usar `powershell -ExecutionPolicy Bypass -File .\scripts\guard_flutter_cycle.ps1 -Mode web-fast` para build web rapido e `-Mode appbundle-fast` para Android rapido quando a validacao ja estiver limpa
+6. se algo falhar, corrigir na mesma rodada e rerodar a guarda; nao empilhar avisos, erros de analise ou quebras estruturais para depois
+7. usar `scripts/check_core_consistency.ps1` apenas como apoio quando o ambiente estiver instavel ou como fallback textual
+8. revisar os arquivos centrais alterados
+9. atualizar documentos de continuidade se a arquitetura mudou
+
+## Comandos padrao para o operador
+
+- `C:\Users\hp\flutter\flutter\bin\flutter.bat pub get` quando `.dart_tool` tiver sido limpo ou a rodada anterior tiver executado `flutter clean`
+- `C:\Users\hp\flutter\flutter\bin\flutter.bat analyze --no-pub`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\build_flutter_direct.ps1 -Target web -NoPub`
+- `cmd /c npm.cmd --prefix functions run build`
+- `firebase deploy --only hosting,functions,firestore:rules,storage --project pontocerto-e1dab`
+- `C:\Users\hp\flutter\flutter\bin\flutter.bat build appbundle --release --no-pub`
+- `Copy-Item` apenas se `build\app\outputs\bundle\release\app-release.aab` existir
 
 ## Regra permanente de saude tecnica
 
@@ -69,3 +101,10 @@ Orientar a operacao minima do sistema sem depender de memoria informal.
 - gerar receita manual quando a nota ja criou movimento automaticamente
 - abrir novas frentes grandes sem revisar `Fiscal`, `Financeiro` e `Workforce`
 - apagar registros correntes de continuidade
+- Regra suprema operacional:
+  - o Codex cuida apenas de codigo, rules e documentacao tecnica
+  - analyze, build, deploy, AAB e copia de artefacto ficam com o operador no terminal dele
+  - o Codex nao deve executar tarefas pesadas como fluxo padrao
+  - ao final de cada rodada, os comandos devem ser entregues em uma unica sequencia pronta para copiar e colar no PowerShell
+  - a sequencia deve parar no primeiro erro e evitar publicar artefato antigo por acidente
+  - comandos sensiveis do PowerShell nao devem vir quebrados em duas linhas

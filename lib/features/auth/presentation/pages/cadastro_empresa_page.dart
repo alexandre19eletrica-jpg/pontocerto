@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pontocerto/core/auth/claims_sync.dart';
 import 'package:pontocerto/core/auth/session.dart';
 import 'package:pontocerto/core/company/empresa_cache.dart';
 import 'package:pontocerto/core/errors/app_error_mapper.dart';
@@ -12,7 +11,6 @@ import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/utils/formatadores_input.dart';
 import 'package:pontocerto/core/widgets/botao_voltar_app.dart';
-import 'package:pontocerto/features/fiscal/presentation/services/fiscal_registry_lookup_service.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
 
 class PaginaCadastroEmpresa extends ConsumerStatefulWidget {
@@ -38,7 +36,6 @@ class PaginaCadastroEmpresa extends ConsumerStatefulWidget {
 
 class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
   final _cadEmailController = TextEditingController();
-  final _cadSenhaController = TextEditingController();
   final _responsavelController = TextEditingController();
   final _razaoSocialController = TextEditingController();
   final _nomeFantasiaController = TextEditingController();
@@ -71,7 +68,6 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
   @override
   void dispose() {
     _cadEmailController.dispose();
-    _cadSenhaController.dispose();
     _responsavelController.dispose();
     _razaoSocialController.dispose();
     _nomeFantasiaController.dispose();
@@ -154,7 +150,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                   : completionMode
                       ? 'Complete agora os dados reais da empresa para liberar a operacao com base fiscal correta.'
                       : lightweightMode
-                          ? 'Crie o acesso da empresa com nome, email e senha.'
+                          ? 'Crie o acesso da empresa com nome, e-mail e confirmacao pelo link que enviamos.'
                           : 'Crie a conta da empresa e entre no painel principal.',
               subtitle: accountantMode
                   ? 'Use este modulo para abrir uma nova empresa vinculada ao escritorio contabil. A cobranca e o acesso da empresa sao definidos no mesmo fluxo.'
@@ -205,7 +201,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                             : completionMode
                                 ? 'Preencha agora os dados reais da empresa. Se quiser, voce tambem pode indicar o contador neste passo.'
                                 : lightweightMode
-                                    ? 'Comece com nome, email e senha. Depois, ja no sistema, complete os dados reais da empresa.'
+                                    ? 'Comece com nome e e-mail. Defina a senha pelo link do e-mail e complete os dados reais da empresa dentro do sistema.'
                                     : 'Preencha os dados da empresa para concluir o cadastro.',
                         style: tema.textTheme.bodyMedium?.copyWith(
                           color: AppBrandColors.softText,
@@ -329,13 +325,6 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                         keyboardType: TextInputType.emailAddress,
                         icon: Icons.alternate_email_rounded,
                       ),
-                      if (!accountantMode && !completionMode)
-                        _campo(
-                          controller: _cadSenhaController,
-                          label: 'Senha *',
-                          obscureText: true,
-                          icon: Icons.lock_outline_rounded,
-                        ),
                       if (lightweightMode) ...[
                         _campo(
                           controller: _responsavelController,
@@ -575,7 +564,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                                   : completionMode
                                       ? 'Concluir cadastro da empresa'
                                       : lightweightMode
-                                          ? 'Criar acesso e entrar'
+                                          ? 'Solicitar acesso por e-mail'
                                   : 'Cadastrar empresa',
                         ),
                       ),
@@ -614,7 +603,6 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
 
   Future<void> _criarContaEmpresa() async {
     final email = _cadEmailController.text.trim();
-    final senha = _cadSenhaController.text;
     final responsavel = _responsavelController.text.trim();
     final razaoSocial = _razaoSocialController.text.trim();
     final nomeFantasia = _nomeFantasiaController.text.trim();
@@ -631,11 +619,8 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
     final completionMode = widget.completionMode;
 
     if (lightweightMode) {
-      if (email.isEmpty ||
-          senha.isEmpty ||
-          responsavel.isEmpty ||
-          nomeFantasia.isEmpty) {
-        _msg('Preencha nome da empresa, responsavel, email e senha.');
+      if (email.isEmpty || responsavel.isEmpty || nomeFantasia.isEmpty) {
+        _msg('Preencha nome da empresa, responsavel e e-mail.');
         return;
       }
       setState(() => _carregando = true);
@@ -645,36 +630,17 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
         );
         final response = await callable.call(<String, dynamic>{
           'ownerEmail': email,
-          'ownerPassword': senha,
-          'confirmPassword': senha,
+          'ownerPassword': '',
+          'confirmPassword': '',
           'ownerName': responsavel,
           'companyName': nomeFantasia,
         });
-        final result = Map<String, dynamic>.from(response.data as Map);
-        final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email,
-          password: senha,
-        );
-        final uid = cred.user?.uid;
-        if (uid == null) {
-          _msg('Conta criada, mas nao foi possivel abrir a sessao automaticamente.');
-          return;
-        }
-        await syncClaimsForCurrentUser();
-        ref.read(sessionProvider.notifier).definirSessaoPorMapa(
-              userId: uid,
-              dados: {
-                'companyId': result['companyId'],
-                'role': 'OWNER',
-                'nome': responsavel,
-                'email': email,
-              },
-            );
-        ref.read(nomeEmpresaCacheProvider.notifier).state = nomeFantasia;
-        await salvarNomeEmpresaCache(nomeFantasia);
+        Map<String, dynamic>.from(response.data as Map);
         if (!mounted) return;
-        _msg('Acesso criado. Complete agora o cadastro real da empresa.');
-        context.go('/completar-empresa');
+        _msg(
+          'Pedido registrado. Verifique sua caixa de entrada para criar a senha e entrar pelo link enviado.',
+        );
+        context.go('/login-empresa?email=${Uri.encodeComponent(email)}');
       } catch (e) {
         _msg(AppErrorMapper.messageFrom(e, fallback: 'Erro ao criar acesso.'));
       } finally {
@@ -744,7 +710,6 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
     }
 
     if ((!accountantMode && email.isEmpty) ||
-        (!accountantMode && senha.isEmpty) ||
         responsavel.isEmpty ||
         razaoSocial.isEmpty ||
         nomeFantasia.isEmpty ||
@@ -782,7 +747,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
       );
       final response = await callable.call(<String, dynamic>{
         'ownerEmail': email,
-        'ownerPassword': accountantMode ? '' : senha,
+        'ownerPassword': '',
         'ownerName': responsavel,
         'legalName': razaoSocial,
         'tradeName': nomeFantasia,
@@ -861,49 +826,15 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
         return;
       }
 
-      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: senha,
-      );
-      final uid = cred.user?.uid;
-      if (uid == null) {
-        _msg('Conta criada, mas nao foi possivel abrir a sessao automaticamente.');
-        return;
-      }
-
-      await syncClaimsForCurrentUser();
-      await _provisionarEmpresa(
-        companyName: nomeFantasia,
-        companyData: {
-          'razaoSocial': razaoSocial,
-          'nomeFantasia': nomeFantasia,
-          'cnpj': cnpj,
-          'businessCategory': _businessCategory,
-          'inscricaoEstadual': _stateRegistrationRequired ? ie : '',
-          'inscricaoEstadualDispensada': !_stateRegistrationRequired,
-          'inscricaoMunicipalObrigatoria': _businessCategory == 'service',
-          'inscricaoMunicipal': im,
-          'telefone': telefone,
-          'email': emailEmpresa,
-          'endereco': endereco,
-        },
-      );
-
-      ref.read(sessionProvider.notifier).definirSessaoPorMapa(
-            userId: uid,
-            dados: {
-              'companyId': result['companyId'],
-              'role': 'OWNER',
-              'nome': responsavel,
-            },
-          );
-
-      ref.read(nomeEmpresaCacheProvider.notifier).state = nomeFantasia;
-      await salvarNomeEmpresaCache(nomeFantasia);
+      final emailDispatched = result['emailDispatched'] == true;
 
       if (!mounted) return;
-      _msg('Conta criada e liberada com sucesso.');
-      context.go('/home');
+      _msg(
+        emailDispatched
+            ? 'Cadastro liberado. Verifique o e-mail informado para definir a senha e entrar.'
+            : 'Cadastro liberado. Use recuperar senha no login caso o e-mail nao chegue.',
+      );
+      context.go('/login-empresa?email=${Uri.encodeComponent(email)}');
     } catch (e) {
       _msg(AppErrorMapper.messageFrom(e, fallback: 'Erro ao criar conta.'));
     } finally {
@@ -995,24 +926,6 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
       if (mounted) {
         setState(() => _carregandoCnpj = false);
       }
-    }
-  }
-
-  Future<void> _provisionarEmpresa({
-    required String companyName,
-    required Map<String, dynamic> companyData,
-  }) async {
-    try {
-      final callable = FirebaseFunctions.instance.httpsCallable(
-        'syncCompanyProfile',
-      );
-      await callable.call(<String, dynamic>{
-        'companyName': companyName,
-        'companyData': companyData,
-      });
-    } catch (_) {
-      // O cadastro nao deve falhar se a provision inicial travar; o owner
-      // ainda consegue reprocessar ao salvar os dados da empresa depois.
     }
   }
 

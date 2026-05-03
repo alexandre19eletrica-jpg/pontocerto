@@ -72,8 +72,7 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                       'Financeiro e documentos no mesmo fluxo',
                       '30 dias de teste gratis',
                     ],
-                    onPrimary: () =>
-                        context.go('/cadastro-escritorio-contabil'),
+                    onPrimary: () => context.go('/cadastro-empresa'),
                     primaryLabel: 'COMEÇAR PRÉ-CADASTRO DA EMPRESA',
                     secondaryLabel: 'Falar com alguem',
                     onSecondary: () {
@@ -320,7 +319,7 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   const Text(
-                                    'Voce vai para a tela de cadastro do escritorio contabil, que abre o pre-cadastro correto da empresa no modelo atual do Ponto Certo.',
+                                    'Voce vai para a tela de cadastro da empresa, onde inicia o acesso real no modelo atual do Ponto Certo.',
                                     style: TextStyle(
                                       height: 1.45,
                                       fontWeight: FontWeight.w600,
@@ -347,9 +346,8 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                                   ),
                                   const SizedBox(height: 20),
                                   FilledButton(
-                                    onPressed: () => context.go(
-                                      '/cadastro-escritorio-contabil',
-                                    ),
+                                    onPressed: () =>
+                                        context.go('/cadastro-empresa'),
                                     style: FilledButton.styleFrom(
                                       backgroundColor:
                                           VendasLandingTheme.primary,

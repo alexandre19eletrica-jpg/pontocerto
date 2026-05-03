@@ -87,7 +87,7 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
         _accountantName.text.trim().isEmpty ||
         _accountantEmail.text.trim().isEmpty) {
       if (context.mounted) {
-        context.showUserMessage('Informe empresa e contador para continuar.');
+        context.showUserMessage('Informe os quatro contatos para continuar.');
       }
       return;
     }
@@ -114,7 +114,7 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
       );
       if (!mounted) return;
       context.showUserSuccess(
-        'Pedido de teste salvo. O contador indicado vai receber o caminho para cadastrar a empresa e iniciar os 30 dias gratis no sistema real.',
+        'Registro recebido. A equipe do Ponto Certo entra em contato usando os e-mails informados.',
       );
     } catch (error) {
       if (!mounted) return;
@@ -133,7 +133,7 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
     final plan = _plan;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Solicitar teste com contador'),
+        title: const Text('Solicitar entrada no plano'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/vendas'),
@@ -146,7 +146,7 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
               AppWorkspaceCard(
                 title: plan?.title ?? 'Plano',
                 subtitle:
-                    'O teste real de 30 dias comeca sem cobranca de implantacao. Para usar, a empresa precisa indicar o contador que vai iniciar primeiro o cadastro do escritorio.',
+                    'Pedido inicial recebido pela equipe do Ponto Certo. Liberamos ambiente web e fluxo complementar assim que confirmarmos seus contatos.',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -154,22 +154,22 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
                     const SizedBox(height: 8),
                     Text(
                       plan?.implantationLabel ??
-                          'O teste real de 30 dias sera iniciado com contador indicado pela empresa.',
+                          'Combinamos detalhes de uso com voce antes de iniciar cobranca recorrente.',
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Este fluxo inicial libera o sistema web e tambem prepara o app dos funcionarios dentro do mesmo teste real.',
+                      'Este envio registra dados comerciais e a operacao prepara os acessos quando previstos.',
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Nesta etapa, a empresa solicita a entrada, informa seu nome e e-mail, informa nome e e-mail do contador e o contador indicado vira o contato principal para primeiro cadastrar o escritorio e depois cadastrar a empresa que o indicou.',
+                      'Informe dois contatos: empresa e parceiro contabil. Ambos recebem atualizacao por e-mail quando o envio automatico estiver disponivel.',
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
               AppWorkspaceCard(
-                title: 'Empresa e contador',
+                title: 'Contatos da implantacao',
                 child: Column(
                   children: [
                     _field(_companyName, 'Nome da empresa *'),
@@ -178,9 +178,9 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
                     _field(_accountantEmail, 'Email do contador *'),
                     const SizedBox(height: 8),
                     const _ImplementationModeCard(
-                      title: 'Fluxo oficial de entrada',
+                      title: 'Como seguimos internamente',
                       text:
-                          'A empresa pede a entrada, indica o contador e o contador recebe os dados para primeiro cadastrar o escritorio de contabilidade. Depois disso, ele cadastra a empresa que o indicou no sistema. O teste real fica liberado por 30 dias, sem cobranca de implantacao.',
+                          'Dados entram no funil comercial, criamos os acessos leves quando disponiveis e notificamos empresa e parceiro cadastrado sobre o proximo passo. Prazos podem variar conforme fila e validacao de seguranca.',
                       selected: true,
                     ),
                   ],
@@ -197,7 +197,7 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
                       )
                     : const Icon(Icons.arrow_forward),
                 label: Text(
-                  _saving ? 'Enviando...' : 'Solicitar teste real de 30 dias',
+                  _saving ? 'Enviando...' : 'Registrar interesse e contatos',
                 ),
               ),
             ],

@@ -280,7 +280,7 @@ class RotasApp {
       GoRoute(
         path: '/contratar',
         redirect: (context, state) =>
-            '/cadastro-escritorio-contabil${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
+            '/cadastro-empresa${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
       ),
       GoRoute(
         path: '/boas-vindas-empresa',

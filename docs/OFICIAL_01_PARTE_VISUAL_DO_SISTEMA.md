@@ -218,6 +218,13 @@ No painel supremo, alertas de governanca devem aparecer como blocos claros de at
 
 Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visiveis no `Pipeline comercial`.
 
+## Atualizacao visual (03/05/2026)
+
+- Pagina de vendas `/vendas`: blocos de texto e citacoes com linguagem mais institucional (menos enfase em culpa ou obrigacao sobre qualquer perfil).
+- Pre-cadastro comercial (`SalesPreRegistrationPage`): titulos e textos de apoio alinhados ao follow-up comercial/operacional sem checklist longo de condutas do contador.
+- Cadastro leve da empresa (`/cadastro-empresa`): botao final descreve solicitacao por e-mail; sem campo de senha no formulario leve e no cadastro publico completo.
+- Cadastro leve do escritorio (`/cadastro-escritorio-contabil`): texto de apoio menciona senha definida via link; campos de senha removidos da UI.
+
 ## Regra de manutencao
 
 Toda mudanca visual relevante deve responder:

@@ -29,6 +29,23 @@ service firebase.storage {
       return role() == 'EMPLOYEE' || role() == 'employee' || role() == 'FUNCIONARIO' || role() == 'funcionario';
     }
 
+    function accountantLinkedCompany(empresaId) {
+      return (
+        role() == 'ACCOUNTANT' ||
+        role() == 'accountant' ||
+        role() == 'CONTADOR' ||
+        role() == 'contador'
+      ) && (
+        empresaId == companyId() ||
+        userDoc().data.currentCompanyId == empresaId ||
+        exists(/databases/(default)/documents/accountant_links/$(empresaId + '_' + request.auth.uid)) ||
+        (
+          exists(/databases/(default)/documents/accountant_links/$(request.auth.uid)) &&
+          firestore.get(/databases/(default)/documents/accountant_links/$(request.auth.uid)).data.companyId == empresaId
+        )
+      );
+    }
+
     function taskDoc(taskId) {
       return firestore.get(/databases/(default)/documents/tasks/$(taskId));
     }
@@ -59,6 +76,23 @@ service firebase.storage {
           isManager() ||
           isEmployee()
         );
+    }
+
+    match /documentos/{empresaId}/xml/{allPaths=**} {
+      allow read: if signedIn() &&
+        (
+          empresaId == companyId() ||
+          accountantLinkedCompany(empresaId)
+        ) &&
+        (
+          isOwner() ||
+          isManager() ||
+          role() == 'ACCOUNTANT' ||
+          role() == 'accountant' ||
+          role() == 'CONTADOR' ||
+          role() == 'contador'
+        );
+      allow write: if false;
     }
 
     match /{allPaths=**} {

@@ -20,6 +20,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    function isDemoReadOnlyUser() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        userDoc().data.demoReadOnly == true;
+    }
+
     function effectiveCompanyId() {
       return request.auth.token.companyId != null
         ? request.auth.token.companyId
@@ -290,12 +296,14 @@ service cloud.firestore {
         );
 
       allow create: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         (
           uid == request.auth.uid ||
           ((isOwner() || isManager()) && sameCompanyData(request.resource.data))
         );
 
       allow update: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         supremePlatformUserMustRemainActive() &&
         (
           (
@@ -314,15 +322,16 @@ service cloud.firestore {
         );
 
       allow delete: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         !isSupremePlatformCompanyId(resource.data.companyId) &&
         ((isOwner() || isManager()) && sameCompany(resource));
     }
 
     match /employees/{docId} {
       allow read: if signedIn() && sameCompany(resource);
-      allow create: if signedIn() && (isOwner() || isManager()) && sameCompanyData(request.resource.data);
-      allow update: if signedIn() && (isOwner() || isManager()) && sameCompany(resource) && sameCompanyData(request.resource.data);
-      allow delete: if signedIn() && (isOwner() || isManager()) && sameCompany(resource);
+      allow create: if signedIn() && !isDemoReadOnlyUser() && (isOwner() || isManager()) && sameCompanyData(request.resource.data);
+      allow update: if signedIn() && !isDemoReadOnlyUser() && (isOwner() || isManager()) && sameCompany(resource) && sameCompanyData(request.resource.data);
+      allow delete: if signedIn() && !isDemoReadOnlyUser() && (isOwner() || isManager()) && sameCompany(resource);
     }
 
     match /work_entries/{docId} {
@@ -359,6 +368,7 @@ service cloud.firestore {
       allow read: if signedIn() && canReadByRole(resource);
 
       allow create: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         sameCompanyData(request.resource.data) &&
         (
           isOwner() ||
@@ -367,6 +377,7 @@ service cloud.firestore {
         );
 
       allow update: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         sameCompany(resource) &&
         sameCompanyData(request.resource.data) &&
         (
@@ -661,6 +672,7 @@ service cloud.firestore {
         );
 
       allow delete: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         sameCompany(resource) &&
         canManageDebts(resource.data.companyId);
     }
@@ -672,6 +684,7 @@ service cloud.firestore {
           (sameCompany(resource) && accountantCanReadFinance(resource.data.companyId))
         );
       allow create: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         canManagePayments(request.resource.data.companyId) &&
         sameCompanyData(request.resource.data) &&
         nonEmptyString(paymentCompetenceFromData(request.resource.data)) &&
@@ -681,6 +694,7 @@ service cloud.firestore {
         );
 
       allow update: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         sameCompany(resource) &&
         sameCompanyData(request.resource.data) &&
         nonEmptyString(paymentCompetenceFromData(resource.data)) &&
@@ -711,6 +725,7 @@ service cloud.firestore {
         );
 
       allow delete: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         canManagePayments(resource.data.companyId) &&
         sameCompany(resource) &&
         nonEmptyString(paymentCompetenceFromData(resource.data)) &&
@@ -978,9 +993,11 @@ service cloud.firestore {
           accountantLinkedCompany(resource.data.companyId)
         );
       allow create: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         (isOwner() || isManager()) &&
         request.resource.data.companyId == effectiveCompanyId();
       allow update: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         (
           docId == effectiveCompanyId() ||
           resource.data.companyId == effectiveCompanyId() ||
@@ -1014,6 +1031,7 @@ service cloud.firestore {
           )
         );
       allow delete: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         (isOwner() || isManager()) &&
         resource.data.companyId == effectiveCompanyId();
     }
@@ -1109,15 +1127,73 @@ service cloud.firestore {
     match /service_invoices/{docId} {
       allow read: if signedIn() && sameCompany(resource);
       allow create: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         canManageServiceInvoices(request.resource.data.companyId) &&
         sameCompanyData(request.resource.data);
       allow update: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         canManageServiceInvoices(resource.data.companyId) &&
         sameCompany(resource) &&
         sameCompanyData(request.resource.data);
       allow delete: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         canManageServiceInvoices(resource.data.companyId) &&
         sameCompany(resource);
+    }
+
+    match /fiscal_received_documents/{docId} {
+      allow read: if signedIn() &&
+        sameCompany(resource) &&
+        (
+          isOwner() ||
+          isManager() ||
+          isAccountant()
+        );
+
+      allow create, update, delete: if false;
+    }
+
+    match /empresas/{empresaId} {
+      allow read: if signedIn() &&
+        (
+          empresaId == effectiveCompanyId() ||
+          accountantLinkedCompany(empresaId)
+        ) &&
+        (
+          isOwner() ||
+          isManager() ||
+          isAccountant()
+        );
+
+      allow create, update, delete: if false;
+
+      match /documentos_fiscais/{docId} {
+        allow read: if signedIn() &&
+          (
+            empresaId == effectiveCompanyId() ||
+            accountantLinkedCompany(empresaId)
+          ) &&
+          (
+            isOwner() ||
+            isManager() ||
+            isAccountant()
+          );
+        allow create, update, delete: if false;
+      }
+
+      match /xml_sync_logs/{docId} {
+        allow read: if signedIn() &&
+          (
+            empresaId == effectiveCompanyId() ||
+            accountantLinkedCompany(empresaId)
+          ) &&
+          (
+            isOwner() ||
+            isManager() ||
+            isAccountant()
+          );
+        allow create, update, delete: if false;
+      }
     }
 
     match /invoice_customers/{docId} {

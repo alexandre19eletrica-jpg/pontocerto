@@ -29,8 +29,6 @@ class _AccountingOfficeSignupPageState
   final _responsibleNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
@@ -65,8 +63,6 @@ class _AccountingOfficeSignupPageState
     _responsibleNameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
     _addressController.dispose();
     _cityController.dispose();
     _stateController.dispose();
@@ -160,15 +156,10 @@ class _AccountingOfficeSignupPageState
     if (_lightweightMode) {
       if (_officeNameController.text.trim().isEmpty ||
           _responsibleNameController.text.trim().isEmpty ||
-          _emailController.text.trim().isEmpty ||
-          _passwordController.text.isEmpty ||
-          _confirmPasswordController.text.isEmpty) {
-        _showMessage('Preencha nome, email e senha para criar o acesso.');
-        return;
-      }
-
-      if (_passwordController.text != _confirmPasswordController.text) {
-        _showMessage('A confirmacao de senha nao confere.');
+          _emailController.text.trim().isEmpty) {
+        _showMessage(
+          'Preencha nome da razao social do escritorio, responsavel e e-mail.',
+        );
         return;
       }
 
@@ -179,8 +170,8 @@ class _AccountingOfficeSignupPageState
             officeName: _officeNameController.text.trim(),
             responsibleName: _responsibleNameController.text.trim(),
             email: _emailController.text.trim().toLowerCase(),
-            password: _passwordController.text,
-            confirmPassword: _confirmPasswordController.text,
+            password: '',
+            confirmPassword: '',
           ),
         );
         if (!mounted) return;
@@ -214,22 +205,15 @@ class _AccountingOfficeSignupPageState
       return;
     }
 
-    if (_officeNameController.text.trim().isEmpty ||
+    if (        _officeNameController.text.trim().isEmpty ||
         _cnpjController.text.trim().isEmpty ||
         _responsibleNameController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty ||
         _emailController.text.trim().isEmpty ||
-        _passwordController.text.isEmpty ||
-        _confirmPasswordController.text.isEmpty ||
         _addressController.text.trim().isEmpty ||
         _cityController.text.trim().isEmpty ||
         _stateController.text.trim().isEmpty) {
       _showMessage('Preencha todos os campos obrigatorios do escritorio.');
-      return;
-    }
-
-    if (_passwordController.text != _confirmPasswordController.text) {
-      _showMessage('A confirmacao de senha nao confere.');
       return;
     }
 
@@ -243,8 +227,8 @@ class _AccountingOfficeSignupPageState
           responsibleName: _responsibleNameController.text.trim(),
           phone: _phoneController.text.trim(),
           email: _emailController.text.trim().toLowerCase(),
-          password: _passwordController.text,
-          confirmPassword: _confirmPasswordController.text,
+          password: '',
+          confirmPassword: '',
           address: _addressController.text.trim(),
           city: _cityController.text.trim(),
           state: _stateController.text.trim().toUpperCase(),
@@ -338,7 +322,7 @@ class _AccountingOfficeSignupPageState
                 title: 'Escritorio de contabilidade',
                 subtitle:
                     lightweightMode
-                        ? 'Crie o acesso do contador agora com nome, email e senha. O perfil real do escritorio e a carteira podem ser completados depois dentro do sistema.'
+                        ? 'Abra o acesso com nome e e-mail. A senha e definida pelo link automatico enviado na caixa de entrada.'
                         : 'Cadastro dedicado para o contador indicado pela empresa. Primeiro o escritorio e cadastrado; depois a empresa indicada entra no fluxo oficial desse escritorio.',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,17 +337,15 @@ class _AccountingOfficeSignupPageState
                     const SizedBox(height: 8),
                     Text(
                       lightweightMode
-                          ? '1. O contador cria o acesso com nome, email e senha.\n'
-                              '2. Entra no sistema imediatamente.\n'
-                              '3. Completa o perfil real do escritorio quando quiser.\n'
-                              '4. Depois cadastra e acompanha as empresas da carteira.'
-                          : '1. A plataforma cadastra o escritorio direto ou envia um link por e-mail.\n'
-                              '2. O escritorio preenche todos os dados necessarios.\n'
-                              '3. Ao finalizar, o sistema envia e-mail com link de acesso, login e senha cadastrada.\n'
-                              '4. O escritorio sobe automaticamente na base da plataforma.\n'
-                              '5. Depois disso, o contador usa o escritorio ja cadastrado para registrar a empresa que o indicou.\n'
-                              '6. O teste real de 30 dias passa a valer no sistema inteiro da empresa indicada.\n'
-                              '7. Depois do trial, o escritorio passa a ter assinatura base de R\$ 97,90 por mes, com opcao de isencao quando a parceria comercial for aprovada.',
+                          ? '1. Registre escritorio e responsavel com e-mail valido.\n'
+                              '2. Confirme a senha atraves do link recebido.\n'
+                              '3. Entre pelo login do contador e complete dados fiscais quando for o momento.\n'
+                              '4. Organize empresas e rotinas na carteira do escritorio.'
+                          : '1. A empresa ou a plataforma envia um convite quando aplicavel.\n'
+                              '2. O escritorio completa dados cadastrais e fiscais no formulario oficial.\n'
+                              '3. O sistema envia e-mail com acesso ao ambiente web e orientacao para o app quando couber.\n'
+                              '4. O escritorio fica disponivel na base da plataforma para vinculos e operacao.\n'
+                              '5. Em seguida, cadastre ou vincule as empresas da carteira no fluxo interno.',
                     ),
                     const SizedBox(height: 12),
                     if (!lightweightMode)
@@ -376,7 +358,7 @@ class _AccountingOfficeSignupPageState
                           border: Border.all(color: AppBrandColors.border),
                         ),
                         child: const Text(
-                          'Regra comercial atual: primeiro entra o cadastro do escritorio indicado pela empresa. Depois o contador cadastra a empresa indicada e o sistema inteiro entra em teste real gratis por 30 dias. Nao existe cobranca de implantacao nessa entrada.',
+                          'Modelo atual: entrada com teste gratuito quando previsto na proposta comercial. Depois da abertura do escritorio, a carteira centraliza cadastro das empresas e acompanha o consumo pelo periodo combinado.',
                           style: TextStyle(
                             color: AppBrandColors.softText,
                             fontWeight: FontWeight.w600,
@@ -497,18 +479,17 @@ class _AccountingOfficeSignupPageState
                       icon: Icons.alternate_email_rounded,
                       keyboardType: TextInputType.emailAddress,
                     ),
-                    _field(
-                      controller: _passwordController,
-                      label: 'Senha *',
-                      icon: Icons.lock_outline_rounded,
-                      obscureText: true,
-                    ),
-                    _field(
-                      controller: _confirmPasswordController,
-                      label: 'Confirmar senha *',
-                      icon: Icons.verified_user_outlined,
-                      obscureText: true,
-                    ),
+                    if (lightweightMode)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          'A senha sera definida pelo link enviado para este e-mail.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppBrandColors.softText,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
                     if (!lightweightMode) ...[
                       _field(
                         controller: _addressController,

@@ -16,10 +16,12 @@ Versao local atual de referencia:
 
 - `1.0.87+1058`
 
-Na frente comercial publica atual, o contato principal priorizado e o **escritorio contabil**.
+Na frente comercial publica atual existe **dois callables de entrada leve**:
 
-O fluxo publico inicial agora aponta para **Cadastrar escritorio de contabilidade**.
-A empresa continua usando o mesmo cadastro operacional ja existente, mas esse passo passa a acontecer depois, a partir do ambiente do escritorio.
+- **Empresa:** `/cadastro-empresa` envia nome, e-mail e dados iniciais; a **senha** e definida pelo **link** enviado por e-mail quando as Functions tiverem SMTP/SendGrid e `MAIL_FROM` configurados.
+- **Escritorio:** `/cadastro-escritorio-contabil` segue a mesma logica de **senha por e-mail** para o acesso do contador no fluxo simplificado.
+
+Depois do cadastro publico completo com CNPJ liberado, o sistema encaminha o utilizador para **`/login-empresa`** com mensagem para abrir o e-mail (ou recuperar senha), em vez de iniciar sessao automaticamente no browser.
 
 ## Modulos principais da empresa
 

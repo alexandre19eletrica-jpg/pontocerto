@@ -22,6 +22,22 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 - integracoes operacionais e fiscais
 - regras finas de autorizacao por papel e contexto
 
+### Publico: demo, pre-cadastro e entrada leve (03/05/2026)
+
+#### `publicOpenDemoAccess`
+
+- Workspace fixo `public_demo_workspace`; UIDs fixos `public_demo_owner` / `public_demo_accountant` (ignora IDs legados em `demo_access_config`).
+- `platformUpdateDemoAccessConfig` deixou de exigir que `company_settings` exista para IDs customizados ao gravar a configuracao administrativa.
+
+#### `publicCreateSalesPreRegistration`
+
+- Lead gravado antes dos envios; e-mails encapsulados em `try/catch` com `logger.warn` quando credenciais SMTP/SendGrid/`MAIL_FROM` faltam.
+- Resposta opcional: `precadastroEmpresaEmailOk`, `conviteParceiroEmailOk`.
+
+#### Entrada leve
+
+- `publicCreateCompanyWorkspaceAccess` e `publicCreateAccountantWorkspaceAccess` aceitam senha vazia no payload; o servidor gera senha interna e usa `generatePasswordResetLink` no fluxo de boas-vindas quando o correio envia.
+
 ## 3. Dados
 
 - Cloud Firestore
