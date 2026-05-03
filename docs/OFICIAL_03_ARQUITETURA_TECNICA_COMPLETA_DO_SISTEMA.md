@@ -32,7 +32,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 #### Plataforma admin (governanca — 03/05/2026)
 
 - Rotas: `/platform-admin/governanca`; menu shell > Plataforma > **Governanca**.
-- Callables: `platformListStandaloneLightweightCompanies`, `platformListPublicDemoAccessLedger`, `platformListCompanies` (dedupe por `companyId`).
+- Callables: `platformListStandaloneLightweightCompanies`, `platformListPublicDemoAccessLedger`, `platformListCompanies` (dedupe por `companyId`), `platformListLightweightTestOffices`, `platformDeleteLightweightTestCompany`, `platformDeleteLightweightTestOffice`.
 - Indice composto Firestore: `users` — `role` + `lightweightProfilePending` (`firestore.indexes.json`).
 
 #### `platformUpdateDemoAccessConfig`

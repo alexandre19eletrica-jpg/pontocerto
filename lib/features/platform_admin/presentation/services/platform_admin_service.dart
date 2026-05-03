@@ -41,6 +41,26 @@ class PlatformAdminService {
         .toList();
   }
 
+  Future<List<StandaloneLightweightOfficeRow>> listLightweightTestOffices() async {
+    final callable = _functions.httpsCallable('platformListLightweightTestOffices');
+    final result = await callable.call();
+    final data = Map<String, dynamic>.from(result.data as Map);
+    return (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => StandaloneLightweightOfficeRow.fromMap(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  Future<void> deleteLightweightTestCompany({required String companyId}) async {
+    final callable = _functions.httpsCallable('platformDeleteLightweightTestCompany');
+    await callable.call(<String, dynamic>{'companyId': companyId});
+  }
+
+  Future<void> deleteLightweightTestOffice({required String officeId}) async {
+    final callable = _functions.httpsCallable('platformDeleteLightweightTestOffice');
+    await callable.call(<String, dynamic>{'officeId': officeId});
+  }
+
   Future<IssuedTrialInvite> issueTrialInvite90Days({
     String? companyEmail,
     required String accountantEmail,
@@ -763,6 +783,42 @@ class PublicDemoAccessLedgerRow {
       firstSeenAtIso: map['firstSeenAtIso']?.toString() ?? '',
       dedupeVersion: (map['dedupeVersion'] as num?)?.toInt() ?? 0,
       userAgentSnippet: map['userAgentSnippet']?.toString() ?? '',
+    );
+  }
+}
+
+/// Escritorio contabil apenas com cadastro leve incompleto.
+class StandaloneLightweightOfficeRow {
+  const StandaloneLightweightOfficeRow({
+    required this.officeId,
+    required this.officeName,
+    required this.email,
+    required this.responsibleName,
+    required this.platformStatus,
+    required this.source,
+    required this.linkedCompaniesCount,
+    required this.linkedCompaniesInIndex,
+  });
+
+  final String officeId;
+  final String officeName;
+  final String email;
+  final String responsibleName;
+  final String platformStatus;
+  final String source;
+  final int linkedCompaniesCount;
+  final int linkedCompaniesInIndex;
+
+  factory StandaloneLightweightOfficeRow.fromMap(Map<String, dynamic> map) {
+    return StandaloneLightweightOfficeRow(
+      officeId: map['officeId']?.toString() ?? '',
+      officeName: map['officeName']?.toString() ?? '',
+      email: map['email']?.toString() ?? '',
+      responsibleName: map['responsibleName']?.toString() ?? '',
+      platformStatus: map['platformStatus']?.toString() ?? '',
+      source: map['source']?.toString() ?? '',
+      linkedCompaniesCount: (map['linkedCompaniesCount'] as num?)?.toInt() ?? 0,
+      linkedCompaniesInIndex: (map['linkedCompaniesInIndex'] as num?)?.toInt() ?? 0,
     );
   }
 }

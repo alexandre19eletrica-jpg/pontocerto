@@ -67,6 +67,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   late Future<List<PlatformAccountingOfficeSummary>> _accountingOfficesFuture;
   Future<List<StandaloneLightweightCompanyRow>>? _standaloneLightFuture;
   Future<List<PublicDemoAccessLedgerRow>>? _demoLedgerFuture;
+  Future<List<StandaloneLightweightOfficeRow>>? _lightweightOfficesFuture;
   Future<PlatformFiscalCompanyStatus>? _fiscalStatusFuture;
   String? _selectedCompanyId;
   String? _selectedAdminOfficeId;
@@ -83,9 +84,11 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     if (widget.section == PlatformAdminSection.governanca) {
       _standaloneLightFuture = _service.listStandaloneLightweightCompanies();
       _demoLedgerFuture = _service.listPublicDemoAccessLedger(limit: 200);
+      _lightweightOfficesFuture = _service.listLightweightTestOffices();
     } else {
       _standaloneLightFuture = null;
       _demoLedgerFuture = null;
+      _lightweightOfficesFuture = null;
     }
   }
 
@@ -750,6 +753,115 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     }
   }
 
+  void _reloadGovernance() {
+    setState(() {
+      if (widget.section != PlatformAdminSection.governanca) {
+        return;
+      }
+      _standaloneLightFuture =
+          _service.listStandaloneLightweightCompanies();
+      _demoLedgerFuture = _service.listPublicDemoAccessLedger(limit: 200);
+      _lightweightOfficesFuture = _service.listLightweightTestOffices();
+    });
+  }
+
+  Future<void> _confirmDeleteLightweightTestCompany(
+    StandaloneLightweightCompanyRow r,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Apagar empresa de teste?'),
+          content: Text(
+            'Remove utilizador no Auth, documentos em users (owners de teste), '
+            'vinculos accountant_links pendentes/inativos e company_settings - '
+            'apenas se continuar em modo cadastro leve e sem vinculo ativo com contador.\n\n'
+            '${r.companyName}\n'
+            '${r.companyId}\n'
+            '${r.ownerEmail}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFB91C1C),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Apagar definitivamente'),
+            ),
+          ],
+        );
+      },
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await _service.deleteLightweightTestCompany(companyId: r.companyId);
+      if (!mounted) return;
+      if (context.mounted) {
+        context.showUserMessage('Empresa de teste removida.');
+      }
+      _reloadGovernance();
+    } catch (e) {
+      if (!mounted) return;
+      if (context.mounted) {
+        context.showUserError(AppErrorMapper.messageFrom(e));
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteLightweightTestOffice(
+    StandaloneLightweightOfficeRow r,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Apagar escritorio de teste?'),
+          content: Text(
+            'Remove utilizador contador no Auth, users e accounting_offices - '
+            'apenas escritorio ainda em cadastro leve e sem empresas na carteira.\n\n'
+            '${r.officeName}\n'
+            '${r.officeId}\n'
+            '${r.email}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFB91C1C),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Apagar definitivamente'),
+            ),
+          ],
+        );
+      },
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await _service.deleteLightweightTestOffice(officeId: r.officeId);
+      if (!mounted) return;
+      if (context.mounted) {
+        context.showUserMessage('Escritorio de teste removido.');
+      }
+      _reloadGovernance();
+    } catch (e) {
+      if (!mounted) return;
+      if (context.mounted) {
+        context.showUserError(AppErrorMapper.messageFrom(e));
+      }
+    }
+  }
+
   Widget _folderCard({
     required String title,
     required String subtitle,
@@ -840,18 +952,11 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   Widget _buildGovernanceSection() {
     final standalone = _standaloneLightFuture;
     final demos = _demoLedgerFuture;
-    if (standalone == null || demos == null) {
+    final offices = _lightweightOfficesFuture;
+    if (standalone == null || demos == null || offices == null) {
       return const Center(
         child: Text('Estado de governanca indisponivel.'),
       );
-    }
-
-    void refresh() {
-      setState(() {
-        _standaloneLightFuture =
-            _service.listStandaloneLightweightCompanies();
-        _demoLedgerFuture = _service.listPublicDemoAccessLedger(limit: 200);
-      });
     }
 
     return ListView(
@@ -862,13 +967,14 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
           children: [
             Expanded(
               child: Text(
-                'Atualize para recarregar. Para mover uma empresa para a carteira do contador apos ela ser vinculada, use Escritorios.',
+                'Atualize para recarregar. Use Apagar apenas para registos criados pelo cadastro publico leve '
+                '(teste). Vinculos ativos empresa-contador impedem exclusao ate desvincular.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
             IconButton(
               tooltip: 'Atualizar',
-              onPressed: refresh,
+              onPressed: _reloadGovernance,
               icon: const Icon(Icons.refresh_rounded),
             ),
           ],
@@ -883,7 +989,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
         _folderCard(
           title: 'Empresas em teste direto (sem escritorio)',
           subtitle:
-              'Cadastro publico leve ainda incompleto. Ao o contador vincular na carteira do escritorio e concluirem o cadastro real, estas entradas deixam de aparecer aqui.',
+              'Cadastro publico leve ainda incompleto. Botao vermelho: apaga utilizador Auth, owners de teste, links pendentes e company_settings quando permitido pela regra de seguranca.',
           initiallyExpanded: true,
           child: FutureBuilder<List<StandaloneLightweightCompanyRow>>(
             future: standalone,
@@ -916,10 +1022,78 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                         '${r.accountantPendingStatus.isEmpty ? "" : "\ncontador pendente: ${r.accountantPendingStatus}"}',
                       ),
                       isThreeLine: true,
-                      trailing: TextButton(
+                      trailing: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 148),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextButton(
+                              onPressed: () =>
+                                  _selectCompanyInAdminPanel(r.companyId),
+                              child: const Text('Financeiro'),
+                            ),
+                            IconButton(
+                              tooltip: 'Apagar teste',
+                              color: const Color(0xFFB91C1C),
+                              onPressed: () =>
+                                  _confirmDeleteLightweightTestCompany(r),
+                              icon: const Icon(Icons.delete_forever_rounded),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        _folderCard(
+          title: 'Escritorios em teste (cadastro leve)',
+          subtitle:
+              'Publicos vindos do pre-cadastro leve sem CNPJ completo. Sem empresas na carteira. Use Apagar para remover contador de teste e documento accounting_offices.',
+          initiallyExpanded: true,
+          child: FutureBuilder<List<StandaloneLightweightOfficeRow>>(
+            future: offices,
+            builder: (context, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snap.hasError) {
+                return Text(AppErrorMapper.messageFrom(snap.error!));
+              }
+              final rows = snap.data ?? const [];
+              if (rows.isEmpty) {
+                return const Text(
+                  'Nenhum escritorio nesta fila (ou ja concluiram cadastro real).',
+                );
+              }
+              return Column(
+                children: [
+                  for (final r in rows)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        r.officeName.isEmpty ? r.officeId : r.officeName,
+                      ),
+                      subtitle: Text(
+                        '${r.email}\n'
+                        '${r.officeId}\n'
+                        'carteira(index): ${r.linkedCompaniesInIndex} empresas | campo office: '
+                        '${r.linkedCompaniesCount}',
+                      ),
+                      isThreeLine: true,
+                      trailing: IconButton(
+                        tooltip:
+                            'Apagar apenas se carteira vazia (ver mensagem servidor)',
+                        color: const Color(0xFFB91C1C),
                         onPressed: () =>
-                            _selectCompanyInAdminPanel(r.companyId),
-                        child: const Text('Financeiro'),
+                            _confirmDeleteLightweightTestOffice(r),
+                        icon: const Icon(Icons.delete_forever_rounded),
                       ),
                     ),
                 ],

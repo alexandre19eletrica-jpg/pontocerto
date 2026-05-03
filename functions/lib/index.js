@@ -8169,6 +8169,198 @@ exports.platformListPublicDemoAccessLedger = functions.https.onCall(async (data,
         items: rows,
     };
 });
+exports.platformListLightweightTestOffices = functions.https.onCall(async (_data, context) => {
+    const claims = assertClaims(context);
+    const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+    assertPlatformAdmin(claims, userProfile);
+    const snap = await accountingOfficeRef()
+        .where('lightweightProfilePending', '==', true)
+        .limit(100)
+        .get();
+    const items = [];
+    for (const doc of snap.docs) {
+        if (doc.id === PUBLIC_DEMO_OFFICE_ID) {
+            continue;
+        }
+        const o = asRecord(doc.data());
+        const linked = await listCompanySettingsLinkedToOffice(doc.id);
+        items.push({
+            officeId: doc.id,
+            officeName: asTrimmedString(o.officeName),
+            email: asTrimmedString(o.email).toLowerCase(),
+            responsibleName: asTrimmedString(o.responsibleName),
+            platformStatus: asTrimmedString(o.platformStatus) || 'active',
+            source: asTrimmedString(o.source),
+            linkedCompaniesCount: Number(o.linkedCompaniesCount ?? 0) || 0,
+            linkedCompaniesInIndex: linked.length,
+        });
+    }
+    items.sort((a, b) => String(b['officeId'] ?? '').localeCompare(String(a['officeId'] ?? '')));
+    return {
+        ok: true,
+        items,
+    };
+});
+exports.platformDeleteLightweightTestCompany = functions.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+    assertPlatformAdmin(claims, userProfile);
+    const companyId = asTrimmedString(data?.companyId);
+    if (!companyId || companyId === PUBLIC_DEMO_COMPANY_ID) {
+        throw new functions.https.HttpsError('invalid-argument', 'companyId obrigatorio (e nao pode ser o workspace demo).');
+    }
+    const settingsSnap = await admin.firestore().collection('company_settings').doc(companyId).get();
+    const settingsData = asRecord(settingsSnap.data());
+    const companyUsers = await admin
+        .firestore()
+        .collection('users')
+        .where('companyId', '==', companyId)
+        .limit(50)
+        .get();
+    if (!settingsSnap.exists && companyUsers.empty) {
+        throw new functions.https.HttpsError('not-found', 'Empresa nao encontrada.');
+    }
+    if (settingsSnap.exists) {
+        const ds = asRecord(settingsData.directSignup);
+        if (ds.lightweightProfilePending !== true) {
+            throw new functions.https.HttpsError('failed-precondition', 'So e permitido apagar empresas ainda em cadastro leve (directSignup.lightweightProfilePending).');
+        }
+    }
+    for (const d of companyUsers.docs) {
+        const u = asRecord(d.data());
+        if (roleParaFirestore(u.role) !== 'OWNER') {
+            throw new functions.https.HttpsError('failed-precondition', 'Esta empresa tem utilizadores alem do owner. Nao e possivel apagar automaticamente.');
+        }
+        if (u.lightweightProfilePending !== true) {
+            throw new functions.https.HttpsError('failed-precondition', 'O owner ja nao esta em modo cadastro leve; exclusao abortada por seguranca.');
+        }
+    }
+    const activeLinks = await admin
+        .firestore()
+        .collection('accountant_links')
+        .where('companyId', '==', companyId)
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
+    if (!activeLinks.empty) {
+        throw new functions.https.HttpsError('failed-precondition', 'Empresa com vinculo ativo ao contador. Desvincule antes de apagar o registo de teste.');
+    }
+    const allLinks = await admin
+        .firestore()
+        .collection('accountant_links')
+        .where('companyId', '==', companyId)
+        .limit(200)
+        .get();
+    if (!allLinks.empty) {
+        const batch = admin.firestore().batch();
+        for (const d of allLinks.docs) {
+            batch.delete(d.ref);
+        }
+        await batch.commit();
+    }
+    for (const d of companyUsers.docs) {
+        try {
+            await admin.auth().deleteUser(d.id);
+        }
+        catch (err) {
+            functions.logger.warn('platformDeleteLightweightTestCompany auth delete', {
+                uid: d.id,
+                error: errorMessage(err, ''),
+            });
+        }
+        await admin.firestore().collection('users').doc(d.id).delete();
+    }
+    if (settingsSnap.exists) {
+        await settingsSnap.ref.delete();
+    }
+    await writeAudit({
+        claims,
+        module: 'platform',
+        action: 'delete_lightweight_test_company',
+        entityPath: 'company_settings',
+        entityId: companyId,
+        before: { hadSettings: settingsSnap.exists, usersRemoved: companyUsers.size },
+        after: { removed: true },
+    });
+    return { ok: true, companyId };
+});
+exports.platformDeleteLightweightTestOffice = functions.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+    assertPlatformAdmin(claims, userProfile);
+    const officeId = asTrimmedString(data?.officeId);
+    if (!officeId || officeId === PUBLIC_DEMO_OFFICE_ID) {
+        throw new functions.https.HttpsError('invalid-argument', 'officeId obrigatorio (e nao pode ser o escritorio demo).');
+    }
+    const officeSnap = await accountingOfficeRef().doc(officeId).get();
+    if (!officeSnap.exists) {
+        throw new functions.https.HttpsError('not-found', 'Escritorio nao encontrado.');
+    }
+    const o = asRecord(officeSnap.data());
+    if (o.lightweightProfilePending !== true) {
+        throw new functions.https.HttpsError('failed-precondition', 'So e permitido apagar escritorios ainda em cadastro leve (lightweightProfilePending).');
+    }
+    const linked = await listCompanySettingsLinkedToOffice(officeId);
+    if (linked.length > 0) {
+        throw new functions.https.HttpsError('failed-precondition', 'Escritorio ainda tem empresas na carteira (company_settings). Remova ou apague essas empresas de teste primeiro.');
+    }
+    const storedCount = Number(o.linkedCompaniesCount ?? 0) || 0;
+    if (storedCount > 0) {
+        throw new functions.https.HttpsError('failed-precondition', 'Escritorio indica empresas vinculadas (linkedCompaniesCount). Confirme a carteira antes de apagar.');
+    }
+    const accountantSnap = await admin
+        .firestore()
+        .collection('users')
+        .where('officeId', '==', officeId)
+        .limit(20)
+        .get();
+    for (const d of accountantSnap.docs) {
+        const u = asRecord(d.data());
+        if (roleParaFirestore(u.role) !== 'ACCOUNTANT') {
+            throw new functions.https.HttpsError('failed-precondition', 'Existem utilizadores nao-contador ligados a este officeId. Exclusao bloqueada.');
+        }
+        if (u.lightweightProfilePending !== true) {
+            throw new functions.https.HttpsError('failed-precondition', 'Contador ja nao esta em cadastro leve; exclusao abortada.');
+        }
+    }
+    for (const d of accountantSnap.docs) {
+        const uid = d.id;
+        const linksByAcct = await admin
+            .firestore()
+            .collection('accountant_links')
+            .where('accountantUserId', '==', uid)
+            .limit(200)
+            .get();
+        if (!linksByAcct.empty) {
+            const batch = admin.firestore().batch();
+            for (const link of linksByAcct.docs) {
+                batch.delete(link.ref);
+            }
+            await batch.commit();
+        }
+        try {
+            await admin.auth().deleteUser(uid);
+        }
+        catch (err) {
+            functions.logger.warn('platformDeleteLightweightTestOffice auth delete', {
+                uid,
+                error: errorMessage(err, ''),
+            });
+        }
+        await admin.firestore().collection('users').doc(uid).delete();
+    }
+    await accountingOfficeRef().doc(officeId).delete();
+    await writeAudit({
+        claims,
+        module: 'platform',
+        action: 'delete_lightweight_test_office',
+        entityPath: 'accounting_offices',
+        entityId: officeId,
+        before: { email: asTrimmedString(o.email) },
+        after: { removed: true },
+    });
+    return { ok: true, officeId };
+});
 exports.platformGetCompanyFiscalStatus = functions.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
     const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
