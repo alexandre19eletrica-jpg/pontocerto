@@ -62,6 +62,8 @@ class AppErrorMapper {
       'not-found' => 'Servico indisponivel no momento.',
       'deadline-exceeded' => 'Tempo de resposta excedido.',
       'unavailable' => 'Servico temporariamente indisponivel.',
+      'internal' =>
+          (e.message != null && e.message!.trim().isNotEmpty) ? e.message : null,
       _ => null,
     };
   }

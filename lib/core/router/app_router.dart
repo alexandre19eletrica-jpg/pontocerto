@@ -454,6 +454,12 @@ class RotasApp {
             ),
           ),
           GoRoute(
+            path: '/platform-admin/governanca',
+            builder: (context, state) => const PlatformAdminPage(
+              section: PlatformAdminSection.governanca,
+            ),
+          ),
+          GoRoute(
             path: '/platform-admin/convidar',
             builder: (context, state) =>
                 const PlatformAdminPage(section: PlatformAdminSection.convidar),

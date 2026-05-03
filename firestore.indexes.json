@@ -4,6 +4,14 @@
       "collectionGroup": "users",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "role", "order": "ASCENDING" },
+        { "fieldPath": "lightweightProfilePending", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "officeId", "order": "ASCENDING" },
         { "fieldPath": "role", "order": "ASCENDING" }
       ]

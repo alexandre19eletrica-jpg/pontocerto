@@ -1095,6 +1095,11 @@ class _PlatformAdminShellGroup extends StatelessWidget {
             onTap: () => onSubRoute(kPlatformAdminEscritoriosPath),
           ),
           _PlatformAdminSubEntry(
+            label: 'Governanca',
+            selected: currentRoute == kPlatformAdminGovernancaPath,
+            onTap: () => onSubRoute(kPlatformAdminGovernancaPath),
+          ),
+          _PlatformAdminSubEntry(
             label: 'Convidar',
             selected: currentRoute == kPlatformAdminConvidarPath,
             onTap: () => onSubRoute(kPlatformAdminConvidarPath),

@@ -220,6 +220,7 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 
 ## Atualizacao visual (03/05/2026)
 
+- Plataforma `/platform-admin/governanca` (submenu **Governanca** sob Plataforma): duas listas em cards expansiveis — empresas em **teste direto** (cadastro leve sem escritorio completo) e **livro de demos** (registos anonimizados: hash de IP parcial, tipo de dispositivo, telas); botao para ir a **Escritorios e carteira**; atalho **Financeiro** por linha de empresa teste.
 - Pagina de vendas `/vendas`: blocos de texto e citacoes com linguagem mais institucional (menos enfase em culpa ou obrigacao sobre qualquer perfil).
 - Pre-cadastro comercial (`SalesPreRegistrationPage`): titulos e textos de apoio alinhados ao follow-up comercial/operacional sem checklist longo de condutas do contador.
 - Cadastro leve da empresa (`/cadastro-empresa`): botao final descreve solicitacao por e-mail; sem campo de senha no formulario leve e no cadastro publico completo.

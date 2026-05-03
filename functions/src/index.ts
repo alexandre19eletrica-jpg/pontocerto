@@ -757,6 +757,45 @@ function hashPublicToken(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
+/** ID de documento em platform_public/demo_access: deduplica visitas do mesmo IP + assinatura leve do dispositivo. */
+function buildPublicDemoAccessDedupeDocId(params: {
+  ipHash: string;
+  userAgent: string;
+  deviceType: string;
+  language: string;
+  screenWidth: number;
+  screenHeight: number;
+}): string {
+  const uaShort = hashPublicToken(asTrimmedString(params.userAgent)).slice(0, 20);
+  const seed = [
+    params.ipHash || 'na',
+    sanitizeMarketingKey(params.deviceType),
+    String(Number(params.screenWidth) || 0),
+    String(Number(params.screenHeight) || 0),
+    asTrimmedString(params.language).slice(0, 16),
+    uaShort,
+  ].join('|');
+  return `dv1_${hashPublicToken(seed).slice(0, 48)}`;
+}
+
+function firestoreCreatedMillis(value: unknown): number {
+  if (value instanceof admin.firestore.Timestamp) {
+    return value.toMillis();
+  }
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof (value as {toMillis?: () => number}).toMillis === 'function'
+  ) {
+    try {
+      return (value as {toMillis: () => number}).toMillis();
+    } catch (_) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+
 function generatePublicToken(): string {
   return crypto.randomBytes(24).toString('base64url');
 }
@@ -2871,14 +2910,53 @@ function errorMessage(error: unknown, fallback: string): string {
   return text || fallback;
 }
 
+/** Texto concatenado para classificar falhas IAM (mensagem as vezes nao esta em Error.message). */
+function collectErrorTextDeep(error: unknown): string {
+  const chunks: string[] = [];
+  const push = (s: string) => {
+    const t = String(s ?? '').trim();
+    if (!t || chunks.some((existing) => existing.includes(t))) {
+      return;
+    }
+    chunks.push(t);
+  };
+  push(errorMessage(error, ''));
+  if (error && typeof error === 'object') {
+    const any = error as Record<string, unknown>;
+    for (const k of ['message', 'code', 'status', 'details'] as const) {
+      const v = any[k];
+      if (typeof v === 'string') {
+        push(v);
+      }
+    }
+    const ei = any['errorInfo'];
+    if (ei && typeof ei === 'object') {
+      const r = ei as Record<string, unknown>;
+      if (typeof r['message'] === 'string') {
+        push(r['message']);
+      }
+      if (typeof r['code'] === 'string') {
+        push(r['code']);
+      }
+    }
+    try {
+      push(JSON.stringify(error));
+    } catch (_) {
+      /* ignored */
+    }
+  }
+  return chunks.join('\n').toLowerCase();
+}
+
 /** createCustomToken / algumas operacoes Admin Auth exigem signBlob no runtime das Functions. */
 function isLikelyFirebaseAdminIamSigningError(error: unknown): boolean {
-  const msg = errorMessage(error, '');
+  const blob = collectErrorTextDeep(error);
   return (
-    /signBlob/i.test(msg) ||
-    /SERVICE_ACCOUNT_TOKEN_CREATOR/i.test(msg) ||
-    /iam\.serviceaccounts\.sign/i.test(msg) ||
-    /Permission.*iam\.serviceAccounts/i.test(msg)
+    blob.includes('signblob') ||
+    blob.includes('service_account_token_creator') ||
+    blob.includes('iam.serviceaccounts.sign') ||
+    blob.includes('serviceaccounttokencreator') ||
+    /permission[^\n]*iam\.serviceaccounts/i.test(blob)
   );
 }
 
@@ -10024,7 +10102,8 @@ exports.platformListCompanies = functions.https.onCall(async (_data, context) =>
     .limit(200)
     .get();
 
-  const items = await Promise.all(
+  const rows: Array<{companyId: string; millis: number; item: Record<string, unknown>}> =
+    await Promise.all(
     usersSnap.docs.map(async (doc) => {
       const data = asRecord(doc.data());
       const companyId = asTrimmedString(data.companyId);
@@ -10051,7 +10130,7 @@ exports.platformListCompanies = functions.https.onCall(async (_data, context) =>
             settingsData,
           })
         : {};
-      return {
+      const item = {
         ownerUid: doc.id,
         companyId,
         companyName:
@@ -10112,12 +10191,140 @@ exports.platformListCompanies = functions.https.onCall(async (_data, context) =>
         focusProvisioningStatus:
           asTrimmedString(fiscalSnapshot.focusProvisioningStatus),
       };
+      return {
+        companyId,
+        millis: firestoreCreatedMillis(data.createdAt),
+        item,
+      };
     }),
+  );
+
+  const canonicalByCompany = new Map<string, Record<string, unknown>>();
+  const bestMillis = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.companyId) {
+      continue;
+    }
+    const prev = bestMillis.get(row.companyId);
+    if (prev === undefined || row.millis < prev) {
+      bestMillis.set(row.companyId, row.millis);
+      canonicalByCompany.set(row.companyId, row.item);
+    }
+  }
+
+  const items = Array.from(canonicalByCompany.values());
+
+  return {
+    ok: true,
+    items,
+  };
+});
+
+exports.platformListStandaloneLightweightCompanies = functions.https.onCall(async (_data, context) => {
+  const claims = assertClaims(context);
+  const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+  assertPlatformAdmin(claims, userProfile);
+
+  const ownersSnap = await admin
+    .firestore()
+    .collection('users')
+    .where('role', '==', 'OWNER')
+    .where('lightweightProfilePending', '==', true)
+    .limit(120)
+    .get();
+
+  const buckets = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+  for (const doc of ownersSnap.docs) {
+    const data = asRecord(doc.data());
+    const companyId = asTrimmedString(data.companyId);
+    if (!companyId || companyId === PUBLIC_DEMO_COMPANY_ID) {
+      continue;
+    }
+    const prev = buckets.get(companyId);
+    const ms = firestoreCreatedMillis(data.createdAt);
+    if (!prev) {
+      buckets.set(companyId, doc);
+      continue;
+    }
+    const prevMs = firestoreCreatedMillis(asRecord(prev.data()).createdAt);
+    if (ms < prevMs) {
+      buckets.set(companyId, doc);
+    }
+  }
+
+  const items: Record<string, unknown>[] = [];
+  for (const [companyId, doc] of buckets.entries()) {
+    const data = asRecord(doc.data());
+    const settingsSnap = await admin
+      .firestore()
+      .collection('company_settings')
+      .doc(companyId)
+      .get();
+    const settingsData = asRecord(settingsSnap.data());
+    const ds = asRecord(settingsData.directSignup);
+    const ap = asRecord(settingsData.accountantOnboardingPending);
+    items.push({
+      companyId,
+      ownerUid: doc.id,
+      ownerName: asTrimmedString(data.nome),
+      ownerEmail: asTrimmedString(data.email).toLowerCase(),
+      companyName:
+        asTrimmedString(data.companyName) ||
+        asTrimmedString(asRecord(data.companyData).nomeFantasia),
+      lightweightSource: asTrimmedString(ds.source),
+      directSignupPending: ds.lightweightProfilePending === true,
+      accountantPendingStatus: asTrimmedString(ap.status),
+      updatedAtIso: timestampToIsoString(settingsData.updatedAt),
+    });
+  }
+
+  items.sort((a, b) =>
+    String(b['updatedAtIso'] ?? '').localeCompare(String(a['updatedAtIso'] ?? '')),
   );
 
   return {
     ok: true,
     items,
+  };
+});
+
+exports.platformListPublicDemoAccessLedger = functions.https.onCall(async (data, context) => {
+  const claims = assertClaims(context);
+  const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+  assertPlatformAdmin(claims, userProfile);
+
+  const limit = Math.min(300, Math.max(1, Number(data?.limit ?? 120) || 120));
+  const snap = await demoPublicAccessRef().limit(800).get();
+  const rows = snap.docs
+    .map((doc) => {
+      const item = asRecord(doc.data());
+      const rolesRaw = item.roles ?? {};
+      return {
+        docId: doc.id,
+        clientVisitorId: asTrimmedString(item.clientVisitorId),
+        marketingVisitorId: asTrimmedString(item.visitorId),
+        ipHashShort: asTrimmedString(item.ipHash).slice(0, 12),
+        deviceType: asTrimmedString(item.deviceType),
+        language: asTrimmedString(item.language),
+        screen: `${Number(item.screenWidth ?? 0)}x${Number(item.screenHeight ?? 0)}`,
+        accessCount: Number(item.accessCount ?? 0) || 0,
+        rolesCompany: rolesRaw && typeof rolesRaw === 'object' ? (rolesRaw as Record<string, unknown>)['company'] === true : false,
+        rolesAccountant:
+          rolesRaw && typeof rolesRaw === 'object'
+            ? (rolesRaw as Record<string, unknown>)['accountant'] === true
+            : false,
+        lastSeenAtIso: timestampToIsoString(item.lastSeenAt),
+        firstSeenAtIso: timestampToIsoString(item.firstSeenAt),
+        dedupeVersion: Number(item.dedupeVersion ?? 0) || 0,
+        userAgentSnippet: asTrimmedString(item.userAgent).slice(0, 120),
+      };
+    })
+    .sort((a, b) => String(b.lastSeenAtIso).localeCompare(String(a.lastSeenAtIso)))
+    .slice(0, limit);
+
+  return {
+    ok: true,
+    items: rows,
   };
 });
 
@@ -12211,7 +12418,15 @@ exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
     );
   }
 
-  const accessRef = demoPublicAccessRef().doc(visitorId);
+  const dedupeDocId = buildPublicDemoAccessDedupeDocId({
+    ipHash: metadata.ipHash,
+    userAgent: metadata.userAgent,
+    deviceType,
+    language,
+    screenWidth,
+    screenHeight,
+  });
+  const accessRef = demoPublicAccessRef().doc(dedupeDocId);
   const dateKey = marketingDateKey();
   const dailyRef = marketingDailyRef(dateKey);
 
@@ -12236,6 +12451,8 @@ exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
         screenWidth,
         screenHeight,
         ipHash: metadata.ipHash,
+        clientVisitorId: visitorId,
+        dedupeVersion: 1,
         userAgent: metadata.userAgent,
         accessCount: admin.firestore.FieldValue.increment(1),
         roles: {

@@ -65,6 +65,8 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   late Future<PlatformSalesPipelineSnapshot> _salesPipelineFuture;
   late Future<PlatformMarketingDashboard> _marketingDashboardFuture;
   late Future<List<PlatformAccountingOfficeSummary>> _accountingOfficesFuture;
+  Future<List<StandaloneLightweightCompanyRow>>? _standaloneLightFuture;
+  Future<List<PublicDemoAccessLedgerRow>>? _demoLedgerFuture;
   Future<PlatformFiscalCompanyStatus>? _fiscalStatusFuture;
   String? _selectedCompanyId;
   String? _selectedAdminOfficeId;
@@ -77,10 +79,25 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     return _service.listAccountingOffices(searchEmail: q.isEmpty ? null : q);
   }
 
+  void _primeGovernanceFutures() {
+    if (widget.section == PlatformAdminSection.governanca) {
+      _standaloneLightFuture = _service.listStandaloneLightweightCompanies();
+      _demoLedgerFuture = _service.listPublicDemoAccessLedger(limit: 200);
+    } else {
+      _standaloneLightFuture = null;
+      _demoLedgerFuture = null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _primeGovernanceFutures();
+    if (widget.section == PlatformAdminSection.governanca) {
+      _future = Future.value(const <PlatformCompanySummary>[]);
+    } else {
+      _future = _load();
+    }
     _publicSalesConfigFuture = _publicSalesConfigService.fetch();
     _publicDemoConfigFuture = _publicDemoConfigService.fetch();
     _salesPipelineFuture = _service.listSalesPipeline();
@@ -119,6 +136,14 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   @override
   void didUpdateWidget(covariant PlatformAdminPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.section != widget.section) {
+      _primeGovernanceFutures();
+      if (widget.section == PlatformAdminSection.governanca) {
+        _future = Future.value(const <PlatformCompanySummary>[]);
+      } else if (oldWidget.section == PlatformAdminSection.governanca) {
+        _future = _load();
+      }
+    }
     if (oldWidget.section != widget.section) {
       if (widget.section == PlatformAdminSection.integracoes &&
           _selectedCompanyId != null &&
@@ -768,6 +793,16 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
 
   AppWorkspaceHeader _headerForSection() {
     switch (widget.section) {
+      case PlatformAdminSection.governanca:
+        return const AppWorkspaceHeader(
+          title: 'Governanca de acessos',
+          subtitle:
+              'Empresas em teste sem escritorio vinculado e registo anonimizado dos demos publicos (dedupe por IP e pela assinatura leve do dispositivo/navegador).',
+          chips: [
+            AppHeaderChip('Plataforma'),
+            AppHeaderChip('Demo'),
+          ],
+        );
       case PlatformAdminSection.escritorios:
         return const AppWorkspaceHeader(
           title: 'Escritorios e carteira',
@@ -802,6 +837,146 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     }
   }
 
+  Widget _buildGovernanceSection() {
+    final standalone = _standaloneLightFuture;
+    final demos = _demoLedgerFuture;
+    if (standalone == null || demos == null) {
+      return const Center(
+        child: Text('Estado de governanca indisponivel.'),
+      );
+    }
+
+    void refresh() {
+      setState(() {
+        _standaloneLightFuture =
+            _service.listStandaloneLightweightCompanies();
+        _demoLedgerFuture = _service.listPublicDemoAccessLedger(limit: 200);
+      });
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 32),
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                'Atualize para recarregar. Para mover uma empresa para a carteira do contador apos ela ser vinculada, use Escritorios.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Atualizar',
+              onPressed: refresh,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => context.go(kPlatformAdminEscritoriosPath),
+          icon: const Icon(Icons.account_balance_outlined),
+          label: const Text('Ir para Escritorios e carteira'),
+        ),
+        const SizedBox(height: 12),
+        _folderCard(
+          title: 'Empresas em teste direto (sem escritorio)',
+          subtitle:
+              'Cadastro publico leve ainda incompleto. Ao o contador vincular na carteira do escritorio e concluirem o cadastro real, estas entradas deixam de aparecer aqui.',
+          initiallyExpanded: true,
+          child: FutureBuilder<List<StandaloneLightweightCompanyRow>>(
+            future: standalone,
+            builder: (context, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snap.hasError) {
+                return Text(AppErrorMapper.messageFrom(snap.error!));
+              }
+              final rows = snap.data ?? const [];
+              if (rows.isEmpty) {
+                return const Text(
+                  'Nenhuma empresa nesta fila no momento.',
+                );
+              }
+              return Column(
+                children: [
+                  for (final r in rows)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        r.companyName.isEmpty ? r.companyId : r.companyName,
+                      ),
+                      subtitle: Text(
+                        '${r.ownerEmail}\n${r.companyId}'
+                        '${r.accountantPendingStatus.isEmpty ? "" : "\ncontador pendente: ${r.accountantPendingStatus}"}',
+                      ),
+                      isThreeLine: true,
+                      trailing: TextButton(
+                        onPressed: () =>
+                            _selectCompanyInAdminPanel(r.companyId),
+                        child: const Text('Financeiro'),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        _folderCard(
+          title: 'Livro de demos publicos (dedupe rede + navegador)',
+          subtitle:
+              'Cada documento agrupa sessoes vindas da mesma origem tecnica para nao multiplicar contagem. Mostramos apenas trecho do hash de IP e do user-agent.',
+          initiallyExpanded: true,
+          child: FutureBuilder<List<PublicDemoAccessLedgerRow>>(
+            future: demos,
+            builder: (context, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snap.hasError) {
+                return Text(AppErrorMapper.messageFrom(snap.error!));
+              }
+              final rows = snap.data ?? const [];
+              if (rows.isEmpty) {
+                return const Text(
+                  'Sem registos na colecao de demo (ou dados antigos apenas com IDs de visitor).',
+                );
+              }
+              return Column(
+                children: [
+                  for (final r in rows)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        '${r.rolesCompany ? "Demo empresa" : ""}'
+                        '${r.rolesCompany && r.rolesAccountant ? " · " : ""}'
+                        '${r.rolesAccountant ? "Demo contador" : ""}'
+                        '${!r.rolesCompany && !r.rolesAccountant ? "(sem papel registrado)" : ""}'
+                        ' · ${r.accessCount}x',
+                      ),
+                      subtitle: Text(
+                        'Ultimo acesso: ${r.lastSeenAtIso}\nip(hash parcial): ${r.ipHashShort}\n'
+                        '${r.deviceType} · tela ${r.screen} · ${r.language}',
+                      ),
+                      isThreeLine: true,
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider);
@@ -820,6 +995,14 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     ref.read(shellPageChromeProvider.notifier).state = ShellPageChrome(
       header: _headerForSection(),
     );
+
+    if (widget.section == PlatformAdminSection.governanca) {
+      return AppGradientBackground(
+        child: AppPageLayout(
+          child: _buildGovernanceSection(),
+        ),
+      );
+    }
 
     return AppGradientBackground(
       child: AppPageLayout(

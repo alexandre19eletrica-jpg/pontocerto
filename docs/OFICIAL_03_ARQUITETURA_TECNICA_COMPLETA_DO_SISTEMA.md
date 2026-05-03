@@ -27,7 +27,17 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 #### `publicOpenDemoAccess`
 
 - Workspace fixo `public_demo_workspace`; UIDs fixos `public_demo_owner` / `public_demo_accountant` (ignora IDs legados em `demo_access_config`).
-- `platformUpdateDemoAccessConfig` deixou de exigir que `company_settings` exista para IDs customizados ao gravar a configuracao administrativa.
+- Gravacao em `platform_public/demo_access` com docId `dv1_*` (hash de IP + UA + dimensoes + idioma + tipo de dispositivo); campos `clientVisitorId`, `dedupeVersion`.
+
+#### Plataforma admin (governanca — 03/05/2026)
+
+- Rotas: `/platform-admin/governanca`; menu shell > Plataforma > **Governanca**.
+- Callables: `platformListStandaloneLightweightCompanies`, `platformListPublicDemoAccessLedger`, `platformListCompanies` (dedupe por `companyId`).
+- Indice composto Firestore: `users` — `role` + `lightweightProfilePending` (`firestore.indexes.json`).
+
+#### `platformUpdateDemoAccessConfig`
+
+- Deixou de exigir que `company_settings` exista para IDs customizados ao gravar a configuracao administrativa.
 
 #### `publicCreateSalesPreRegistration`
 
@@ -42,6 +52,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 #### IAM / Auth Admin (`signBlob`)
 
 - `createCustomToken` (demo: `publicOpenDemoAccess`) e `generatePasswordResetLink` podem falhar em producao quando a conta de servico que corre as Functions nao pode assinar blobs na conta firebase-adminsdk; nesse caso devolve-se `HttpsError` `failed-precondition` com orientacao IAM (`roles/iam.serviceAccountTokenCreator`), em vez de `internal` apenas com stack técnico.
+- Deteccao de falha IAM percorre tambem texto aninhado do erro SDK (`collectErrorTextDeep`).
 
 ## 3. Dados
 

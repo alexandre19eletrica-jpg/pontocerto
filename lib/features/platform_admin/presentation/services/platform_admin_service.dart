@@ -17,6 +17,30 @@ class PlatformAdminService {
     return items;
   }
 
+  Future<List<StandaloneLightweightCompanyRow>> listStandaloneLightweightCompanies() async {
+    final callable = _functions.httpsCallable('platformListStandaloneLightweightCompanies');
+    final result = await callable.call();
+    final data = Map<String, dynamic>.from(result.data as Map);
+    final items = (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (item) =>
+              StandaloneLightweightCompanyRow.fromMap(Map<String, dynamic>.from(item)),
+        )
+        .toList();
+    return items;
+  }
+
+  Future<List<PublicDemoAccessLedgerRow>> listPublicDemoAccessLedger({int limit = 120}) async {
+    final callable = _functions.httpsCallable('platformListPublicDemoAccessLedger');
+    final result = await callable.call(<String, dynamic>{'limit': limit});
+    final data = Map<String, dynamic>.from(result.data as Map);
+    return (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => PublicDemoAccessLedgerRow.fromMap(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
   Future<IssuedTrialInvite> issueTrialInvite90Days({
     String? companyEmail,
     required String accountantEmail,
@@ -646,6 +670,99 @@ class PlatformAccountingOfficeSummary {
       companies: rawCompanies,
       updatedAt: map['updatedAt']?.toString() ?? '',
       createdAt: map['createdAt']?.toString() ?? '',
+    );
+  }
+}
+
+/// Empresa owner com cadastro leve pendente (entrada publica sem escritorio).
+class StandaloneLightweightCompanyRow {
+  const StandaloneLightweightCompanyRow({
+    required this.companyId,
+    required this.ownerUid,
+    required this.ownerName,
+    required this.ownerEmail,
+    required this.companyName,
+    required this.lightweightSource,
+    required this.directSignupPending,
+    required this.accountantPendingStatus,
+    required this.updatedAtIso,
+  });
+
+  final String companyId;
+  final String ownerUid;
+  final String ownerName;
+  final String ownerEmail;
+  final String companyName;
+  final String lightweightSource;
+  final bool directSignupPending;
+  final String accountantPendingStatus;
+  final String updatedAtIso;
+
+  factory StandaloneLightweightCompanyRow.fromMap(Map<String, dynamic> map) {
+    return StandaloneLightweightCompanyRow(
+      companyId: map['companyId']?.toString() ?? '',
+      ownerUid: map['ownerUid']?.toString() ?? '',
+      ownerName: map['ownerName']?.toString() ?? '',
+      ownerEmail: map['ownerEmail']?.toString() ?? '',
+      companyName: map['companyName']?.toString() ?? '',
+      lightweightSource: map['lightweightSource']?.toString() ?? '',
+      directSignupPending: map['directSignupPending'] == true,
+      accountantPendingStatus: map['accountantPendingStatus']?.toString() ?? '',
+      updatedAtIso: map['updatedAtIso']?.toString() ?? '',
+    );
+  }
+}
+
+/// Linha anonimizada do livro de demo (IP apenas hash, UA truncado).
+class PublicDemoAccessLedgerRow {
+  const PublicDemoAccessLedgerRow({
+    required this.docId,
+    required this.clientVisitorId,
+    required this.marketingVisitorId,
+    required this.ipHashShort,
+    required this.deviceType,
+    required this.language,
+    required this.screen,
+    required this.accessCount,
+    required this.rolesCompany,
+    required this.rolesAccountant,
+    required this.lastSeenAtIso,
+    required this.firstSeenAtIso,
+    required this.dedupeVersion,
+    required this.userAgentSnippet,
+  });
+
+  final String docId;
+  final String clientVisitorId;
+  final String marketingVisitorId;
+  final String ipHashShort;
+  final String deviceType;
+  final String language;
+  final String screen;
+  final int accessCount;
+  final bool rolesCompany;
+  final bool rolesAccountant;
+  final String lastSeenAtIso;
+  final String firstSeenAtIso;
+  final int dedupeVersion;
+  final String userAgentSnippet;
+
+  factory PublicDemoAccessLedgerRow.fromMap(Map<String, dynamic> map) {
+    return PublicDemoAccessLedgerRow(
+      docId: map['docId']?.toString() ?? '',
+      clientVisitorId: map['clientVisitorId']?.toString() ?? '',
+      marketingVisitorId: map['marketingVisitorId']?.toString() ?? '',
+      ipHashShort: map['ipHashShort']?.toString() ?? '',
+      deviceType: map['deviceType']?.toString() ?? '',
+      language: map['language']?.toString() ?? '',
+      screen: map['screen']?.toString() ?? '',
+      accessCount: (map['accessCount'] as num?)?.toInt() ?? 0,
+      rolesCompany: map['rolesCompany'] == true,
+      rolesAccountant: map['rolesAccountant'] == true,
+      lastSeenAtIso: map['lastSeenAtIso']?.toString() ?? '',
+      firstSeenAtIso: map['firstSeenAtIso']?.toString() ?? '',
+      dedupeVersion: (map['dedupeVersion'] as num?)?.toInt() ?? 0,
+      userAgentSnippet: map['userAgentSnippet']?.toString() ?? '',
     );
   }
 }
