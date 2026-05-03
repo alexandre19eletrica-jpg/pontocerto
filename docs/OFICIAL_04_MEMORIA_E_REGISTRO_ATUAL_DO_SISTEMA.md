@@ -6,6 +6,8 @@ Projeto: Ponto Certo
 **Registo (03/05/2026 — copy vendas empresa/contador demo + avaliacao):** `/vendas-empresa` e `/vendas-contador` alinham heroi (subhead e badges) e card **Demonstracao gratuita do sistema** com linguagem institucional unificada (demonstracao antes de adesao; trinta dias avaliativos apos adesao formal). Ver `OFICIAL_01`.
 
 
+**Registo (03/05/2026 — demo runtime SA adminsdk):** `publicOpenDemoAccess` volta a `runWith`, desta vez com **`serviceAccount: firebase-adminsdk-fbsvc@pontocerto-e1dab.iam.gserviceaccount.com`** (callable sem Secret). IAM sobre `firebase-adminsdk`: acrescentado binding **Token Creator** do proprio membros adminsdk sobre a mesma conta. Motivo: utilizador continuava bloqueado por permissao mesmo com Token Creator appspot/compute → adminsdk.
+
 **Registo (03/05/2026 — IAM only demo + landing empresa MEI/WhatsApp):** verificacao `gcloud iam service-accounts get-iam-policy firebase-adminsdk-fbsvc@pontocerto-e1dab.iam.gserviceaccount.com`: ja existem `roles/iam.serviceAccountTokenCreator` + `roles/iam.serviceAccountUser` para `1074663509241-compute@developer.gserviceaccount.com` e `pontocerto-e1dab@appspot.gserviceaccount.com`. **`publicOpenDemoAccess`** removeu `runWith({ secrets: [ADMIN_SDK_AUTH_CERT_JSON] })` (`defineSecret` retirado) — deploy deixa de depender do Secret Firebase para essa callable; IAM permanece obrigatorio. `/vendas-empresa`: texto retira atalho "Sou contador" e acrescenta clareza juridico-comercial: MEI/sem contador que domina obrigacoes pode seguir sem contratar; WhatsApp como canal alternativo aos botoes existentes.
 
 

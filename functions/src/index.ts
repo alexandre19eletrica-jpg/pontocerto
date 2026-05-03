@@ -900,6 +900,9 @@ const PUBLIC_DEMO_COMPANY_ID = 'public_demo_workspace';
 const PUBLIC_DEMO_COMPANY_NAME = 'Ponto Certo';
 const PUBLIC_DEMO_OFFICE_ID = 'public_demo_office';
 const PUBLIC_DEMO_OFFICE_NAME = 'Escritorio Ponto Certo';
+/** Esta callable corre como conta Firebase Admin do projecto Auth (GCP `firebaseauth.admin`), evitando falhas de IAM no `signBlob` entre `appspot` e `firebase-adminsdk`. */
+const PUBLIC_OPEN_DEMO_CLOUD_FUNCTION_RUNTIME_SA_EMAIL =
+  'firebase-adminsdk-fbsvc@pontocerto-e1dab.iam.gserviceaccount.com';
 
 type PublicDemoProfile = 'company' | 'accountant';
 
@@ -12754,7 +12757,11 @@ exports.publicGetDemoAccessSummary = functions.https.onCall(async () => {
   };
 });
 
-exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
+exports.publicOpenDemoAccess = functions
+  .runWith({
+    serviceAccount: PUBLIC_OPEN_DEMO_CLOUD_FUNCTION_RUNTIME_SA_EMAIL,
+  })
+  .https.onCall(async (data, context) => {
   try {
   const profile = normalizePublicDemoProfile(data?.profile);
   const configSnap = await demoAccessConfigRef().get();
