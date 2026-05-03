@@ -37,6 +37,7 @@ import 'package:pontocerto/features/marketing/presentation/pages/vendas_convite_
 import 'package:pontocerto/features/marketing/presentation/pages/vendas_empresa_page.dart';
 import 'package:pontocerto/features/marketing/presentation/pages/employee_tester_showcase_page.dart';
 import 'package:pontocerto/features/marketing/presentation/pages/employee_tester_signup_page.dart';
+import 'package:pontocerto/features/marketing/presentation/pages/public_demo_access_page.dart';
 import 'package:pontocerto/features/marketing/presentation/pages/sales_onboarding_page.dart';
 import 'package:pontocerto/features/payments/presentation/pages/payments_page.dart';
 import 'package:pontocerto/features/platform_admin/presentation/pages/platform_admin_page.dart';
@@ -83,6 +84,8 @@ class RotasApp {
         final estaNoConviteContador = location == '/convite-contador';
         final estaNoCadastroTesteFuncionario = location == '/teste-funcionario';
         final estaNoCadastroTesteCurto = location == '/cadastro-teste';
+        final estaNoDemoEmpresa = location == '/demo-empresa';
+        final estaNoDemoContador = location == '/demo-contador';
         final acessoFuncionarioWebNegado =
             state.uri.queryParameters['employee-web-denied'] == '1';
 
@@ -97,6 +100,8 @@ class RotasApp {
               estaNoCadastroEscritorio ||
               estaNoCadastroTesteFuncionario ||
               estaNoCadastroTesteCurto ||
+              estaNoDemoEmpresa ||
+              estaNoDemoContador ||
               estaNoCadastroEmpresaContador) {
             return null;
           }
@@ -141,6 +146,9 @@ class RotasApp {
         if (estaNoConviteContador) {
           return null;
         }
+        if (estaNoCadastro || estaNoCadastroEmpresaContador) {
+          return null;
+        }
         if (estaNoCadastroEscritorio) {
           return null;
         }
@@ -148,6 +156,9 @@ class RotasApp {
           return null;
         }
         if (estaNoCadastroTesteCurto) {
+          return null;
+        }
+        if (estaNoDemoEmpresa || estaNoDemoContador) {
           return null;
         }
 
@@ -160,9 +171,6 @@ class RotasApp {
         }
 
         if (estaNoLogin ||
-            estaNoCadastro ||
-            estaNoCadastroEmpresaContador ||
-            estaNoCadastroEscritorio ||
             estaNoInicio ||
             location == '/login' ||
             location == '/login-funcionario') {
@@ -230,13 +238,13 @@ class RotasApp {
       ),
       GoRoute(
         path: '/cadastro-empresa',
-        redirect: (context, state) =>
-            '/cadastro-escritorio-contabil${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
+        builder: (context, state) =>
+            const PaginaCadastroEmpresa(lightweightMode: true),
       ),
       GoRoute(
         path: '/cadastro-empresa-contador',
-        redirect: (context, state) =>
-            '/cadastro-escritorio-contabil${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
+        builder: (context, state) =>
+            const PaginaCadastroEmpresa(lightweightMode: true),
       ),
       GoRoute(
         path: '/cadastro-escritorio-contabil',
@@ -266,9 +274,8 @@ class RotasApp {
       ),
       GoRoute(
         path: '/convite',
-        builder: (context, state) => VendasConvitePage(
-          token: state.uri.queryParameters['token'] ?? '',
-        ),
+        builder: (context, state) =>
+            VendasConvitePage(token: state.uri.queryParameters['token'] ?? ''),
       ),
       GoRoute(
         path: '/contratar',
@@ -294,6 +301,20 @@ class RotasApp {
       GoRoute(
         path: '/cadastro-teste',
         builder: (context, state) => const EmployeeTesterSignupPage(),
+      ),
+      GoRoute(
+        path: '/demo-empresa',
+        builder: (context, state) => const PublicDemoAccessPage(
+          profile: 'company',
+          sourcePath: '/demo-empresa',
+        ),
+      ),
+      GoRoute(
+        path: '/demo-contador',
+        builder: (context, state) => const PublicDemoAccessPage(
+          profile: 'accountant',
+          sourcePath: '/demo-contador',
+        ),
       ),
       ShellRoute(
         builder: (BuildContext context, GoRouterState state, Widget child) {
@@ -332,6 +353,11 @@ class RotasApp {
               accountantMode: true,
               trialInviteToken: state.uri.queryParameters['trialToken'],
             ),
+          ),
+          GoRoute(
+            path: '/completar-empresa',
+            builder: (context, state) =>
+                const PaginaCadastroEmpresa(completionMode: true),
           ),
           GoRoute(
             path: '/accountant-partner',

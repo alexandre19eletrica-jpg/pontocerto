@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -148,6 +149,17 @@ class _AppShellScaffoldState extends State<AppShellScaffold> {
     setState(() => _refreshEpoch++);
     GoRouter.of(context).refresh();
     await Future<void>.delayed(const Duration(milliseconds: 320));
+  }
+
+  Future<void> _openRealAccessRoute() async {
+    final targetRoute = widget.session.isDemoCompany
+        ? '/cadastro-empresa'
+        : '/cadastro-escritorio-contabil';
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
+    if (!mounted) return;
+    context.go(targetRoute);
   }
 
   ScrollPosition? _resolveBodyScrollPosition() {
@@ -408,6 +420,49 @@ class _AppShellScaffoldState extends State<AppShellScaffold> {
                               },
                             )
                           : widget.header,
+                    ),
+                  if (widget.session.isDemo)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8E1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFFD54F)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.session.isDemoCompany
+                                ? 'Modo demo da empresa: leitura somente. Os dados exibidos representam a experiencia real do sistema, mas nenhuma alteracao e gravada.'
+                                : 'Modo demo do contador: leitura somente. Os dados exibidos representam a experiencia real do sistema, mas nenhuma alteracao e gravada.',
+                            style: const TextStyle(
+                              color: AppBrandColors.ink,
+                              fontWeight: FontWeight.w700,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: _openRealAccessRoute,
+                            icon: const Icon(Icons.lock_open_outlined),
+                            label: Text(
+                              widget.session.isDemoCompany
+                                  ? 'Ir para acesso real da empresa'
+                                  : 'Ir para acesso real do contador',
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppBrandColors.ink,
+                              side: const BorderSide(color: Color(0xFFFFC107)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   Expanded(
                     child: Listener(

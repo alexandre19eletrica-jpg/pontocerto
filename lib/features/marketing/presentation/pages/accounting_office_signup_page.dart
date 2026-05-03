@@ -44,6 +44,8 @@ class _AccountingOfficeSignupPageState
   String _cnpjLookupMessage =
       'Use o CNPJ para preencher automaticamente os dados disponiveis do escritorio.';
 
+  bool get _lightweightMode => widget.token.trim().isEmpty;
+
   @override
   void initState() {
     super.initState();
@@ -155,6 +157,63 @@ class _AccountingOfficeSignupPageState
 
   Future<void> _submit() async {
     if (_submitting) return;
+    if (_lightweightMode) {
+      if (_officeNameController.text.trim().isEmpty ||
+          _responsibleNameController.text.trim().isEmpty ||
+          _emailController.text.trim().isEmpty ||
+          _passwordController.text.isEmpty ||
+          _confirmPasswordController.text.isEmpty) {
+        _showMessage('Preencha nome, email e senha para criar o acesso.');
+        return;
+      }
+
+      if (_passwordController.text != _confirmPasswordController.text) {
+        _showMessage('A confirmacao de senha nao confere.');
+        return;
+      }
+
+      setState(() => _submitting = true);
+      try {
+        final result = await _service.createWorkspaceAccess(
+          payload: AccountingOfficeLightweightPayload(
+            officeName: _officeNameController.text.trim(),
+            responsibleName: _responsibleNameController.text.trim(),
+            email: _emailController.text.trim().toLowerCase(),
+            password: _passwordController.text,
+            confirmPassword: _confirmPasswordController.text,
+          ),
+        );
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Acesso criado'),
+            content: Text(result.message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Fechar'),
+              ),
+              FilledButton(
+                onPressed: () => context.go(
+                  '/login-contador?email=${Uri.encodeComponent(result.email)}',
+                ),
+                child: const Text('Ir para login'),
+              ),
+            ],
+          ),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        _showMessage(AppErrorMapper.messageFrom(error));
+      } finally {
+        if (mounted) {
+          setState(() => _submitting = false);
+        }
+      }
+      return;
+    }
+
     if (_officeNameController.text.trim().isEmpty ||
         _cnpjController.text.trim().isEmpty ||
         _responsibleNameController.text.trim().isEmpty ||
@@ -261,6 +320,7 @@ class _AccountingOfficeSignupPageState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final prefill = _prefill;
+    final lightweightMode = _lightweightMode;
 
     return Scaffold(
       appBar: AppBar(
@@ -277,7 +337,9 @@ class _AccountingOfficeSignupPageState
               AppWorkspaceCard(
                 title: 'Escritorio de contabilidade',
                 subtitle:
-                    'Cadastro dedicado para o contador indicado pela empresa. Primeiro o escritorio e cadastrado; depois a empresa indicada entra no fluxo oficial desse escritorio.',
+                    lightweightMode
+                        ? 'Crie o acesso do contador agora com nome, email e senha. O perfil real do escritorio e a carteira podem ser completados depois dentro do sistema.'
+                        : 'Cadastro dedicado para o contador indicado pela empresa. Primeiro o escritorio e cadastrado; depois a empresa indicada entra no fluxo oficial desse escritorio.',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -289,32 +351,38 @@ class _AccountingOfficeSignupPageState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '1. A plataforma cadastra o escritorio direto ou envia um link por e-mail.\n'
-                      '2. O escritorio preenche todos os dados necessarios.\n'
-                      '3. Ao finalizar, o sistema envia e-mail com link de acesso, login e senha cadastrada.\n'
-                      '4. O escritorio sobe automaticamente na base da plataforma.\n'
-                      '5. Depois disso, o contador usa o escritorio ja cadastrado para registrar a empresa que o indicou.\n'
-                      '6. O teste real de 30 dias passa a valer no sistema inteiro da empresa indicada.\n'
-                      '7. Depois do trial, o escritorio passa a ter assinatura base de R\$ 97,90 por mes, com opcao de isencao quando a parceria comercial for aprovada.',
+                    Text(
+                      lightweightMode
+                          ? '1. O contador cria o acesso com nome, email e senha.\n'
+                              '2. Entra no sistema imediatamente.\n'
+                              '3. Completa o perfil real do escritorio quando quiser.\n'
+                              '4. Depois cadastra e acompanha as empresas da carteira.'
+                          : '1. A plataforma cadastra o escritorio direto ou envia um link por e-mail.\n'
+                              '2. O escritorio preenche todos os dados necessarios.\n'
+                              '3. Ao finalizar, o sistema envia e-mail com link de acesso, login e senha cadastrada.\n'
+                              '4. O escritorio sobe automaticamente na base da plataforma.\n'
+                              '5. Depois disso, o contador usa o escritorio ja cadastrado para registrar a empresa que o indicou.\n'
+                              '6. O teste real de 30 dias passa a valer no sistema inteiro da empresa indicada.\n'
+                              '7. Depois do trial, o escritorio passa a ter assinatura base de R\$ 97,90 por mes, com opcao de isencao quando a parceria comercial for aprovada.',
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppBrandColors.border),
-                      ),
-                      child: const Text(
-                        'Regra comercial atual: primeiro entra o cadastro do escritorio indicado pela empresa. Depois o contador cadastra a empresa indicada e o sistema inteiro entra em teste real gratis por 30 dias. Nao existe cobranca de implantacao nessa entrada.',
-                        style: TextStyle(
-                          color: AppBrandColors.softText,
-                          fontWeight: FontWeight.w600,
+                    if (!lightweightMode)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppBrandColors.border),
+                        ),
+                        child: const Text(
+                          'Regra comercial atual: primeiro entra o cadastro do escritorio indicado pela empresa. Depois o contador cadastra a empresa indicada e o sistema inteiro entra em teste real gratis por 30 dias. Nao existe cobranca de implantacao nessa entrada.',
+                          style: TextStyle(
+                            color: AppBrandColors.softText,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
                     if (_loadingPrefill) ...[
                       const SizedBox(height: 12),
                       const LinearProgressIndicator(),
@@ -361,7 +429,9 @@ class _AccountingOfficeSignupPageState
               AppWorkspaceCard(
                 title: 'Dados do escritorio',
                 subtitle:
-                    'Base cadastral necessaria para criar o acesso do escritorio e preparar o monitoramento na plataforma.',
+                    lightweightMode
+                        ? 'Entrada simplificada para liberar o acesso do contador agora.'
+                        : 'Base cadastral necessaria para criar o acesso do escritorio e preparar o monitoramento na plataforma.',
                 child: Column(
                   children: [
                     _field(
@@ -369,55 +439,58 @@ class _AccountingOfficeSignupPageState
                       label: 'Nome do escritorio *',
                       icon: Icons.apartment_rounded,
                     ),
-                    _field(
-                      controller: _cnpjController,
-                      label: 'CNPJ *',
-                      icon: Icons.badge_rounded,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [CnpjInputFormatter()],
-                    ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: _loadingCnpj ? null : _lookupCnpj,
-                            icon: const Icon(Icons.travel_explore_outlined),
-                            label: Text(
-                              _loadingCnpj
-                                  ? 'Buscando CNPJ...'
-                                  : 'Buscar dados do CNPJ',
-                            ),
-                          ),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 420),
-                            child: Text(
-                              _cnpjLookupMessage,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppBrandColors.softText,
-                                height: 1.4,
+                    if (!lightweightMode) ...[
+                      _field(
+                        controller: _cnpjController,
+                        label: 'CNPJ *',
+                        icon: Icons.badge_rounded,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [CnpjInputFormatter()],
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _loadingCnpj ? null : _lookupCnpj,
+                              icon: const Icon(Icons.travel_explore_outlined),
+                              label: Text(
+                                _loadingCnpj
+                                    ? 'Buscando CNPJ...'
+                                    : 'Buscar dados do CNPJ',
                               ),
                             ),
-                          ),
-                        ],
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 420),
+                              child: Text(
+                                _cnpjLookupMessage,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppBrandColors.softText,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
+                    ],
                     _field(
                       controller: _responsibleNameController,
                       label: 'Responsavel principal *',
                       icon: Icons.person_rounded,
                     ),
-                    _field(
-                      controller: _phoneController,
-                      label: 'Telefone *',
-                      icon: Icons.phone_rounded,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [TelefoneInputFormatter()],
-                    ),
+                    if (!lightweightMode)
+                      _field(
+                        controller: _phoneController,
+                        label: 'Telefone *',
+                        icon: Icons.phone_rounded,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [TelefoneInputFormatter()],
+                      ),
                     _field(
                       controller: _emailController,
                       label: 'Login por e-mail *',
@@ -436,73 +509,75 @@ class _AccountingOfficeSignupPageState
                       icon: Icons.verified_user_outlined,
                       obscureText: true,
                     ),
-                    _field(
-                      controller: _addressController,
-                      label: 'Endereco completo *',
-                      icon: Icons.location_on_outlined,
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _field(
-                            controller: _cityController,
-                            label: 'Cidade *',
-                            icon: Icons.location_city_outlined,
+                    if (!lightweightMode) ...[
+                      _field(
+                        controller: _addressController,
+                        label: 'Endereco completo *',
+                        icon: Icons.location_on_outlined,
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _field(
+                              controller: _cityController,
+                              label: 'Cidade *',
+                              icon: Icons.location_city_outlined,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _field(
-                            controller: _stateController,
-                            label: 'UF *',
-                            icon: Icons.map_outlined,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _billingChoice,
-                        decoration: const InputDecoration(
-                          labelText:
-                              'Regra padrao de cobranca das empresas indicadas *',
-                          prefixIcon: Icon(
-                            Icons.account_balance_wallet_outlined,
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'office',
-                            child: Text('Cobrar do escritorio por padrao'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'company',
-                            child: Text('Cobrar da empresa por padrao'),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _field(
+                              controller: _stateController,
+                              label: 'UF *',
+                              icon: Icons.map_outlined,
+                            ),
                           ),
                         ],
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() => _billingChoice = value);
-                        },
                       ),
-                    ),
-                    _field(
-                      controller: _notesController,
-                      label: 'Observacoes operacionais',
-                      icon: Icons.notes_rounded,
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Este mesmo fluxo sera reutilizado depois na pagina dedicada para escritorios de contabilidade.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppBrandColors.softText,
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _billingChoice,
+                          decoration: const InputDecoration(
+                            labelText:
+                                'Regra padrao de cobranca das empresas indicadas *',
+                            prefixIcon: Icon(
+                              Icons.account_balance_wallet_outlined,
+                            ),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'office',
+                              child: Text('Cobrar do escritorio por padrao'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'company',
+                              child: Text('Cobrar da empresa por padrao'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _billingChoice = value);
+                          },
                         ),
                       ),
-                    ),
+                      _field(
+                        controller: _notesController,
+                        label: 'Observacoes operacionais',
+                        icon: Icons.notes_rounded,
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Este mesmo fluxo sera reutilizado depois na pagina dedicada para escritorios de contabilidade.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppBrandColors.softText,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     FilledButton.icon(
                       onPressed: _submitting ? null : _submit,
@@ -515,8 +590,12 @@ class _AccountingOfficeSignupPageState
                           : const Icon(Icons.how_to_reg_rounded),
                       label: Text(
                         _submitting
-                            ? 'Finalizando cadastro...'
-                            : 'Cadastrar escritorio',
+                            ? (lightweightMode
+                                ? 'Criando acesso...'
+                                : 'Finalizando cadastro...')
+                            : (lightweightMode
+                                ? 'Criar acesso do contador'
+                                : 'Cadastrar escritorio'),
                       ),
                     ),
                   ],

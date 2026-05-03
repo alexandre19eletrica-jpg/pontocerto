@@ -523,6 +523,18 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}';
   }
 
+  DateTime _invoiceReferenceDate(Map<String, dynamic> data) {
+    final officialIssuedAt = data['officialIssuedAt'];
+    if (officialIssuedAt != null) return _toDate(officialIssuedAt);
+    final issueDate = data['issueDate'];
+    if (issueDate != null) return _toDate(issueDate);
+    final serviceDate = data['serviceDate'];
+    if (serviceDate != null) return _toDate(serviceDate);
+    final createdAt = data['createdAt'];
+    if (createdAt != null) return _toDate(createdAt);
+    return DateTime.now();
+  }
+
   Widget _buildExecutiveOverview({
     required int totalLancamentos,
     required int totalHoras,
@@ -1067,7 +1079,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         final docs = snapshot.data?.docs ?? const [];
         final invoices = docs.where((doc) {
           if (competencia == null) return true;
-          return _competenceFromDate(_toDate(doc.data()['issueDate'])) ==
+          return _competenceFromDate(_invoiceReferenceDate(doc.data())) ==
               competencia;
         }).toList();
         final approved = invoices
@@ -1436,5 +1448,4 @@ class _TaskDistributionRowData {
   final int late;
   final int inProgress;
 }
-
 

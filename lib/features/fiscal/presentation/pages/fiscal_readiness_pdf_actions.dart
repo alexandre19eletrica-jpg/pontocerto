@@ -72,7 +72,7 @@ extension _FiscalReadinessPdfActions on _FiscalReadinessPageState {
               'Data do servico: ${_formatDate(_toDate(data['serviceDate']))}',
             ),
             pw.Text(
-              'Data de emissao: ${_formatDate(_toDate(data['issueDate']))}',
+              'Data de emissao: ${_formatDate(_invoiceReferenceDate(data))}',
             ),
             pw.Text(
               'Status: ${_invoiceStatusLabel(data['status']?.toString())}',
@@ -121,13 +121,13 @@ extension _FiscalReadinessPdfActions on _FiscalReadinessPageState {
           .get();
       final competenceInvoices =
           snapshot.docs.where((doc) {
-            final issueDate = _toDate(doc.data()['issueDate']);
+            final issueDate = _invoiceReferenceDate(doc.data());
             return '${issueDate.year}-${issueDate.month.toString().padLeft(2, '0')}' ==
                 competence;
           }).toList()..sort(
-            (a, b) => _toDate(
-              b.data()['issueDate'],
-            ).compareTo(_toDate(a.data()['issueDate'])),
+            (a, b) => _invoiceReferenceDate(
+              b.data(),
+            ).compareTo(_invoiceReferenceDate(a.data())),
           );
       final activeIssuedInvoices = competenceInvoices
           .where((doc) => _invoiceIsOfficiallyIssued(doc.data()))

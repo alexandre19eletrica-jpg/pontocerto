@@ -80,6 +80,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
   bool _showInactiveFiscalServices = false;
   TextEditingController? _fiscalPaymentReceiptController;
   String? _fiscalPaymentReceiptCompanyId;
+  String? _lastAutoCompetence;
 
   @override
   void dispose() {
@@ -105,6 +106,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     required Session sessao,
     required Map<String, dynamic> companyData,
   }) async {
+    if (sessao.isDemo) {
+      _msg('Demo em leitura: alteracoes nao sao gravadas.');
+      return;
+    }
     final controller = _fiscalPaymentReceiptController;
     if (controller == null) {
       return;
@@ -3333,16 +3338,18 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
               companySettings,
             );
             final canConfigureModule =
-                sessao.role == Role.owner ||
-                sessao.role == Role.manager ||
-                sessao.role == Role.accountant;
+                !sessao.isDemo &&
+                (sessao.role == Role.owner ||
+                    sessao.role == Role.manager ||
+                    sessao.role == Role.accountant);
             /// Provedor/ambiente/API global Focus: so a empresa suprema altera; demais
             /// empresas completam certificado, matriz, homologacao e sync por CNPJ.
             final canEditGlobalFiscalIntegration = hasSupremePlatformAccess(sessao);
             final canManageInvoices =
-                sessao.role == Role.owner ||
-                sessao.role == Role.manager ||
-                sessao.role == Role.accountant;
+                !sessao.isDemo &&
+                (sessao.role == Role.owner ||
+                    sessao.role == Role.manager ||
+                    sessao.role == Role.accountant);
             final companyProfile =
                 companySettings['companyOperationalProfile']?.toString() ??
                 'small_business';
@@ -3739,9 +3746,9 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
       builder: (context, snapshot) {
         final docs = snapshot.data?.docs ?? const [];
         final competenceDocs = docs.where((doc) {
-          final issueDate = _toDate(doc.data()['issueDate']);
+          final referenceDate = _invoiceReferenceDate(doc.data());
           final currentCompetence =
-              '${issueDate.year}-${issueDate.month.toString().padLeft(2, '0')}';
+              '${referenceDate.year}-${referenceDate.month.toString().padLeft(2, '0')}';
           return currentCompetence == competence;
         }).toList();
         var grossOfficialCents = 0;
@@ -4138,9 +4145,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           .snapshots(),
       builder: (context, snapshot) {
         final docs = snapshot.data?.docs ?? const [];
+        _maybeAdjustCompetenceToLatestInvoices(docs, competence);
         final monthInvoices = docs.where((doc) {
-          final issueDate = _toDate(doc.data()['issueDate']);
-          return '${issueDate.year}-${issueDate.month.toString().padLeft(2, '0')}' ==
+          final referenceDate = _invoiceReferenceDate(doc.data());
+          return '${referenceDate.year}-${referenceDate.month.toString().padLeft(2, '0')}' ==
               competence;
         }).toList();
         final approved = monthInvoices
@@ -4161,9 +4169,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                       (doc.data()['lastEmissionAttemptStatus']?.toString() ??
                               '')
                           .toUpperCase();
-                  return status == 'PROCESSANDO' ||
-                      status == 'PROCESSING' ||
-                      attempt == 'PROCESSING';
+                  return _mapIsFiscalEmissionProcessing(doc.data()) ||
+                      status.startsWith('PROCESSANDO_') ||
+                      status.startsWith('PROCESSING_') ||
+                      attempt.startsWith('PROCESSING_');
                 })
                 .map((doc) => doc.id)
                 .toList()
@@ -6472,13 +6481,13 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           .get();
       final competenceInvoices =
           snapshot.docs.where((doc) {
-            final issueDate = _toDate(doc.data()['issueDate']);
-            return '${issueDate.year}-${issueDate.month.toString().padLeft(2, '0')}' ==
+            final referenceDate = _invoiceReferenceDate(doc.data());
+            return '${referenceDate.year}-${referenceDate.month.toString().padLeft(2, '0')}' ==
                 competence;
           }).toList()..sort(
-            (a, b) => _toDate(
-              b.data()['issueDate'],
-            ).compareTo(_toDate(a.data()['issueDate'])),
+            (a, b) => _invoiceReferenceDate(
+              b.data(),
+            ).compareTo(_invoiceReferenceDate(a.data())),
           );
       final invoiceCount = competenceInvoices.length;
       final officialMissing = competenceInvoices
@@ -6925,7 +6934,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
   }
 
   bool _invoiceIsCanceled(Map<String, dynamic> data) {
-    return (data['status']?.toString() ?? '').toUpperCase() == 'CANCELED';
+    final status = (data['status']?.toString() ?? '').toUpperCase();
+    return status == 'CANCELED' || status == 'CANCELLED';
   }
 
   int _invoiceGrossAmount(Map<String, dynamic> data) {
@@ -6955,6 +6965,38 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     return DateTime.now();
   }
 
+  DateTime _invoiceReferenceDate(Map<String, dynamic> data) {
+    final officialIssuedAt = data['officialIssuedAt'];
+    if (officialIssuedAt is Timestamp) return officialIssuedAt.toDate();
+    if (officialIssuedAt is DateTime) return officialIssuedAt;
+    if (officialIssuedAt is String) {
+      final parsed = DateTime.tryParse(officialIssuedAt);
+      if (parsed != null) return parsed;
+    }
+    final issueDate = data['issueDate'];
+    if (issueDate is Timestamp) return issueDate.toDate();
+    if (issueDate is DateTime) return issueDate;
+    if (issueDate is String) {
+      final parsed = DateTime.tryParse(issueDate);
+      if (parsed != null) return parsed;
+    }
+    final serviceDate = data['serviceDate'];
+    if (serviceDate is Timestamp) return serviceDate.toDate();
+    if (serviceDate is DateTime) return serviceDate;
+    if (serviceDate is String) {
+      final parsed = DateTime.tryParse(serviceDate);
+      if (parsed != null) return parsed;
+    }
+    final createdAt = data['createdAt'];
+    if (createdAt is Timestamp) return createdAt.toDate();
+    if (createdAt is DateTime) return createdAt;
+    if (createdAt is String) {
+      final parsed = DateTime.tryParse(createdAt);
+      if (parsed != null) return parsed;
+    }
+    return DateTime.now();
+  }
+
   String _formatDateTime(DateTime date) {
     final d = date.day.toString().padLeft(2, '0');
     final m = date.month.toString().padLeft(2, '0');
@@ -6967,6 +7009,38 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     final d = date.day.toString().padLeft(2, '0');
     final m = date.month.toString().padLeft(2, '0');
     return '$d/$m/${date.year}';
+  }
+
+  void _maybeAdjustCompetenceToLatestInvoices(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+    String competence,
+  ) {
+    if (docs.isEmpty) return;
+    final hasCurrentCompetence = docs.any((doc) {
+      final referenceDate = _invoiceReferenceDate(doc.data());
+      final docCompetence =
+          '${referenceDate.year}-${referenceDate.month.toString().padLeft(2, '0')}';
+      return docCompetence == competence;
+    });
+    if (hasCurrentCompetence) return;
+
+    final latestReference = docs
+        .map((doc) => _invoiceReferenceDate(doc.data()))
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+    final latest = latestReference.first;
+    final latestCompetence =
+        '${latest.year}-${latest.month.toString().padLeft(2, '0')}';
+    if (latestCompetence == competence || latestCompetence == _lastAutoCompetence) {
+      return;
+    }
+    _lastAutoCompetence = latestCompetence;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _competenceController.text = latestCompetence;
+      });
+    });
   }
 
   String _onlyDigits(String input) {

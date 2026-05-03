@@ -1122,6 +1122,10 @@ class PlatformMarketingMetrics {
     required this.preregSubmits,
     required this.hotVisitors,
     required this.recurringVisitors,
+    required this.demoVisitors,
+    required this.demoCompanyUnique,
+    required this.demoAccountantUnique,
+    required this.demoOpenCount,
     required this.preregConversionRate,
     required this.planSelectRate,
   });
@@ -1134,6 +1138,10 @@ class PlatformMarketingMetrics {
   final int preregSubmits;
   final int hotVisitors;
   final int recurringVisitors;
+  final int demoVisitors;
+  final int demoCompanyUnique;
+  final int demoAccountantUnique;
+  final int demoOpenCount;
   final double preregConversionRate;
   final double planSelectRate;
 
@@ -1147,6 +1155,11 @@ class PlatformMarketingMetrics {
       preregSubmits: (map['preregSubmits'] as num?)?.toInt() ?? 0,
       hotVisitors: (map['hotVisitors'] as num?)?.toInt() ?? 0,
       recurringVisitors: (map['recurringVisitors'] as num?)?.toInt() ?? 0,
+      demoVisitors: (map['demoVisitors'] as num?)?.toInt() ?? 0,
+      demoCompanyUnique: (map['demoCompanyUnique'] as num?)?.toInt() ?? 0,
+      demoAccountantUnique:
+          (map['demoAccountantUnique'] as num?)?.toInt() ?? 0,
+      demoOpenCount: (map['demoOpenCount'] as num?)?.toInt() ?? 0,
       preregConversionRate:
           (map['preregConversionRate'] as num?)?.toDouble() ?? 0,
       planSelectRate: (map['planSelectRate'] as num?)?.toDouble() ?? 0,

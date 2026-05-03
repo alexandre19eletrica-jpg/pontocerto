@@ -9,6 +9,8 @@ class Session {
     required this.role,
     required this.nome,
     this.email = '',
+    this.isDemo = false,
+    this.demoProfile = '',
   });
 
   final String userId;
@@ -16,7 +18,15 @@ class Session {
   final Role role;
   final String nome;
   final String email;
+  final bool isDemo;
+  final String demoProfile;
+
+  bool get isDemoCompany => isDemo && demoProfile == 'company';
+
+  bool get isDemoAccountant => isDemo && demoProfile == 'accountant';
 }
+
+bool isDemoReadOnlySession(Session? session) => session?.isDemo == true;
 
 bool canAccessRoute(Role role, String location) {
   if (location == '/accountant-companies') {
@@ -104,6 +114,8 @@ class SessionController extends StateNotifier<Session?> {
       role: atual.role,
       nome: nome ?? atual.nome,
       email: atual.email,
+      isDemo: atual.isDemo,
+      demoProfile: atual.demoProfile,
     );
   }
 
@@ -119,6 +131,8 @@ class SessionController extends StateNotifier<Session?> {
       role: role,
       nome: dados['nome']?.toString() ?? 'Usuario',
       email: dados['email']?.toString() ?? '',
+      isDemo: dados['demoReadOnly'] == true || dados['isDemo'] == true,
+      demoProfile: dados['demoProfile']?.toString() ?? '',
     );
   }
 
@@ -143,6 +157,8 @@ class SessionController extends StateNotifier<Session?> {
       role: role,
       nome: nome,
       email: '',
+      isDemo: false,
+      demoProfile: '',
     );
   }
 

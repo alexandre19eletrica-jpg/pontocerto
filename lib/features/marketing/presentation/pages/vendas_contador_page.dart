@@ -47,7 +47,7 @@ class VendasContadorPage extends StatelessWidget {
                     metaFbqTrackStartTrialEscritorio();
                     context.go('/cadastro-escritorio-contabil');
                   },
-                  primaryLabel: 'QUERO ORGANIZAR MEU ESCRITÓRIO',
+                  primaryLabel: 'CADASTRAR ESCRITORIO DE CONTABILIDADE',
                   secondaryLabel: 'Falar com alguém',
                   onSecondary: () {
                     abrirWhatsappVendas(
@@ -55,6 +55,37 @@ class VendasContadorPage extends StatelessWidget {
                           'Olá! Sou contador e quero entender o Ponto Certo para minha carteira.',
                     );
                   },
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFD7E3F4)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Teste o valor antes da conversa comercial',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Abra o demo do contador e veja sua carteira organizada com status fiscal, documentos e rotina em um fluxo que reduz cobranca solta e aumenta controle real.',
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => context.go('/demo-contador'),
+                          icon: const Icon(Icons.account_balance_outlined),
+                          label: const Text('Ver demo do contador'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 VendasTrustStrip(
                   compact: compact,
@@ -207,7 +238,7 @@ class VendasContadorPage extends StatelessWidget {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
                             child: const Text(
-                              'COMEÇAR TESTE GRÁTIS AGORA',
+                              'CADASTRAR ESCRITORIO DE CONTABILIDADE',
                               style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.35),
                             ),
                           ),

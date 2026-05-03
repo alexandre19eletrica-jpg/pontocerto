@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
+import 'package:pontocerto/features/marketing/presentation/services/public_demo_access_service.dart';
 
 const _ink = Color(0xFF16202B);
 const _muted = Color(0xFF5C6B7A);
@@ -10,7 +11,7 @@ const _line = Color(0xFFDCE5EF);
 
 void _irContratarTrialEscritorio(BuildContext context) {
   metaFbqTrackStartTrialEscritorio();
-  context.go('/contratar');
+  context.go('/cadastro-escritorio-contabil');
 }
 
 class SalesPage extends StatefulWidget {
@@ -21,13 +22,55 @@ class SalesPage extends StatefulWidget {
 }
 
 class _SalesPageState extends State<SalesPage> {
+  final _demoService = PublicDemoAccessService();
+  PublicDemoAccessResult? _demoSummary;
+  bool _openingDemoCompany = false;
+  bool _openingDemoAccountant = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       metaFbqTrackVendasFunnel();
+      _loadDemoSummary();
     });
+  }
+
+  Future<void> _loadDemoSummary() async {
+    try {
+      final summary = await _demoService.getSummary();
+      if (!mounted) return;
+      setState(() => _demoSummary = summary);
+    } catch (_) {}
+  }
+
+  Future<void> _openDemo(String profile) async {
+    setState(() {
+      if (profile == 'company') {
+        _openingDemoCompany = true;
+      } else {
+        _openingDemoAccountant = true;
+      }
+    });
+    try {
+      final result = await _demoService.openDemo(
+        profile: profile,
+        pagePath: '/vendas',
+      );
+      if (!mounted) return;
+      context.go(result.targetRoute);
+    } finally {
+      if (mounted) {
+        setState(() {
+          if (profile == 'company') {
+            _openingDemoCompany = false;
+          } else {
+            _openingDemoAccountant = false;
+          }
+        });
+      }
+    }
   }
 
   @override
@@ -48,7 +91,15 @@ class _SalesPageState extends State<SalesPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _HeroSection(compact: compact, medium: medium),
+                  _HeroSection(
+                    compact: compact,
+                    medium: medium,
+                    demoSummary: _demoSummary,
+                    openingDemoCompany: _openingDemoCompany,
+                    openingDemoAccountant: _openingDemoAccountant,
+                    onOpenDemoCompany: () => _openDemo('company'),
+                    onOpenDemoAccountant: () => _openDemo('accountant'),
+                  ),
                   SizedBox(height: compact ? 16 : 22),
                   const _FiscalHeroSection(),
                   SizedBox(height: compact ? 16 : 22),
@@ -81,10 +132,7 @@ class _SalesPageState extends State<SalesPage> {
       ),
     );
 
-    return Scaffold(
-      backgroundColor: _surface,
-      body: pageContent,
-    );
+    return Scaffold(backgroundColor: _surface, body: pageContent);
   }
 }
 
@@ -130,10 +178,23 @@ class _FiscalHeroSection extends StatelessWidget {
 }
 
 class _HeroSection extends StatelessWidget {
-  const _HeroSection({required this.compact, required this.medium});
+  const _HeroSection({
+    required this.compact,
+    required this.medium,
+    required this.demoSummary,
+    required this.openingDemoCompany,
+    required this.openingDemoAccountant,
+    required this.onOpenDemoCompany,
+    required this.onOpenDemoAccountant,
+  });
 
   final bool compact;
   final bool medium;
+  final PublicDemoAccessResult? demoSummary;
+  final bool openingDemoCompany;
+  final bool openingDemoAccountant;
+  final VoidCallback onOpenDemoCompany;
+  final VoidCallback onOpenDemoAccountant;
 
   @override
   Widget build(BuildContext context) {
@@ -158,9 +219,59 @@ class _HeroSection extends StatelessWidget {
           style: _leadStyle,
         ),
         const SizedBox(height: 26),
+        if (demoSummary != null)
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _StatPill('Demo unico', demoSummary!.visitors.toString()),
+              _StatPill('Empresa', demoSummary!.companyUnique.toString()),
+              _StatPill('Contador', demoSummary!.accountantUnique.toString()),
+            ],
+          ),
+        if (demoSummary != null) const SizedBox(height: 18),
         _PrimaryButton(
           label: 'Começar teste grátis',
           onPressed: () => _irContratarTrialEscritorio(context),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            OutlinedButton.icon(
+              onPressed: openingDemoCompany ? null : onOpenDemoCompany,
+              icon: openingDemoCompany
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.storefront_outlined),
+              label: const Text('Ver demo empresa'),
+            ),
+            OutlinedButton.icon(
+              onPressed: openingDemoAccountant ? null : onOpenDemoAccountant,
+              icon: openingDemoAccountant
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.account_balance_outlined),
+              label: const Text('Ver demo contador'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Abra o demo em leitura para sentir o menu real, navegar pelos modulos e depois avancar para o teste com a sua propria empresa.',
+          style: TextStyle(
+            color: _muted,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            height: 1.35,
+          ),
         ),
       ],
     );
@@ -182,6 +293,29 @@ class _HeroSection extends StatelessWidget {
   }
 }
 
+class _StatPill extends StatelessWidget {
+  const _StatPill(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _line),
+      ),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(color: _ink, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
 class _StoryOpeningSection extends StatelessWidget {
   const _StoryOpeningSection();
 
@@ -196,7 +330,10 @@ class _StoryOpeningSection extends StatelessWidget {
             style: _strongBodyStyle,
           ),
           SizedBox(height: 16),
-          Text('Seja na empresa ou no escritório, a rotina vira isso:', style: _bodyStyle),
+          Text(
+            'Seja na empresa ou no escritório, a rotina vira isso:',
+            style: _bodyStyle,
+          ),
           SizedBox(height: 18),
           _ListBox(
             items: [
@@ -207,7 +344,10 @@ class _StoryOpeningSection extends StatelessWidget {
             ],
           ),
           SizedBox(height: 18),
-          Text('E no final... sempre alguém precisa correr atrás.', style: _bodyStyle),
+          Text(
+            'E no final... sempre alguém precisa correr atrás.',
+            style: _bodyStyle,
+          ),
           SizedBox(height: 26),
           _ScreenShotCard(
             asset: 'assets/marketing/sales/documentos.png',
@@ -230,14 +370,19 @@ class _OriginSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionTitle('O Ponto Certo não nasceu como ideia. Nasceu da operação real.'),
+          _SectionTitle(
+            'O Ponto Certo não nasceu como ideia. Nasceu da operação real.',
+          ),
           SizedBox(height: 16),
           Text(
             'Como empresário na área de serviços e obras, eu vivia exatamente isso: dependência de WhatsApp pra tudo, informação indo e voltando, falta de padrão e retrabalho todo mês.',
             style: _bodyStyle,
           ),
           SizedBox(height: 16),
-          Text('Mesmo fazendo minha parte... nada ficava realmente organizado.', style: _bodyStyle),
+          Text(
+            'Mesmo fazendo minha parte... nada ficava realmente organizado.',
+            style: _bodyStyle,
+          ),
           SizedBox(height: 18),
           _QuoteBox(
             text:
@@ -285,8 +430,10 @@ class _DifferenceSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _TextImageSection(
       compact: compact,
-      title: 'Você não precisa trabalhar mais. Você precisa de um processo que funcione.',
-      body: 'Tudo fica dentro do mesmo sistema, com comunicação, emissão, financeiro e rotina contábil organizados.',
+      title:
+          'Você não precisa trabalhar mais. Você precisa de um processo que funcione.',
+      body:
+          'Tudo fica dentro do mesmo sistema, com comunicação, emissão, financeiro e rotina contábil organizados.',
       items: const [
         'Organização da comunicação',
         'Organização da emissão de notas',
@@ -475,7 +622,10 @@ class _CredibilitySection extends StatelessWidget {
             ],
           ),
           SizedBox(height: 16),
-          Text('Sistema criado a partir da operação real, não teoria.', style: _strongBodyStyle),
+          Text(
+            'Sistema criado a partir da operação real, não teoria.',
+            style: _strongBodyStyle,
+          ),
         ],
       ),
     );
@@ -503,7 +653,10 @@ class _ClosingSection extends StatelessWidget {
           const SizedBox(height: 18),
           const Text('Você não tem um problema de esforço.', style: _bodyStyle),
           const SizedBox(height: 8),
-          const Text('Você tem um problema de processo.', style: _strongBodyStyle),
+          const Text(
+            'Você tem um problema de processo.',
+            style: _strongBodyStyle,
+          ),
           const SizedBox(height: 8),
           const Text('E isso dá pra resolver.', style: _bodyStyle),
           const SizedBox(height: 24),
@@ -529,7 +682,9 @@ class _ProfessionalFooterSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SectionTitle('Operação profissional, dados protegidos e processo claro'),
+              _SectionTitle(
+                'Operação profissional, dados protegidos e processo claro',
+              ),
               SizedBox(height: 16),
               _CheckGrid(
                 items: [
@@ -754,7 +909,9 @@ class _SectionCard extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(compact ? 16 : 22),
         border: Border.all(
-          color: color == Colors.white ? _line : Colors.white.withValues(alpha: 0.14),
+          color: color == Colors.white
+              ? _line
+              : Colors.white.withValues(alpha: 0.14),
         ),
         boxShadow: const [
           BoxShadow(
@@ -794,7 +951,9 @@ class _PrimaryButton extends StatelessWidget {
           foregroundColor: light ? _primary : Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
           textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
     );
@@ -927,7 +1086,9 @@ class _CheckChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: light ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFF9FBFD),
+        color: light
+            ? Colors.white.withValues(alpha: 0.12)
+            : const Color(0xFFF9FBFD),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: light ? Colors.white.withValues(alpha: 0.18) : _line,
@@ -1141,7 +1302,10 @@ class _LegalFooter extends StatelessWidget {
             children: const [
               Text('Ponto Certo', style: _footerStrongStyle),
               Text('Privacidade e segurança', style: _footerMutedStyle),
-              Text('Termos de uso aplicáveis ao serviço', style: _footerMutedStyle),
+              Text(
+                'Termos de uso aplicáveis ao serviço',
+                style: _footerMutedStyle,
+              ),
               Text('Suporte e implantação guiada', style: _footerMutedStyle),
             ],
           ),

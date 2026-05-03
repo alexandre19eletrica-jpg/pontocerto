@@ -28,6 +28,17 @@ class AccountingOfficeSignupService {
     final data = Map<String, dynamic>.from(result.data as Map);
     return AccountingOfficeSignupResult.fromMap(data);
   }
+
+  Future<AccountingOfficeSignupResult> createWorkspaceAccess({
+    required AccountingOfficeLightweightPayload payload,
+  }) async {
+    final callable = _functions.httpsCallable(
+      'publicCreateAccountantWorkspaceAccess',
+    );
+    final result = await callable.call(payload.toMap());
+    final data = Map<String, dynamic>.from(result.data as Map);
+    return AccountingOfficeSignupResult.fromMap(data);
+  }
 }
 
 class AccountingOfficeSignupPayload {
@@ -76,6 +87,32 @@ class AccountingOfficeSignupPayload {
       'state': state,
       'billingChoice': billingChoice,
       'notes': notes,
+    };
+  }
+}
+
+class AccountingOfficeLightweightPayload {
+  const AccountingOfficeLightweightPayload({
+    required this.officeName,
+    required this.responsibleName,
+    required this.email,
+    required this.password,
+    required this.confirmPassword,
+  });
+
+  final String officeName;
+  final String responsibleName;
+  final String email;
+  final String password;
+  final String confirmPassword;
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'officeName': officeName,
+      'responsibleName': responsibleName,
+      'email': email,
+      'password': password,
+      'confirmPassword': confirmPassword,
     };
   }
 }

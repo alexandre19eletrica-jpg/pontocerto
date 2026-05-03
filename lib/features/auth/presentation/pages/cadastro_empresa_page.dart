@@ -21,11 +21,15 @@ class PaginaCadastroEmpresa extends ConsumerStatefulWidget {
     this.accountantMode = false,
     this.trialInviteToken,
     this.publicAccountantMode = false,
+    this.lightweightMode = false,
+    this.completionMode = false,
   });
 
   final bool accountantMode;
   final String? trialInviteToken;
   final bool publicAccountantMode;
+  final bool lightweightMode;
+  final bool completionMode;
 
   @override
   ConsumerState<PaginaCadastroEmpresa> createState() =>
@@ -85,6 +89,16 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
   @override
   void initState() {
     super.initState();
+    if (widget.completionMode) {
+      final sessao = ref.read(sessionProvider);
+      final emailAtual = FirebaseAuth.instance.currentUser?.email?.trim() ?? '';
+      if (sessao != null) {
+        _responsavelController.text = sessao.nome;
+      }
+      if (emailAtual.isNotEmpty) {
+        _cadEmailController.text = emailAtual.toLowerCase();
+      }
+    }
     if (widget.accountantMode) {
       final session = ref.read(sessionProvider);
       _hasAccountant = true;
@@ -114,12 +128,20 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
     final accountantMode = widget.accountantMode;
+    final lightweightMode = widget.lightweightMode;
+    final completionMode = widget.completionMode;
     final trialToken = (widget.trialInviteToken ?? '').trim();
 
     return Scaffold(
       appBar: AppBar(
         leading: const BotaoVoltarApp(),
-        title: Text(accountantMode ? 'Cadastrar empresa indicada' : 'Cadastrar empresa'),
+        title: Text(
+          accountantMode
+              ? 'Cadastrar empresa indicada'
+              : completionMode
+                  ? 'Completar cadastro da empresa'
+                  : 'Cadastrar empresa',
+        ),
       ),
       body: AppGradientBackground(
         child: ListView(
@@ -129,10 +151,18 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
               tag: accountantMode ? 'CONTADOR CADASTRA EMPRESA' : 'CADASTRO EMPRESA',
               title: accountantMode
                   ? 'Cadastre a empresa da carteira com o escritorio no centro do fluxo.'
-                  : 'Crie a conta da empresa e entre no painel principal.',
+                  : completionMode
+                      ? 'Complete agora os dados reais da empresa para liberar a operacao com base fiscal correta.'
+                      : lightweightMode
+                          ? 'Crie o acesso da empresa com nome, email e senha.'
+                          : 'Crie a conta da empresa e entre no painel principal.',
               subtitle: accountantMode
                   ? 'Use este modulo para abrir uma nova empresa vinculada ao escritorio contabil. A cobranca e o acesso da empresa sao definidos no mesmo fluxo.'
-                  : 'Configure os dados principais da empresa e inicie o uso da plataforma administrativa.',
+                  : completionMode
+                      ? 'Depois de entrar no sistema, a empresa conclui aqui o cadastro real e pode opcionalmente indicar um contador.'
+                      : lightweightMode
+                          ? 'A empresa entra primeiro no sistema e completa os dados reais da empresa depois, ja dentro da plataforma.'
+                          : 'Configure os dados principais da empresa e inicie o uso da plataforma administrativa.',
             ),
             const SizedBox(height: 16),
             if (trialToken.isNotEmpty && !accountantMode) ...[
@@ -156,7 +186,13 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        accountantMode ? 'Cadastro de nova empresa' : 'Criacao da empresa',
+                        accountantMode
+                            ? 'Cadastro de nova empresa'
+                            : completionMode
+                                ? 'Conclusao do cadastro real'
+                                : lightweightMode
+                                    ? 'Criacao do acesso inicial'
+                                    : 'Criacao da empresa',
                         style: tema.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w900,
                           color: AppBrandColors.ink,
@@ -166,7 +202,11 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                       Text(
                         accountantMode
                             ? 'Preencha os dados da empresa e do responsavel. O escritorio atual entra vinculado automaticamente no cadastro.'
-                            : 'Preencha os dados da empresa para concluir o cadastro.',
+                            : completionMode
+                                ? 'Preencha agora os dados reais da empresa. Se quiser, voce tambem pode indicar o contador neste passo.'
+                                : lightweightMode
+                                    ? 'Comece com nome, email e senha. Depois, ja no sistema, complete os dados reais da empresa.'
+                                    : 'Preencha os dados da empresa para concluir o cadastro.',
                         style: tema.textTheme.bodyMedium?.copyWith(
                           color: AppBrandColors.softText,
                           height: 1.45,
@@ -207,7 +247,8 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                           ),
                         ),
                       ],
-                      Container(
+                      if (!lightweightMode && !completionMode)
+                        Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
@@ -288,13 +329,25 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                         keyboardType: TextInputType.emailAddress,
                         icon: Icons.alternate_email_rounded,
                       ),
-                      if (!accountantMode)
+                      if (!accountantMode && !completionMode)
                         _campo(
                           controller: _cadSenhaController,
                           label: 'Senha *',
                           obscureText: true,
                           icon: Icons.lock_outline_rounded,
                         ),
+                      if (lightweightMode) ...[
+                        _campo(
+                          controller: _responsavelController,
+                          label: 'Nome do responsavel *',
+                          icon: Icons.person_rounded,
+                        ),
+                        _campo(
+                          controller: _nomeFantasiaController,
+                          label: 'Nome da empresa *',
+                          icon: Icons.business_center_rounded,
+                        ),
+                      ] else ...[
                       _campo(
                         controller: _responsavelController,
                         label: accountantMode
@@ -385,6 +438,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                         label: 'Endereco *',
                         icon: Icons.location_on_outlined,
                       ),
+                      ],
                       if (accountantMode)
                         Container(
                           padding: const EdgeInsets.all(14),
@@ -466,7 +520,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                             ],
                           ),
                         ),
-                      if (!accountantMode)
+                      if ((!accountantMode && !lightweightMode) || completionMode)
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
@@ -480,7 +534,11 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                               SwitchListTile(
                                 value: _hasAccountant,
                                 contentPadding: EdgeInsets.zero,
-                                title: const Text('Cadastrar contador agora'),
+                                title: Text(
+                                  completionMode
+                                      ? 'Indicar contador agora'
+                                      : 'Cadastrar contador agora',
+                                ),
                                 subtitle: const Text(
                                   'Opcional. Se a empresa ja tiver contador, o sistema tenta vincular o escritorio no momento do cadastro.',
                                 ),
@@ -514,6 +572,10 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                               ? 'Criando conta...'
                               : accountantMode
                                   ? 'Cadastrar empresa indicada'
+                                  : completionMode
+                                      ? 'Concluir cadastro da empresa'
+                                      : lightweightMode
+                                          ? 'Criar acesso e entrar'
                                   : 'Cadastrar empresa',
                         ),
                       ),
@@ -565,6 +627,121 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
     final accountantName = _accountantNameController.text.trim();
     final accountantEmail = _accountantEmailController.text.trim().toLowerCase();
     final accountantMode = widget.accountantMode;
+    final lightweightMode = widget.lightweightMode;
+    final completionMode = widget.completionMode;
+
+    if (lightweightMode) {
+      if (email.isEmpty ||
+          senha.isEmpty ||
+          responsavel.isEmpty ||
+          nomeFantasia.isEmpty) {
+        _msg('Preencha nome da empresa, responsavel, email e senha.');
+        return;
+      }
+      setState(() => _carregando = true);
+      try {
+        final callable = _functions.httpsCallable(
+          'publicCreateCompanyWorkspaceAccess',
+        );
+        final response = await callable.call(<String, dynamic>{
+          'ownerEmail': email,
+          'ownerPassword': senha,
+          'confirmPassword': senha,
+          'ownerName': responsavel,
+          'companyName': nomeFantasia,
+        });
+        final result = Map<String, dynamic>.from(response.data as Map);
+        final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: senha,
+        );
+        final uid = cred.user?.uid;
+        if (uid == null) {
+          _msg('Conta criada, mas nao foi possivel abrir a sessao automaticamente.');
+          return;
+        }
+        await syncClaimsForCurrentUser();
+        ref.read(sessionProvider.notifier).definirSessaoPorMapa(
+              userId: uid,
+              dados: {
+                'companyId': result['companyId'],
+                'role': 'OWNER',
+                'nome': responsavel,
+                'email': email,
+              },
+            );
+        ref.read(nomeEmpresaCacheProvider.notifier).state = nomeFantasia;
+        await salvarNomeEmpresaCache(nomeFantasia);
+        if (!mounted) return;
+        _msg('Acesso criado. Complete agora o cadastro real da empresa.');
+        context.go('/completar-empresa');
+      } catch (e) {
+        _msg(AppErrorMapper.messageFrom(e, fallback: 'Erro ao criar acesso.'));
+      } finally {
+        if (mounted) {
+          setState(() => _carregando = false);
+        }
+      }
+      return;
+    }
+
+    if (completionMode) {
+      if (responsavel.isEmpty ||
+          razaoSocial.isEmpty ||
+          nomeFantasia.isEmpty ||
+          cnpj.isEmpty ||
+          (_stateRegistrationRequired && ie.isEmpty) ||
+          (_businessCategory == 'service' && im.isEmpty) ||
+          telefone.isEmpty ||
+          emailEmpresa.isEmpty ||
+          endereco.isEmpty) {
+        _msg('Preencha todos os campos obrigatorios da empresa.');
+        return;
+      }
+      if (_hasAccountant &&
+          (accountantName.isEmpty || accountantEmail.isEmpty)) {
+        _msg('Informe nome e email do contador ou desative essa opcao.');
+        return;
+      }
+      setState(() => _carregando = true);
+      try {
+        final callable = _functions.httpsCallable(
+          'companyCompleteWorkspaceProfile',
+        );
+        await callable.call(<String, dynamic>{
+          'ownerName': responsavel,
+          'legalName': razaoSocial,
+          'tradeName': nomeFantasia,
+          'cnpj': cnpj,
+          'businessCategory': _businessCategory,
+          'stateRegistration': _stateRegistrationRequired ? ie : '',
+          'municipalRegistration': im,
+          'phone': telefone,
+          'companyEmail': emailEmpresa,
+          'address': endereco,
+          'accountantName': _hasAccountant ? accountantName : '',
+          'accountantEmail': _hasAccountant ? accountantEmail : '',
+          'registrySnapshot': _registrySnapshot,
+        });
+        ref.read(nomeEmpresaCacheProvider.notifier).state = nomeFantasia;
+        await salvarNomeEmpresaCache(nomeFantasia);
+        if (!mounted) return;
+        _msg('Cadastro real da empresa concluido.');
+        context.go('/home');
+      } catch (e) {
+        _msg(
+          AppErrorMapper.messageFrom(
+            e,
+            fallback: 'Erro ao concluir o cadastro da empresa.',
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() => _carregando = false);
+        }
+      }
+      return;
+    }
 
     if ((!accountantMode && email.isEmpty) ||
         (!accountantMode && senha.isEmpty) ||

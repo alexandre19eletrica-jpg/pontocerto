@@ -29,9 +29,9 @@ class PaginaInicio extends ConsumerWidget {
                 child: const HeroBanner(
                   tag: 'PAINEL PRINCIPAL',
                   title:
-                      'Escritorio e empresa em um fluxo mais claro e direto.',
+                      'Empresa e contador entram rapido e completam o resto dentro do sistema.',
                   subtitle:
-                      'O escritorio contabil entra primeiro, organiza o acesso inicial e depois cadastra as empresas da carteira no mesmo ambiente.',
+                      'A empresa pode criar o proprio acesso e completar o cadastro real depois. O contador tambem cria o acesso dele e monta a carteira no mesmo ambiente.',
                 ),
               ),
             ),
@@ -55,7 +55,7 @@ class PaginaInicio extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Operacao administrativa, fiscal e comercial com entrada inicial do escritorio contabil e cadastro da empresa feito depois, por ele.',
+                        'Operacao administrativa, fiscal e comercial com entrada simples para empresa e contador, sem travar o primeiro acesso.',
                         textAlign: TextAlign.center,
                         style: tema.textTheme.bodyMedium?.copyWith(
                           color: AppBrandColors.softText,
@@ -138,6 +138,11 @@ class PaginaInicio extends ConsumerWidget {
                           metaFbqTrackStartTrialEscritorio();
                           context.go('/cadastro-escritorio-contabil');
                         },
+                        child: const Text('Comecar pre-cadastro da empresa'),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            context.go('/cadastro-escritorio-contabil'),
                         child: const Text(
                           'Cadastrar escritorio de contabilidade',
                         ),
@@ -184,7 +189,7 @@ class PaginaInicio extends ConsumerWidget {
                       const SizedBox(width: 14),
                       Expanded(
                         child: Text(
-                          'Entrada principal com foco em escritorio contabil, clareza operacional e cadastro da empresa feito depois pelo proprio escritorio.',
+                          'Entrada simples para conhecer o sistema por dentro e depois completar empresa, fiscal e contador no proprio ambiente.',
                           style: tema.textTheme.bodyMedium?.copyWith(
                             color: AppBrandColors.ink,
                             fontWeight: FontWeight.w600,

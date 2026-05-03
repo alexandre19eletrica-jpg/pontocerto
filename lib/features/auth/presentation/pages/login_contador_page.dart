@@ -86,7 +86,7 @@ class _PaginaLoginContadorState extends ConsumerState<PaginaLoginContador> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Use o acesso do escritorio para consultar a carteira, operar o fiscal e depois cadastrar as empresas vinculadas.',
+                        'Entre com o acesso do contador para operar carteira, fiscal e cadastro de empresas vinculadas.',
                         style: tema.textTheme.bodyMedium?.copyWith(
                           color: AppBrandColors.softText,
                           height: 1.45,

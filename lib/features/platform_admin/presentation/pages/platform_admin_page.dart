@@ -15,6 +15,7 @@ import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/utils/replace_trailing_paste_text_input_formatter.dart';
 import 'package:pontocerto/core/utils/trial_invite_bulk_parser.dart';
 import 'package:pontocerto/features/finance/presentation/utils/money.dart';
+import 'package:pontocerto/features/marketing/presentation/services/public_demo_config_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_sales_config_service.dart';
 import 'package:pontocerto/features/platform_admin/presentation/platform_admin_section.dart';
 import 'package:pontocerto/features/platform_admin/presentation/services/platform_admin_service.dart';
@@ -33,6 +34,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   static const String salesPageWebUrl = 'https://pontocerto-e1dab.web.app/';
   final _service = PlatformAdminService();
   final _publicSalesConfigService = PublicSalesConfigService();
+  final _publicDemoConfigService = PublicDemoConfigService();
   final _trialCompanyEmail = TextEditingController();
   final _trialCompanyName = TextEditingController();
   final _trialCompanyCnpj = TextEditingController();
@@ -59,6 +61,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   bool _bulkSending = false;
   late Future<List<PlatformCompanySummary>> _future;
   late Future<PublicSalesConfig> _publicSalesConfigFuture;
+  late Future<PublicDemoConfig> _publicDemoConfigFuture;
   late Future<PlatformSalesPipelineSnapshot> _salesPipelineFuture;
   late Future<PlatformMarketingDashboard> _marketingDashboardFuture;
   late Future<List<PlatformAccountingOfficeSummary>> _accountingOfficesFuture;
@@ -79,6 +82,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     super.initState();
     _future = _load();
     _publicSalesConfigFuture = _publicSalesConfigService.fetch();
+    _publicDemoConfigFuture = _publicDemoConfigService.fetch();
     _salesPipelineFuture = _service.listSalesPipeline();
     _marketingDashboardFuture = _service.getMarketingDashboard();
     _trialInvitesFuture = _service.listTrialInvites(limit: 80);
@@ -2057,6 +2061,41 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                       );
                     },
                   ),
+                  const SizedBox(height: 12),
+                  FutureBuilder<PublicDemoConfig>(
+                    future: _publicDemoConfigFuture,
+                    builder: (context, snapshot) {
+                      final config =
+                          snapshot.data ?? PublicDemoConfig.defaults();
+                      return AppWorkspaceCard(
+                        title: 'Demo publico',
+                        subtitle:
+                            'Define o ambiente demo publico. Por padrao, o sistema usa um workspace ficticio do Ponto Certo, sem expor dados reais.',
+                        trailing: OutlinedButton.icon(
+                          onPressed: () => _editPublicDemoConfig(config),
+                          icon: const Icon(Icons.visibility_outlined),
+                          label: const Text('Configurar demo'),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _DetailLine(
+                              'Status',
+                              config.enabled ? 'Ativo' : 'Desligado',
+                            ),
+                            _DetailLine(
+                              'Demo empresa',
+                              '${config.ownerDisplayName} | companyId: ${config.ownerCompanyId.isNotEmpty ? config.ownerCompanyId : 'public_demo_workspace'}',
+                            ),
+                            _DetailLine(
+                              'Demo contador',
+                              '${config.accountantDisplayName} | companyId: ${config.accountantCompanyId.isNotEmpty ? config.accountantCompanyId : 'public_demo_workspace'}',
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ],
                 if (s == PlatformAdminSection.financeiro) ...[
                   const SizedBox(height: 12),
@@ -2758,6 +2797,10 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                               preregSubmits: 0,
                               hotVisitors: 0,
                               recurringVisitors: 0,
+                              demoVisitors: 0,
+                              demoCompanyUnique: 0,
+                              demoAccountantUnique: 0,
+                              demoOpenCount: 0,
                               preregConversionRate: 0,
                               planSelectRate: 0,
                             ),
@@ -2814,6 +2857,32 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                                   value: dashboard.metrics.recurringVisitors
                                       .toString(),
                                   caption: 'Voltaram pelo menos 2 vezes',
+                                ),
+                                AppMetricCard(
+                                  label: 'Demo unicos',
+                                  value: dashboard.metrics.demoVisitors
+                                      .toString(),
+                                  caption: 'Dispositivos unicos no demo',
+                                ),
+                                AppMetricCard(
+                                  label: 'Demo empresa',
+                                  value: dashboard.metrics.demoCompanyUnique
+                                      .toString(),
+                                  caption: 'Entradas unicas no perfil empresa',
+                                ),
+                                AppMetricCard(
+                                  label: 'Demo contador',
+                                  value: dashboard.metrics.demoAccountantUnique
+                                      .toString(),
+                                  caption:
+                                      'Entradas unicas no perfil contador',
+                                ),
+                                AppMetricCard(
+                                  label: 'Aberturas demo',
+                                  value: dashboard.metrics.demoOpenCount
+                                      .toString(),
+                                  caption:
+                                      'Acessos totais registrados no demo',
                                 ),
                               ],
                             ),
@@ -3031,6 +3100,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     setState(() {
       _future = _load();
       _publicSalesConfigFuture = _publicSalesConfigService.fetch();
+      _publicDemoConfigFuture = _publicDemoConfigService.fetch();
       _salesPipelineFuture = _service.listSalesPipeline();
       _marketingDashboardFuture = _service.getMarketingDashboard();
       _trialInvitesFuture = _service.listTrialInvites(limit: 80);
@@ -4050,6 +4120,107 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       additionalImplantation.dispose();
       additionalCheckout.dispose();
       metaPixelHead.dispose();
+    }
+  }
+
+  Future<void> _editPublicDemoConfig(PublicDemoConfig config) async {
+    final ownerCompanyId = TextEditingController(text: config.ownerCompanyId);
+    final ownerDisplayName = TextEditingController(
+      text: config.ownerDisplayName,
+    );
+    final accountantCompanyId = TextEditingController(
+      text: config.accountantCompanyId,
+    );
+    final accountantDisplayName = TextEditingController(
+      text: config.accountantDisplayName,
+    );
+    bool enabled = config.enabled;
+
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+            title: const Text('Configurar demo publico'),
+            content: SizedBox(
+              width: 560,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SwitchListTile(
+                      value: enabled,
+                      onChanged: (value) =>
+                          setStateDialog(() => enabled = value),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Demo publico ativo'),
+                      subtitle: const Text(
+                        'Quando desligado, os botoes continuam visiveis, mas o acesso nao abre sessao demo.',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _salesConfigField('Empresa demo - companyId', ownerCompanyId),
+                    _salesConfigField('Empresa demo - nome exibido', ownerDisplayName),
+                    const SizedBox(height: 12),
+                    _salesConfigField(
+                      'Contador demo - companyId',
+                      accountantCompanyId,
+                    ),
+                    _salesConfigField(
+                      'Contador demo - nome exibido',
+                      accountantDisplayName,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Se os companyId ficarem vazios, o backend usa automaticamente o workspace ficticio do Ponto Certo. So preencha esses campos se quiser apontar o demo para outro ambiente controlado. O acesso demo continua somente leitura.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Salvar'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (confirmed != true) return;
+
+      await _publicDemoConfigService.update(
+        PublicDemoConfig(
+          enabled: enabled,
+          ownerUid: config.ownerUid,
+          ownerCompanyId: ownerCompanyId.text.trim(),
+          ownerDisplayName: ownerDisplayName.text.trim(),
+          accountantUid: config.accountantUid,
+          accountantCompanyId: accountantCompanyId.text.trim(),
+          accountantDisplayName: accountantDisplayName.text.trim(),
+        ),
+      );
+
+      if (!mounted) return;
+      _reload();
+      context.showUserSuccess('Configuracao do demo publico salva.');
+    } catch (error) {
+      if (!mounted) return;
+      context.showUserError(AppErrorMapper.messageFrom(error));
+    } finally {
+      ownerCompanyId.dispose();
+      ownerDisplayName.dispose();
+      accountantCompanyId.dispose();
+      accountantDisplayName.dispose();
     }
   }
 

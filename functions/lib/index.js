@@ -385,6 +385,12 @@ async function assertOperatorFromProfile(context) {
     assertRole(claims, ['OWNER', 'MANAGER', 'ACCOUNTANT']);
     return claims;
 }
+async function assertNotDemoReadOnly(claims) {
+    const profile = await carregarUsuario(claims.uid);
+    if (profile.demoReadOnly === true) {
+        throw new functions.https.HttpsError('permission-denied', 'Acesso demo disponivel apenas para leitura.');
+    }
+}
 function asRecord(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
         return {};
@@ -517,6 +523,12 @@ function commercialSettings(settingsData) {
 function publicSalesConfigRef() {
     return admin.firestore().collection('platform_public').doc('sales_page');
 }
+function demoAccessConfigRef() {
+    return admin.firestore().collection('platform_public').doc('demo_access');
+}
+function demoPublicAccessRef() {
+    return admin.firestore().collection('demo_public_accesses');
+}
 function buildDefaultPublicSalesConfig(current) {
     const planSolo = asRecord(current.planSolo);
     const planEquipe = asRecord(current.planEquipe);
@@ -584,6 +596,278 @@ function accountingOfficeInviteRef() {
 }
 const PUBLIC_EMPLOYEE_TESTER_COMPANY_ID = 'public_employee_testers';
 const PUBLIC_EMPLOYEE_TESTER_COMPANY_NAME = 'Comunidade de testes Ponto Certo';
+const PUBLIC_DEMO_OWNER_UID = 'public_demo_owner';
+const PUBLIC_DEMO_ACCOUNTANT_UID = 'public_demo_accountant';
+const PUBLIC_DEMO_COMPANY_ID = 'public_demo_workspace';
+const PUBLIC_DEMO_COMPANY_NAME = 'Ponto Certo';
+const PUBLIC_DEMO_OFFICE_ID = 'public_demo_office';
+const PUBLIC_DEMO_OFFICE_NAME = 'Escritorio Ponto Certo';
+function normalizePublicDemoProfile(value) {
+    return asTrimmedString(value).toLowerCase() === 'accountant'
+        ? 'accountant'
+        : 'company';
+}
+function buildDefaultDemoAccessConfig(current) {
+    return {
+        enabled: current.enabled !== false,
+        ownerUid: asTrimmedString(current.ownerUid) || PUBLIC_DEMO_OWNER_UID,
+        accountantUid: asTrimmedString(current.accountantUid) || PUBLIC_DEMO_ACCOUNTANT_UID,
+        ownerCompanyId: asTrimmedString(current.ownerCompanyId) || PUBLIC_DEMO_COMPANY_ID,
+        accountantCompanyId: asTrimmedString(current.accountantCompanyId) || PUBLIC_DEMO_COMPANY_ID,
+        ownerDisplayName: asTrimmedString(current.ownerDisplayName) || PUBLIC_DEMO_COMPANY_NAME,
+        accountantDisplayName: asTrimmedString(current.accountantDisplayName) || PUBLIC_DEMO_OFFICE_NAME,
+    };
+}
+function buildLightweightTrialCommercialSettings(params) {
+    const graceUntil = admin.firestore.Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    return buildDefaultCommercialSettings({
+        companyId: params.companyId,
+        commercialSettings: {
+            plan: params.plan,
+            businessTier: params.businessTier,
+            lifecycleStatus: 'trial',
+            billingStatus: 'trialing',
+            allowLogin: true,
+            requiresApproval: false,
+            approvalStatus: 'approved',
+            accessControlMode: 'standard',
+            activationRequired: false,
+            activationStatus: 'released',
+            billingIntegration: {
+                provider: 'manual',
+                accessManagedByGateway: true,
+                customerId: '',
+                subscriptionId: '',
+                paymentLinkUrl: '',
+                checkoutUrl: '',
+                externalReference: params.companyId,
+                status: 'trialing',
+                graceDays: 30,
+                graceUntil,
+                webhookReady: false,
+            },
+            baseSystemPriceCents: params.monthlyPriceCents,
+            monthlyPriceCents: params.monthlyPriceCents,
+            seatsIncluded: params.seatsIncluded,
+            contractedAppUsers: params.seatsIncluded,
+            pricingModel: 'trial_access',
+            platformNote: params.platformNote,
+        },
+    });
+}
+function readPublicRequestMetadata(context) {
+    const rawRequest = asRecord(context?.rawRequest);
+    const headers = asRecord(rawRequest.headers);
+    const forwardedFor = asTrimmedString(headers['x-forwarded-for']);
+    const ipRaw = forwardedFor.split(',').map((item) => item.trim()).find((item) => item) ||
+        asTrimmedString(rawRequest.ip) ||
+        'unknown';
+    const userAgent = asTrimmedString(headers['user-agent']);
+    return {
+        ipHash: hashPublicToken(ipRaw),
+        userAgent,
+    };
+}
+async function ensurePublicDemoUser(params) {
+    const userRef = admin.firestore().collection('users').doc(params.uid);
+    const companySnap = await admin
+        .firestore()
+        .collection('company_settings')
+        .doc(params.companyId)
+        .get();
+    if (!companySnap.exists) {
+        throw new functions.https.HttpsError('failed-precondition', `Company demo ${params.companyId} nao encontrada para o perfil ${params.demoProfile}.`);
+    }
+    const companySettings = asRecord(companySnap.data());
+    const companyData = asRecord(companySettings.companyData);
+    const companyName = asTrimmedString(companyData.nomeFantasia) ||
+        asTrimmedString(companyData.razaoSocial) ||
+        params.displayName;
+    await userRef.set({
+        uid: params.uid,
+        companyId: params.companyId,
+        currentCompanyId: params.companyId,
+        role: params.role,
+        nome: params.displayName,
+        email: `${params.uid}@demo.pontocerto.local`,
+        ativo: true,
+        companyName,
+        companyData,
+        demoReadOnly: true,
+        demoProfile: params.demoProfile,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+}
+async function ensurePublicDemoAuthUser(params) {
+    try {
+        const user = await admin.auth().getUser(params.uid);
+        return user.uid;
+    }
+    catch (error) {
+        const typed = error;
+        if (typed.code !== 'auth/user-not-found') {
+            throw error;
+        }
+    }
+    try {
+        const userByEmail = await admin.auth().getUserByEmail(params.email);
+        await admin.auth().updateUser(userByEmail.uid, {
+            displayName: params.displayName,
+            disabled: false,
+            emailVerified: true,
+        });
+        return userByEmail.uid;
+    }
+    catch (error) {
+        const typed = error;
+        if (typed.code !== 'auth/user-not-found') {
+            throw error;
+        }
+    }
+    const created = await admin.auth().createUser({
+        uid: params.uid,
+        email: params.email,
+        displayName: params.displayName,
+        emailVerified: true,
+        disabled: false,
+    });
+    return created.uid;
+}
+async function ensurePublicDemoAccountantLink(params) {
+    await admin
+        .firestore()
+        .collection('accountant_links')
+        .doc(`${params.companyId}_${params.accountantUid}`)
+        .set({
+        companyId: params.companyId,
+        accountantUserId: params.accountantUid,
+        status: 'active',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        demoReadOnly: true,
+    }, { merge: true });
+}
+async function ensurePublicDemoWorkspace(companyId) {
+    await admin
+        .firestore()
+        .collection('company_settings')
+        .doc(companyId)
+        .set({
+        companyId,
+        companyName: PUBLIC_DEMO_COMPANY_NAME,
+        companyOperationalProfile: 'small_business',
+        companyData: {
+            razaoSocial: PUBLIC_DEMO_COMPANY_NAME,
+            nomeFantasia: PUBLIC_DEMO_COMPANY_NAME,
+            responsavelNome: 'Equipe Ponto Certo',
+            cnpj: '00000000000000',
+            businessCategory: 'service',
+            inscricaoEstadual: '',
+            inscricaoEstadualDispensada: true,
+            inscricaoMunicipalObrigatoria: true,
+            inscricaoMunicipal: 'DEMO-IM',
+            telefone: '(00) 00000-0000',
+            email: 'demo@pontocerto.local',
+            endereco: 'Ambiente demonstrativo',
+            rua: 'Rua Demo',
+            numero: '100',
+            bairro: 'Centro',
+            cidade: 'Sao Paulo',
+            estado: 'SP',
+            cep: '00000000',
+            companyType: 'EMPRESA',
+            companyPlan: 'EQUIPE',
+            legalNature: 'Demonstracao',
+            companySize: 'Demo',
+            mainCnaeDescription: 'Ambiente demonstrativo do sistema',
+            companyDisplayCode: 'DEMO-PC',
+        },
+        companyExperience: {
+            type: 'EMPRESA',
+            plan: 'Equipe',
+            validationLabel: 'Ambiente demo ficticio',
+            validationReason: 'Workspace demonstrativo do Ponto Certo, sem dados reais.',
+        },
+        accountantOffice: {
+            officeId: PUBLIC_DEMO_OFFICE_ID,
+            officeName: PUBLIC_DEMO_OFFICE_NAME,
+            officeEmail: 'contador.demo@pontocerto.local',
+            accountantName: PUBLIC_DEMO_OFFICE_NAME,
+            accountantEmail: 'contador.demo@pontocerto.local',
+        },
+        commercialSettings: buildLightweightTrialCommercialSettings({
+            companyId,
+            plan: 'equipe',
+            businessTier: 'empresa',
+            monthlyPriceCents: DEFAULT_ACCOUNTANT_COMPANY_PRICE_CENTS,
+            seatsIncluded: 3,
+            platformNote: 'Workspace demo ficticio do Ponto Certo, isolado para acesso publico.',
+        }),
+        directSignup: {
+            source: 'public_demo_workspace',
+            lightweightProfilePending: false,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await accountingOfficeRef().doc(PUBLIC_DEMO_OFFICE_ID).set({
+        officeId: PUBLIC_DEMO_OFFICE_ID,
+        officeName: PUBLIC_DEMO_OFFICE_NAME,
+        cnpj: '00000000000000',
+        responsibleName: 'Equipe Ponto Certo',
+        phone: '(00) 00000-0000',
+        email: 'contador.demo@pontocerto.local',
+        address: 'Ambiente demonstrativo',
+        city: 'Sao Paulo',
+        state: 'SP',
+        billingChoiceDefault: 'office',
+        notes: 'Escritorio demo ficticio para apresentacao publica.',
+        source: 'public_demo_workspace',
+        active: true,
+        platformStatus: 'active',
+        officeMonthlyPriceCents: 9790,
+        officeMonthlyPriceLabel: 'R$ 97,90/mes',
+        officeBillingStatus: 'trialing',
+        officePricingModel: 'trial_access',
+        officePartnershipWaiverAllowed: true,
+        officePartnershipWaiverActive: false,
+        officePartnershipStatus: 'standard',
+        linkedCompaniesCount: 1,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+}
+async function buildPublicDemoAccessSummary() {
+    const snap = await demoPublicAccessRef().get();
+    let companyUnique = 0;
+    let accountantUnique = 0;
+    for (const doc of snap.docs) {
+        const data = asRecord(doc.data());
+        const roles = asRecord(data.roles);
+        if (roles.company === true)
+            companyUnique += 1;
+        if (roles.accountant === true)
+            accountantUnique += 1;
+    }
+    return {
+        visitors: snap.size,
+        companyUnique,
+        accountantUnique,
+    };
+}
+async function resolvePublicDemoCompanyId(params) {
+    const preferredCompanyId = asTrimmedString(params.preferredCompanyId);
+    if (preferredCompanyId) {
+        return preferredCompanyId;
+    }
+    const fallbackCompanyId = asTrimmedString(params.fallbackCompanyId);
+    if (fallbackCompanyId) {
+        return fallbackCompanyId;
+    }
+    return PUBLIC_DEMO_COMPANY_ID;
+}
 async function ensurePublicEmployeeTesterCompany() {
     const settingsRef = admin
         .firestore()
@@ -2373,6 +2657,50 @@ async function focusRequest(params) {
         throw new functions.https.HttpsError('internal', message || `Falha na Focus NFe (${response.status}).`);
     }
     return { status: response.status, data };
+}
+async function focusRequestAny(params) {
+    const token = asTrimmedString(params.token);
+    if (!token) {
+        throw new functions.https.HttpsError('failed-precondition', 'Token da Focus NFe nao configurado.');
+    }
+    const response = await fetch(`${focusServerBase(params.environment)}${params.path}`, {
+        method: params.method ?? 'GET',
+        headers: {
+            authorization: focusAuthHeader(token),
+            accept: params.accept || 'application/json',
+            ...(params.contentType
+                ? { 'content-type': params.contentType }
+                : {}),
+        },
+        body: params.body ? JSON.stringify(params.body) : undefined,
+    });
+    const rawText = await response.text();
+    let data = {};
+    if (rawText.trim().length > 0) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.toLowerCase().includes('application/json') ||
+            rawText.trim().startsWith('{') ||
+            rawText.trim().startsWith('[')) {
+            try {
+                data = JSON.parse(rawText);
+            }
+            catch (_) {
+                data = { rawText };
+            }
+        }
+        else {
+            data = rawText;
+        }
+    }
+    if (!response.ok && response.status != 422 && response.status != 400) {
+        const dataRecord = asRecord(data);
+        const message = asTrimmedString(dataRecord.mensagem) ||
+            asTrimmedString(dataRecord.message) ||
+            asTrimmedString(dataRecord.erro) ||
+            rawText.trim();
+        throw new functions.https.HttpsError('internal', message || `Falha na Focus NFe (${response.status}).`);
+    }
+    return { status: response.status, data, rawText, headers: response.headers };
 }
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -4639,6 +4967,506 @@ function buildCompanyDisplayCode(params) {
         .replace(/[^a-z0-9]/g, '') || 'empresa';
     return `comp_${digits}_${firstWord || 'empresa'}`;
 }
+function normalizeFocusIncomingDocumentKind(value) {
+    const normalized = asTrimmedString(value).toLowerCase();
+    if (normalized === 'nfse_nacional' || normalized === 'nfsen') {
+        return 'nfse_nacional';
+    }
+    return 'nfe';
+}
+function buildFocusIncomingDocumentDocId(kind, accessKey) {
+    return `${kind}_${accessKey.replace(/[^a-zA-Z0-9_-]/g, '')}`;
+}
+function fiscalCompanyRef(companyId) {
+    return admin.firestore().collection('empresas').doc(companyId);
+}
+function fiscalCompanyDocumentsRef(companyId) {
+    return fiscalCompanyRef(companyId).collection('documentos_fiscais');
+}
+function fiscalCompanyXmlSyncLogsRef(companyId) {
+    return fiscalCompanyRef(companyId).collection('xml_sync_logs');
+}
+function fiscalIncomingXmlStoragePath(companyId, accessKey) {
+    const safeKey = accessKey.replace(/[^a-zA-Z0-9_-]/g, '');
+    return `documentos/${companyId}/xml/${safeKey}.xml`;
+}
+function coerceUnknownList(value) {
+    if (Array.isArray(value))
+        return value;
+    const record = asRecord(value);
+    if (Array.isArray(record.items))
+        return record.items;
+    if (Array.isArray(record.data))
+        return record.data;
+    if (Array.isArray(record.documentos))
+        return record.documentos;
+    if (Array.isArray(record.notas))
+        return record.notas;
+    if (Array.isArray(record.nfes))
+        return record.nfes;
+    if (Array.isArray(record.nfses))
+        return record.nfses;
+    return [];
+}
+function pickFirstString(record, keys) {
+    for (const finalKey of keys) {
+        const value = asTrimmedString(record[finalKey]);
+        if (value)
+            return value;
+    }
+    return '';
+}
+function pickFirstNumber(record, keys) {
+    for (const key of keys) {
+        const raw = record[key];
+        if (typeof raw === 'number' && Number.isFinite(raw))
+            return raw;
+        const parsed = Number(String(raw ?? '').replace(',', '.'));
+        if (Number.isFinite(parsed))
+            return parsed;
+    }
+    return null;
+}
+function pickFirstTimestamp(record, keys) {
+    for (const key of keys) {
+        const parsed = parseTimestampLike(record[key]);
+        if (parsed != null)
+            return parsed;
+    }
+    return null;
+}
+function extractFocusIncomingXmlContent(value) {
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.startsWith('<') ? trimmed : '';
+    }
+    const record = asRecord(value);
+    const direct = pickFirstString(record, [
+        'xml',
+        'xml_nfe',
+        'xml_nfse',
+        'conteudo_xml',
+        'xmlContent',
+        'rawXml',
+    ]);
+    if (direct.trim().startsWith('<'))
+        return direct.trim();
+    for (const nestedKey of ['documento', 'nota', 'nfse', 'nfe', 'conteudo']) {
+        const nested = extractFocusIncomingXmlContent(record[nestedKey]);
+        if (nested)
+            return nested;
+    }
+    return '';
+}
+function normalizeFiscalDocumentType(kind, item) {
+    const raw = pickFirstString(item, ['tipo', 'modelo', 'documentType', 'document_type'])
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '');
+    if (raw === 'NFCE')
+        return 'NFCE';
+    if (kind === 'nfse_nacional')
+        return 'NFSE_NACIONAL';
+    return 'NFE';
+}
+function pickFirstNsu(item, fallbackVersion) {
+    const direct = pickFirstString(item, [
+        'nsu',
+        'ultimo_nsu',
+        'last_nsu',
+        'sequencia',
+        'sequence',
+        'versao',
+        'version',
+    ]);
+    if (direct)
+        return direct;
+    return fallbackVersion > 0 ? String(fallbackVersion) : '';
+}
+function buildFiscalIncomingTaxPlaceholders(item) {
+    const taxes = asRecord(item.impostos);
+    return {
+        icms: asRecord(taxes.icms),
+        icms_st: asRecord(taxes.icms_st),
+        pis: asRecord(taxes.pis),
+        cofins: asRecord(taxes.cofins),
+        ibs: asRecord(taxes.ibs),
+        cbs: asRecord(taxes.cbs),
+        is: asRecord(taxes.is),
+    };
+}
+function buildFiscalIncomingItems(item) {
+    const rawItems = coerceUnknownList(item.itens);
+    return rawItems
+        .map((entry) => asRecord(entry))
+        .filter((entry) => Object.keys(entry).length > 0)
+        .map((entry) => ({
+        descricao: pickFirstString(entry, ['descricao', 'nome', 'xProd']),
+        ncm: pickFirstString(entry, ['ncm']),
+        cfop: pickFirstString(entry, ['cfop']),
+        valor: pickFirstNumber(entry, ['valor', 'valor_total', 'vProd']),
+        impostos: buildFiscalIncomingTaxPlaceholders(entry),
+    }));
+}
+function summarizeFocusIncomingDocument(params) {
+    const item = params.item;
+    const accessKey = pickFirstString(item, [
+        'chave',
+        'chave_acesso',
+        'access_key',
+        'accessKey',
+        'nfe_chave',
+        'nfse_chave',
+    ]);
+    const version = pickFirstNumber(item, ['versao', 'version']) ?? 0;
+    const nsu = pickFirstNsu(item, version);
+    const xmlContent = extractFocusIncomingXmlContent(item);
+    const totalValue = pickFirstNumber(item, [
+        'valor',
+        'valor_total',
+        'valor_nota',
+        'valor_servicos',
+        'valor_liquido',
+    ]);
+    const issuer = asRecord(item.emitente);
+    const recipient = asRecord(item.destinatario);
+    const provider = asRecord(item.prestador);
+    const taker = asRecord(item.tomador);
+    const fiscalType = normalizeFiscalDocumentType(params.kind, item);
+    const issuedAt = pickFirstTimestamp(item, [
+        'data_emissao',
+        'emitida_em',
+        'data_competencia',
+        'data_recebimento',
+        'dhEmi',
+    ]);
+    const receivedAt = pickFirstTimestamp(item, ['data_recebimento', 'recebida_em']);
+    const issuerDocument = pickFirstString(issuer, ['cnpj', 'cpf']) ||
+        pickFirstString(provider, ['cnpj', 'cpf']) ||
+        pickFirstString(item, ['emitente_cnpj', 'prestador_cnpj']);
+    const recipientDocument = pickFirstString(recipient, ['cnpj', 'cpf']) ||
+        pickFirstString(taker, ['cnpj', 'cpf']) ||
+        pickFirstString(item, ['destinatario_cnpj', 'tomador_cnpj']);
+    return {
+        companyId: params.companyId,
+        receivedCompanyCnpj: params.companyCnpj,
+        chave: accessKey,
+        nsu,
+        tipo: fiscalType,
+        origem: 'focus',
+        documentType: params.kind,
+        accessKey,
+        version,
+        status: pickFirstString(item, ['status', 'situacao']) || 'novo',
+        manifestStatus: pickFirstString(item, [
+            'manifestacao',
+            'manifestacao_destinatario',
+            'manifest_status',
+        ]),
+        number: pickFirstString(item, ['numero', 'numero_nf', 'n_nfse', 'nfe_numero']),
+        series: pickFirstString(item, ['serie']),
+        emitente: pickFirstString(issuer, ['razao_social', 'nome']) ||
+            pickFirstString(provider, ['razao_social', 'nome']) ||
+            pickFirstString(item, ['emitente_nome', 'prestador_nome']),
+        cnpj_emitente: onlyDigits(issuerDocument),
+        destinatario: pickFirstString(recipient, ['razao_social', 'nome']) ||
+            pickFirstString(taker, ['razao_social', 'nome']) ||
+            pickFirstString(item, ['destinatario_nome', 'tomador_nome']),
+        cnpj_destinatario: onlyDigits(recipientDocument),
+        valor_total: totalValue,
+        data_emissao: issuedAt || admin.firestore.FieldValue.delete(),
+        xml_path: xmlContent.length > 0 ? fiscalIncomingXmlStoragePath(params.companyId, accessKey) : '',
+        xml_disponivel: xmlContent.length > 0,
+        xml_tamanho_bytes: xmlContent.length,
+        xml_capturado_em: xmlContent.length > 0
+            ? admin.firestore.FieldValue.serverTimestamp()
+            : admin.firestore.FieldValue.delete(),
+        issuerName: pickFirstString(issuer, ['razao_social', 'nome']) ||
+            pickFirstString(provider, ['razao_social', 'nome']) ||
+            pickFirstString(item, ['emitente_nome', 'prestador_nome']),
+        issuerDocument,
+        recipientName: pickFirstString(recipient, ['razao_social', 'nome']) ||
+            pickFirstString(taker, ['razao_social', 'nome']) ||
+            pickFirstString(item, ['destinatario_nome', 'tomador_nome']),
+        recipientDocument,
+        totalValue,
+        issuedAt: issuedAt || admin.firestore.FieldValue.delete(),
+        receivedAt: receivedAt || admin.firestore.FieldValue.serverTimestamp(),
+        impostos: buildFiscalIncomingTaxPlaceholders(item),
+        itens: buildFiscalIncomingItems(item),
+        criado_em: admin.firestore.FieldValue.serverTimestamp(),
+        atualizado_em: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+}
+async function loadFocusIncomingSyncContext(claims) {
+    const settingsSnap = await admin
+        .firestore()
+        .collection('company_settings')
+        .doc(claims.companyId)
+        .get();
+    if (!settingsSnap.exists) {
+        throw new functions.https.HttpsError('not-found', 'company_settings nao encontrado.');
+    }
+    const mergedSettings = await mergeFiscalSecureSettings(claims.companyId, asRecord(settingsSnap.data()));
+    const companyData = asRecord(mergedSettings.companyData);
+    const cnpj = onlyDigits(companyData.cnpj);
+    if (cnpj.length !== 14) {
+        throw new functions.https.HttpsError('failed-precondition', 'A empresa ativa precisa ter CNPJ valido no cadastro para capturar XML.');
+    }
+    const integration = asRecord(mergedSettings.fiscalRealIntegration);
+    const platformFocus = obterConfigFocusPlatform();
+    const token = asTrimmedString(integration.apiToken) || platformFocus.apiToken;
+    const environment = asTrimmedString(integration.environment) ||
+        platformFocus.environment ||
+        'homologacao';
+    if (!token) {
+        throw new functions.https.HttpsError('failed-precondition', 'Nao existe token Focus configurado para capturar documentos recebidos.');
+    }
+    return { companyData, token, environment, cnpj };
+}
+async function writeFiscalIncomingXmlIfAvailable(params) {
+    const xml = params.xmlContent.trim();
+    if (!xml)
+        return '';
+    const storagePath = fiscalIncomingXmlStoragePath(params.companyId, params.accessKey);
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(storagePath);
+    await file.save(Buffer.from(xml, 'utf8'), {
+        contentType: 'application/xml; charset=utf-8',
+        resumable: false,
+        metadata: {
+            contentType: 'application/xml; charset=utf-8',
+        },
+    });
+    return storagePath;
+}
+exports.fiscalSyncFocusIncomingDocuments = HEAVY_RUNTIME.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    assertRole(claims, ['OWNER', 'MANAGER', 'ACCOUNTANT']);
+    const kind = normalizeFocusIncomingDocumentKind(data?.documentType);
+    const syncContext = await loadFocusIncomingSyncContext(claims);
+    const companyRef = fiscalCompanyRef(claims.companyId);
+    const companySnap = await companyRef.get();
+    const companyData = asRecord(companySnap.data());
+    const syncState = asRecord(asRecord(companyData.xml_sync_state)[kind]);
+    const lastNsuRaw = asTrimmedString(syncState.ultimo_nsu) ||
+        asTrimmedString(syncState.lastVersion) ||
+        asTrimmedString(companyData.ultimo_nsu);
+    const lastVersion = parseNonNegativeInt(lastNsuRaw || 0, 'lastVersion');
+    const query = new URLSearchParams({
+        cnpj: syncContext.cnpj,
+        ...(lastVersion > 0 ? { versao: String(lastVersion) } : {}),
+        ...(kind === 'nfse_nacional' ? { completa: '1' } : {}),
+    });
+    const response = await focusRequestAny({
+        token: syncContext.token,
+        environment: syncContext.environment,
+        path: kind === 'nfse_nacional'
+            ? `/v2/nfsens_recebidas?${query.toString()}`
+            : `/v2/nfes_recebidas?${query.toString()}`,
+    });
+    const items = coerceUnknownList(response.data)
+        .map((item) => asRecord(item))
+        .filter((item) => Object.keys(item).length > 0);
+    let maxVersion = lastVersion;
+    let maxNsu = lastNsuRaw;
+    let capturedWithXml = 0;
+    const processStartedAt = admin.firestore.FieldValue.serverTimestamp();
+    const logRef = fiscalCompanyXmlSyncLogsRef(claims.companyId).doc();
+    await companyRef.set({
+        cnpj: syncContext.cnpj,
+        status_fiscal: 'ativo',
+        xml_sync_status: 'processando',
+        xml_ultima_sincronizacao: processStartedAt,
+        xml_ultimo_erro: admin.firestore.FieldValue.delete(),
+    }, { merge: true });
+    await logRef.set({
+        companyId: claims.companyId,
+        documentType: kind,
+        origem: 'focus',
+        modo_execucao: 'manual',
+        actorUserId: claims.uid,
+        actorRole: claims.role,
+        iniciado_em: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'processando',
+        ultimo_nsu_entrada: lastNsuRaw,
+        cnpj: syncContext.cnpj,
+    });
+    try {
+        const writes = [];
+        for (const item of items) {
+            const summary = summarizeFocusIncomingDocument({
+                kind,
+                companyId: claims.companyId,
+                companyCnpj: syncContext.cnpj,
+                item,
+            });
+            const accessKey = asTrimmedString(summary.accessKey);
+            if (!accessKey)
+                continue;
+            const version = Number(summary.version ?? 0);
+            if (Number.isFinite(version) && version > maxVersion) {
+                maxVersion = version;
+            }
+            const nsu = asTrimmedString(summary.nsu);
+            if (nsu) {
+                const nsuAsNumber = Number(nsu);
+                const maxNsuAsNumber = Number(maxNsu);
+                if (!maxNsu ||
+                    (Number.isFinite(nsuAsNumber) &&
+                        (!Number.isFinite(maxNsuAsNumber) || nsuAsNumber > maxNsuAsNumber))) {
+                    maxNsu = nsu;
+                }
+            }
+            const xmlContent = extractFocusIncomingXmlContent(item);
+            let xmlPath = asTrimmedString(summary.xml_path);
+            if (xmlContent) {
+                xmlPath = await writeFiscalIncomingXmlIfAvailable({
+                    companyId: claims.companyId,
+                    accessKey,
+                    xmlContent,
+                });
+                capturedWithXml += 1;
+            }
+            writes.push(fiscalCompanyDocumentsRef(claims.companyId)
+                .doc(buildFocusIncomingDocumentDocId(kind, accessKey))
+                .set({
+                ...summary,
+                xml_path: xmlPath,
+                xml_disponivel: xmlPath.length > 0,
+                criado_em: admin.firestore.FieldValue.serverTimestamp(),
+                atualizado_em: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true }));
+        }
+        await Promise.all(writes);
+        const headerMaxVersion = Number(response.headers.get('x-max-version') || '0');
+        if (Number.isFinite(headerMaxVersion) && headerMaxVersion > maxVersion) {
+            maxVersion = headerMaxVersion;
+        }
+        if (!maxNsu && maxVersion > 0) {
+            maxNsu = String(maxVersion);
+        }
+        await companyRef.set({
+            cnpj: syncContext.cnpj,
+            status_fiscal: 'ativo',
+            ultimo_nsu: maxNsu,
+            xml_sync_status: 'ativo',
+            xml_ultima_sincronizacao: admin.firestore.FieldValue.serverTimestamp(),
+            xml_ultimo_erro: admin.firestore.FieldValue.delete(),
+            xml_sync_state: {
+                [kind]: {
+                    ultimo_nsu: maxNsu,
+                    lastVersion: maxVersion,
+                    xml_sync_status: 'ativo',
+                    xml_ultima_sincronizacao: admin.firestore.FieldValue.serverTimestamp(),
+                    documentsFetched: items.length,
+                    xmlCaptured: capturedWithXml,
+                    cnpj: syncContext.cnpj,
+                    environment: syncContext.environment,
+                },
+            },
+        }, { merge: true });
+        await logRef.set({
+            status: 'sucesso',
+            finalizado_em: admin.firestore.FieldValue.serverTimestamp(),
+            quantidade_encontrados: items.length,
+            quantidade_importados: items.length,
+            quantidade_xml_importados: capturedWithXml,
+            ultimo_nsu_saida: maxNsu,
+        }, { merge: true });
+        await writeAudit({
+            claims,
+            module: 'fiscal_xml_import',
+            action: 'focus_sync_manual_completed',
+            entityPath: `empresas/${claims.companyId}/documentos_fiscais`,
+            entityId: kind,
+            after: {
+                documentType: kind,
+                found: items.length,
+                imported: items.length,
+                xmlCaptured: capturedWithXml,
+                ultimoNsu: maxNsu,
+            },
+        });
+    }
+    catch (error) {
+        const message = errorMessage(error, 'Falha ao sincronizar documentos fiscais recebidos via Focus.');
+        await companyRef.set({
+            cnpj: syncContext.cnpj,
+            status_fiscal: 'ativo',
+            xml_sync_status: 'erro',
+            xml_ultima_sincronizacao: admin.firestore.FieldValue.serverTimestamp(),
+            xml_ultimo_erro: message,
+            xml_sync_state: {
+                [kind]: {
+                    ultimo_nsu: lastNsuRaw,
+                    lastVersion,
+                    xml_sync_status: 'erro',
+                    xml_ultima_sincronizacao: admin.firestore.FieldValue.serverTimestamp(),
+                    erro: message,
+                    cnpj: syncContext.cnpj,
+                    environment: syncContext.environment,
+                },
+            },
+        }, { merge: true });
+        await logRef.set({
+            status: 'erro',
+            finalizado_em: admin.firestore.FieldValue.serverTimestamp(),
+            quantidade_encontrados: items.length,
+            quantidade_importados: 0,
+            quantidade_xml_importados: capturedWithXml,
+            erro: message,
+        }, { merge: true });
+        await writeAudit({
+            claims,
+            module: 'fiscal_xml_import',
+            action: 'focus_sync_manual_failed',
+            entityPath: `empresas/${claims.companyId}/documentos_fiscais`,
+            entityId: kind,
+            after: {
+                documentType: kind,
+                error: message,
+                found: items.length,
+            },
+        });
+        throw error;
+    }
+    return {
+        ok: true,
+        documentType: kind,
+        companyId: claims.companyId,
+        cnpj: syncContext.cnpj,
+        documentsFetched: items.length,
+        xmlCaptured: capturedWithXml,
+        lastVersion: maxVersion,
+        ultimoNsu: maxNsu,
+    };
+});
+exports.fiscalDownloadImportedXml = HEAVY_RUNTIME.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    assertRole(claims, ['OWNER', 'MANAGER', 'ACCOUNTANT']);
+    const documentId = asTrimmedString(data?.documentId);
+    if (!documentId) {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe o documento fiscal.');
+    }
+    const docSnap = await fiscalCompanyDocumentsRef(claims.companyId).doc(documentId).get();
+    if (!docSnap.exists) {
+        throw new functions.https.HttpsError('not-found', 'Documento fiscal nao encontrado.');
+    }
+    const docData = asRecord(docSnap.data());
+    const xmlPath = asTrimmedString(docData.xml_path);
+    if (!xmlPath) {
+        throw new functions.https.HttpsError('failed-precondition', 'Este documento ainda nao possui XML salvo para download.');
+    }
+    const [buffer] = await admin.storage().bucket().file(xmlPath).download();
+    return {
+        ok: true,
+        documentId,
+        fileName: `${asTrimmedString(docData.chave) || documentId}.xml`,
+        contentType: 'application/xml',
+        base64: buffer.toString('base64'),
+    };
+});
 function toAsaasMoneyValue(valueCents) {
     const cents = Number(valueCents ?? 0);
     if (!Number.isFinite(cents) || cents <= 0) {
@@ -5065,6 +5893,18 @@ async function enviarEmailBoasVindasFuncionario(params) {
     }
     throw new functions.https.HttpsError('failed-precondition', 'Configuracao de envio ausente. Defina smtp.user/smtp.app_password ou sendgrid.key.');
 }
+function buildPlayStoreAccessNoticeHtml(apkUrl) {
+    const linkHtml = apkUrl.trim()
+        ? `<p style="margin: 0 0 10px 0;"><a href="${apkUrl.trim()}">Acessar o app na Play Store</a></p>`
+        : '';
+    return `
+    ${linkHtml}
+    <p style="margin: 0 0 10px 0;">
+      Para acessar pela Play Store, aguarde a liberacao do seu acesso.
+      O app publicado ainda esta em <strong>versao de teste</strong>.
+    </p>
+  `;
+}
 async function enviarEmailMigracaoAmbienteReal(params) {
     const assunto = 'Ponto Certo: ambiente oficial liberado para voce';
     const html = `
@@ -5280,7 +6120,9 @@ async function enviarEmailAcessoInicialEmpresa(params) {
     <div style="font-family: Arial, Helvetica, sans-serif; color: #111; line-height: 1.5;">
       <h2 style="margin:0 0 12px 0;">Ola, ${escapeHtml(params.nome || 'responsavel')}!</h2>
       <p>A empresa <strong>${escapeHtml(params.companyName)}</strong> esta pronta no Ponto Certo.</p>
-      <p><a href="${params.resetLink}" style="font-weight:bold;">Criar senha e acessar o painel</a></p>
+      <p><a href="${params.resetLink}" style="font-weight:bold;">Criar senha de acesso</a></p>
+      <p><a href="${params.loginUrl}" style="font-weight:bold;">Entrar no painel web da empresa</a></p>
+      ${buildPlayStoreAccessNoticeHtml(params.apkUrl)}
       <p>No primeiro acesso, revise os dados cadastrais e siga com a operacao.</p>
       ${officeFounderOperatingCompanyCredibilityHtml()}
       <p style="margin-top: 16px;">${officeFounderEmailSignOffInnerHtml()}</p>
@@ -5333,8 +6175,17 @@ async function ensureCompanyOwnerAccess(params) {
             const existingUser = asRecord(existingUserSnap.data());
             const existingRole = roleParaFirestore(existingUser.role);
             const existingCompanyId = asTrimmedString(existingUser.companyId);
-            if (existingRole !== 'OWNER' || (existingCompanyId && existingCompanyId !== params.companyId)) {
+            const reusableLightweight = existingRole === 'OWNER' &&
+                existingUser.lightweightProfilePending === true;
+            if (existingRole !== 'OWNER' ||
+                (existingCompanyId && existingCompanyId !== params.companyId && !reusableLightweight)) {
                 throw new functions.https.HttpsError('already-exists', 'O email informado ja esta em uso por outro acesso no sistema.');
+            }
+            if (reusableLightweight && existingCompanyId && existingCompanyId !== params.companyId) {
+                await markSupersededLightweightCompany({
+                    previousCompanyId: existingCompanyId,
+                    nextCompanyId: params.companyId,
+                });
             }
         }
         else {
@@ -5367,6 +6218,7 @@ async function ensureCompanyOwnerAccess(params) {
         employeeId: userRecord.uid,
         mustChangePassword: params.mustChangePassword !== false,
         companyData: params.companyData,
+        lightweightProfilePending: false,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -5383,6 +6235,8 @@ async function ensureCompanyOwnerAccess(params) {
         nome: params.ownerName,
         companyName: params.companyName,
         resetLink,
+        loginUrl,
+        apkUrl: emailCfg.apkUrl,
         fromEmail: emailCfg.fromEmail,
         sendgridKey: emailCfg.sendgridKey,
         smtpUser: emailCfg.smtpUser,
@@ -5404,6 +6258,7 @@ async function enviarEmailAcessoInicialContador(params) {
       <p><a href="${params.resetLink}" style="font-weight:bold;">Definir senha de acesso</a></p>
       <p>Acesso web do contador:</p>
       <p><a href="${params.loginUrl}">${params.loginUrl}</a></p>
+      ${buildPlayStoreAccessNoticeHtml(params.apkUrl)}
       <p>Use este ambiente para fiscal, financeiro e conferencias da empresa.</p>
       ${officeFounderPresentationHtml()}
     </div>
@@ -5440,9 +6295,9 @@ async function enviarEmailAcessoEscritorioContabil(params) {
       <h2 style="margin:0 0 12px 0;">Ola, ${escapeHtml(params.responsibleName || 'responsavel')}!</h2>
       <p>O escritorio <strong>${escapeHtml(params.officeName)}</strong> foi cadastrado com sucesso.</p>
       <p><strong>E-mail de login:</strong> ${escapeHtml(params.loginEmail)}</p>
-      <p><strong>Senha provisoria:</strong> ${escapeHtml(params.password)}</p>
-      <p>Por seguranca, altere a senha apos o primeiro acesso.</p>
+      <p><a href="${params.resetLink}" style="font-weight:bold;">Criar senha de acesso</a></p>
       <p><a href="${params.loginUrl}" style="font-weight:bold;">Entrar no painel do escritorio</a><br/><span style="font-size:13px;color:#4b5563;">${params.loginUrl}</span></p>
+      ${buildPlayStoreAccessNoticeHtml(params.apkUrl)}
       <p>Gerencie empresas da carteira, cadastros e operacao contabil a partir deste ambiente.</p>
       ${officeFounderPresentationHtml()}
     </div>
@@ -5498,6 +6353,7 @@ async function enviarNotificacaoInternaNovoCadastro(params) {
 async function notificarNovoCadastroAdministrativo(params) {
     const typeLabel = {
         office: 'Novo escritorio cadastrado',
+        company_preregistration: 'Novo pre-cadastro comercial',
         company_direct: 'Nova empresa cadastrada direto',
         company_from_office: 'Nova empresa cadastrada por escritorio',
         company_trial_from_office: 'Nova empresa trial cadastrada por escritorio',
@@ -5522,6 +6378,285 @@ async function notificarNovoCadastroAdministrativo(params) {
     </div>
   `;
     await enviarNotificacaoInternaNovoCadastro({ subject, html });
+}
+async function markSupersededLightweightCompany(params) {
+    const previousCompanyId = asTrimmedString(params.previousCompanyId);
+    const nextCompanyId = asTrimmedString(params.nextCompanyId);
+    if (!previousCompanyId || !nextCompanyId || previousCompanyId === nextCompanyId) {
+        return;
+    }
+    await admin.firestore().collection('company_settings').doc(previousCompanyId).set({
+        lightweightSuperseded: true,
+        supersededByCompanyId: nextCompanyId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+}
+async function provisionLightweightOfficeAccess(params) {
+    const officeName = asTrimmedString(params.officeName) || 'Escritorio em configuracao';
+    const responsibleName = asTrimmedString(params.responsibleName);
+    const email = asTrimmedString(params.email).toLowerCase();
+    if (!responsibleName || !email) {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe nome e email para criar o acesso do escritorio.');
+    }
+    let userRecord = null;
+    try {
+        userRecord = await admin.auth().getUserByEmail(email);
+    }
+    catch (error) {
+        const typed = error;
+        if (typed.code !== 'auth/user-not-found') {
+            throw error;
+        }
+    }
+    let officeId = '';
+    if (userRecord) {
+        const existingUserSnap = await admin.firestore().collection('users').doc(userRecord.uid).get();
+        if (!existingUserSnap.exists) {
+            throw new functions.https.HttpsError('already-exists', 'Este email ja esta em uso por outro acesso no sistema.');
+        }
+        const existingUser = asRecord(existingUserSnap.data());
+        if (roleParaFirestore(existingUser.role) !== 'ACCOUNTANT') {
+            throw new functions.https.HttpsError('already-exists', 'Este email ja esta em uso por outro acesso no sistema.');
+        }
+        officeId =
+            asTrimmedString(existingUser.officeId) ||
+                asTrimmedString(existingUser.companyId) ||
+                `office_${Date.now()}`;
+        await admin.auth().updateUser(userRecord.uid, {
+            password: params.password || gerarSenhaTemporaria(),
+            displayName: responsibleName,
+        });
+    }
+    else {
+        userRecord = await admin.auth().createUser({
+            email,
+            password: params.password || gerarSenhaTemporaria(),
+            displayName: responsibleName,
+            emailVerified: false,
+        });
+        officeId = `office_${Date.now()}`;
+    }
+    await accountingOfficeRef().doc(officeId).set({
+        officeId,
+        officeName,
+        cnpj: '',
+        responsibleName,
+        phone: '',
+        email,
+        address: '',
+        city: '',
+        state: '',
+        billingChoiceDefault: 'office',
+        notes: '',
+        source: params.source,
+        active: true,
+        platformStatus: 'pending_profile',
+        officeMonthlyPriceCents: 9790,
+        officeMonthlyPriceLabel: 'R$ 97,90/mes',
+        officeBillingStatus: 'trialing',
+        officePricingModel: 'trial_access',
+        officePartnershipWaiverAllowed: true,
+        officePartnershipWaiverActive: false,
+        officePartnershipStatus: 'standard',
+        linkedCompaniesCount: 0,
+        lightweightProfilePending: true,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await admin.firestore().collection('users').doc(userRecord.uid).set({
+        companyId: officeId,
+        currentCompanyId: officeId,
+        companyName: officeName,
+        role: 'ACCOUNTANT',
+        nome: responsibleName,
+        email,
+        employeeId: userRecord.uid,
+        officeId,
+        officeName,
+        officeBillingChoiceDefault: 'office',
+        mustChangePassword: false,
+        lightweightProfilePending: true,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await admin.auth().setCustomUserClaims(userRecord.uid, {
+        companyId: officeId,
+        role: 'ACCOUNTANT',
+        employeeId: userRecord.uid,
+        officeId,
+    });
+    const loginUrl = `https://gestao-ponto-certo.com/login-contador?email=${encodeURIComponent(email)}`;
+    let emailDispatched = false;
+    try {
+        const emailCfg = obterConfigEmail();
+        const resetLink = await admin.auth().generatePasswordResetLink(email);
+        await enviarEmailAcessoEscritorioContabil({
+            email,
+            officeName,
+            responsibleName,
+            loginUrl,
+            loginEmail: email,
+            resetLink,
+            fromEmail: emailCfg.fromEmail,
+            sendgridKey: emailCfg.sendgridKey,
+            smtpUser: emailCfg.smtpUser,
+            smtpAppPassword: emailCfg.smtpAppPassword,
+            apkUrl: emailCfg.apkUrl,
+        });
+        emailDispatched = true;
+    }
+    catch (_) {
+        emailDispatched = false;
+    }
+    return {
+        officeId,
+        officeName,
+        email,
+        loginUrl,
+        emailDispatched,
+    };
+}
+async function provisionLightweightCompanyAccess(params) {
+    const ownerEmail = asTrimmedString(params.ownerEmail).toLowerCase();
+    const ownerName = asTrimmedString(params.ownerName);
+    const companyName = asTrimmedString(params.companyName) || 'Empresa em configuracao';
+    if (!ownerEmail || !ownerName) {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe nome e email para criar o acesso da empresa.');
+    }
+    let ownerRecord = null;
+    try {
+        ownerRecord = await admin.auth().getUserByEmail(ownerEmail);
+    }
+    catch (error) {
+        const typed = error;
+        if (typed.code !== 'auth/user-not-found') {
+            throw error;
+        }
+    }
+    let companyId = '';
+    let companyDisplayCode = '';
+    if (ownerRecord) {
+        const existingUserSnap = await admin.firestore().collection('users').doc(ownerRecord.uid).get();
+        if (!existingUserSnap.exists) {
+            throw new functions.https.HttpsError('already-exists', 'Este email de acesso ja esta em uso. Use outro email ou recupere a senha.');
+        }
+        const existingUser = asRecord(existingUserSnap.data());
+        const isReusable = roleParaFirestore(existingUser.role) === 'OWNER' &&
+            existingUser.lightweightProfilePending === true;
+        if (!isReusable) {
+            throw new functions.https.HttpsError('already-exists', 'Este email de acesso ja esta em uso. Use outro email ou recupere a senha.');
+        }
+        companyId = asTrimmedString(existingUser.companyId) || `comp_${Date.now()}`;
+        companyDisplayCode =
+            asTrimmedString(asRecord(existingUser.companyData).companyDisplayCode) ||
+                buildCompanyDisplayCode({
+                    cnpj: '',
+                    companyName,
+                });
+        await admin.auth().updateUser(ownerRecord.uid, {
+            password: params.password || gerarSenhaTemporaria(),
+            displayName: ownerName,
+        });
+    }
+    else {
+        ownerRecord = await admin.auth().createUser({
+            email: ownerEmail,
+            password: params.password || gerarSenhaTemporaria(),
+            displayName: ownerName,
+            emailVerified: false,
+        });
+        companyId = `comp_${Date.now()}`;
+        companyDisplayCode = buildCompanyDisplayCode({
+            cnpj: '',
+            companyName,
+        });
+    }
+    const companyData = {
+        razaoSocial: companyName,
+        nomeFantasia: companyName,
+        cnpj: '',
+        businessCategory: 'service',
+        inscricaoEstadual: '',
+        inscricaoEstadualDispensada: true,
+        inscricaoMunicipalObrigatoria: true,
+        inscricaoMunicipal: '',
+        telefone: '',
+        email: ownerEmail,
+        endereco: '',
+        companyType: 'EMPRESA',
+        companyPlan: 'EQUIPE',
+        companyDisplayCode: companyDisplayCode,
+    };
+    const commercialSettings = buildLightweightTrialCommercialSettings({
+        companyId,
+        plan: 'equipe',
+        businessTier: 'empresa',
+        monthlyPriceCents: DEFAULT_ACCOUNTANT_COMPANY_PRICE_CENTS,
+        seatsIncluded: 3,
+        platformNote: 'Acesso inicial leve criado antes do cadastro real. Empresa precisa concluir o cadastro real para operar com dados fiscais.',
+    });
+    await admin.firestore().collection('users').doc(ownerRecord.uid).set({
+        companyId,
+        companyName,
+        role: 'OWNER',
+        nome: ownerName,
+        email: ownerEmail,
+        employeeId: ownerRecord.uid,
+        mustChangePassword: false,
+        companyData,
+        lightweightProfilePending: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await admin.auth().setCustomUserClaims(ownerRecord.uid, {
+        companyId,
+        role: 'OWNER',
+        employeeId: ownerRecord.uid,
+    });
+    await admin.firestore().collection('company_settings').doc(companyId).set({
+        companyId,
+        companyData,
+        companyExperience: {
+            type: 'EMPRESA',
+            plan: 'Equipe',
+            validationLabel: 'Cadastro inicial simplificado',
+            validationReason: 'A empresa recebeu um acesso inicial leve antes do cadastro real completo.',
+        },
+        commercialSettings,
+        directSignup: {
+            source: params.source,
+            lightweightProfilePending: true,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    let emailDispatched = false;
+    try {
+        const emailCfg = obterConfigEmail();
+        const resetLink = await admin.auth().generatePasswordResetLink(ownerEmail);
+        const loginUrl = `https://gestao-ponto-certo.com/login-empresa?email=${encodeURIComponent(ownerEmail)}`;
+        await enviarEmailAcessoInicialEmpresa({
+            email: ownerEmail,
+            nome: ownerName,
+            companyName,
+            resetLink,
+            loginUrl,
+            apkUrl: emailCfg.apkUrl,
+            fromEmail: emailCfg.fromEmail,
+            sendgridKey: emailCfg.sendgridKey,
+            smtpUser: emailCfg.smtpUser,
+            smtpAppPassword: emailCfg.smtpAppPassword,
+        });
+        emailDispatched = true;
+    }
+    catch (_) {
+        emailDispatched = false;
+    }
+    return {
+        companyId,
+        companyName,
+        emailDispatched,
+    };
 }
 async function createOrUpdateAccountingOffice(params) {
     const officeName = params.officeName.trim();
@@ -5648,17 +6783,19 @@ async function createOrUpdateAccountingOffice(params) {
     let emailDispatched = false;
     try {
         const emailCfg = obterConfigEmail();
+        const resetLink = await admin.auth().generatePasswordResetLink(email);
         await enviarEmailAcessoEscritorioContabil({
             email,
             officeName,
             responsibleName,
             loginUrl,
             loginEmail: email,
-            password,
+            resetLink,
             fromEmail: emailCfg.fromEmail,
             sendgridKey: emailCfg.sendgridKey,
             smtpUser: emailCfg.smtpUser,
             smtpAppPassword: emailCfg.smtpAppPassword,
+            apkUrl: emailCfg.apkUrl,
         });
         emailDispatched = true;
     }
@@ -6036,11 +7173,14 @@ async function finalizeSalesOnboardingToOperationalCompany(params) {
     }
     const resetLink = await admin.auth().generatePasswordResetLink(ownerEmail);
     const emailCfg = obterConfigEmail();
+    const loginUrl = `https://gestao-ponto-certo.com/login-empresa?email=${encodeURIComponent(ownerEmail)}`;
     await enviarEmailAcessoInicialEmpresa({
         email: ownerEmail,
         nome: ownerName,
         companyName,
         resetLink,
+        loginUrl,
+        apkUrl: emailCfg.apkUrl,
         fromEmail: emailCfg.fromEmail,
         sendgridKey: emailCfg.sendgridKey,
         smtpUser: emailCfg.smtpUser,
@@ -6462,6 +7602,7 @@ async function ensureAccountantAccessForCompany(params) {
         sendgridKey: emailCfg.sendgridKey,
         smtpUser: emailCfg.smtpUser,
         smtpAppPassword: emailCfg.smtpAppPassword,
+        apkUrl: emailCfg.apkUrl,
     });
     await notificarNovoCadastroAdministrativo({
         signupType: 'accountant_linked',
@@ -8162,6 +9303,21 @@ exports.platformGetMarketingDashboard = functions.https.onCall(async (data, cont
     const sessions = sessionsSnap.docs.map((doc) => asRecord(doc.data()));
     const hotVisitors = visitors.filter((item) => (Number(item.score ?? 0) || 0) >= 20).length;
     const recurringVisitors = visitors.filter((item) => (Number(item.sessionCount ?? 0) || 0) >= 2).length;
+    const demoVisitorsSnap = await demoPublicAccessRef()
+        .where('lastSeenAt', '>=', cutoffTimestamp)
+        .get();
+    let demoCompanyUnique = 0;
+    let demoAccountantUnique = 0;
+    let demoOpenCount = 0;
+    for (const doc of demoVisitorsSnap.docs) {
+        const item = asRecord(doc.data());
+        const roles = asRecord(item.roles);
+        if (roles.company === true)
+            demoCompanyUnique += 1;
+        if (roles.accountant === true)
+            demoAccountantUnique += 1;
+        demoOpenCount += Math.max(0, Number(item.accessCount ?? 0) || 0);
+    }
     const recentLeads = leadsSnap.docs.map((doc) => {
         const item = asRecord(doc.data());
         return {
@@ -8198,6 +9354,10 @@ exports.platformGetMarketingDashboard = functions.https.onCall(async (data, cont
             preregSubmits,
             hotVisitors,
             recurringVisitors,
+            demoVisitors: demoVisitorsSnap.size,
+            demoCompanyUnique,
+            demoAccountantUnique,
+            demoOpenCount,
             preregConversionRate: sessionCount > 0 ? Number((preregSubmits / sessionCount).toFixed(4)) : 0,
             planSelectRate: sessionCount > 0 ? Number((planSelects / sessionCount).toFixed(4)) : 0,
         },
@@ -8359,6 +9519,211 @@ exports.publicTrackMarketingEvent = functions.https.onCall(async (data) => {
     return {
         ok: true,
         sourceBucket,
+    };
+});
+exports.publicGetDemoAccessSummary = functions.https.onCall(async () => {
+    const configSnap = await demoAccessConfigRef().get();
+    const config = buildDefaultDemoAccessConfig(asRecord(configSnap.data()));
+    const summary = await buildPublicDemoAccessSummary();
+    return {
+        ok: true,
+        enabled: config.enabled === true,
+        profile: 'summary',
+        targetRoute: '/inicio',
+        visitors: summary.visitors,
+        companyUnique: summary.companyUnique,
+        accountantUnique: summary.accountantUnique,
+    };
+});
+exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
+    const profile = normalizePublicDemoProfile(data?.profile);
+    const configSnap = await demoAccessConfigRef().get();
+    const config = buildDefaultDemoAccessConfig(asRecord(configSnap.data()));
+    if (config.enabled !== true) {
+        throw new functions.https.HttpsError('failed-precondition', 'O acesso demo publico esta desativado no momento.');
+    }
+    const companyId = await resolvePublicDemoCompanyId({
+        preferredCompanyId: profile === 'accountant'
+            ? asTrimmedString(config.accountantCompanyId)
+            : asTrimmedString(config.ownerCompanyId),
+        fallbackCompanyId: profile === 'accountant'
+            ? asTrimmedString(config.ownerCompanyId)
+            : '',
+    });
+    if (!companyId) {
+        throw new functions.https.HttpsError('failed-precondition', `CompanyId demo nao configurado para ${profile}.`);
+    }
+    const visitorId = asTrimmedString(data?.visitorId);
+    if (!visitorId) {
+        throw new functions.https.HttpsError('invalid-argument', 'visitorId obrigatorio para acesso demo.');
+    }
+    const metadata = readPublicRequestMetadata(context);
+    const sessionId = asTrimmedString(data?.sessionId);
+    const pagePath = asTrimmedString(data?.pagePath) || '/vendas';
+    const deviceType = sanitizeMarketingKey(data?.deviceType);
+    const language = asTrimmedString(data?.language).slice(0, 32);
+    const screenWidth = Number(data?.screenWidth ?? 0) || 0;
+    const screenHeight = Number(data?.screenHeight ?? 0) || 0;
+    const uid = profile === 'accountant'
+        ? asTrimmedString(config.accountantUid) || PUBLIC_DEMO_ACCOUNTANT_UID
+        : asTrimmedString(config.ownerUid) || PUBLIC_DEMO_OWNER_UID;
+    const role = profile === 'accountant' ? 'ACCOUNTANT' : 'OWNER';
+    const displayName = profile === 'accountant'
+        ? asTrimmedString(config.accountantDisplayName) || PUBLIC_DEMO_OFFICE_NAME
+        : asTrimmedString(config.ownerDisplayName) || PUBLIC_DEMO_COMPANY_NAME;
+    await ensurePublicDemoWorkspace(companyId);
+    const authUid = await ensurePublicDemoAuthUser({
+        uid,
+        email: `${uid}@demo.pontocerto.local`,
+        displayName,
+    });
+    await ensurePublicDemoUser({
+        uid: authUid,
+        companyId,
+        role,
+        displayName,
+        demoProfile: profile,
+    });
+    if (profile === 'accountant') {
+        await ensurePublicDemoAccountantLink({
+            accountantUid: authUid,
+            companyId,
+        });
+        await admin.firestore().collection('users').doc(authUid).set({
+            officeId: PUBLIC_DEMO_OFFICE_ID,
+            officeName: PUBLIC_DEMO_OFFICE_NAME,
+            officeBillingChoiceDefault: 'office',
+        }, { merge: true });
+    }
+    const accessRef = demoPublicAccessRef().doc(visitorId);
+    const dateKey = marketingDateKey();
+    const dailyRef = marketingDailyRef(dateKey);
+    await admin.firestore().runTransaction(async (tx) => {
+        const snap = await tx.get(accessRef);
+        const current = asRecord(snap.data());
+        const roles = asRecord(current.roles);
+        const isNewVisitor = !snap.exists;
+        const isNewRole = roles[profile] !== true;
+        tx.set(accessRef, {
+            visitorId,
+            firstSeenAt: snap.exists
+                ? current.firstSeenAt ?? admin.firestore.FieldValue.serverTimestamp()
+                : admin.firestore.FieldValue.serverTimestamp(),
+            lastSeenAt: admin.firestore.FieldValue.serverTimestamp(),
+            lastSessionId: sessionId,
+            lastPagePath: pagePath,
+            deviceType,
+            language,
+            screenWidth,
+            screenHeight,
+            ipHash: metadata.ipHash,
+            userAgent: metadata.userAgent,
+            accessCount: admin.firestore.FieldValue.increment(1),
+            roles: {
+                ...roles,
+                [profile]: true,
+            },
+        }, { merge: true });
+        tx.set(dailyRef, {
+            dateKey,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            eventCounts: {
+                [`demo_open_${profile}`]: admin.firestore.FieldValue.increment(1),
+            },
+            ...(isNewVisitor
+                ? {
+                    demoCounts: {
+                        uniqueVisitors: admin.firestore.FieldValue.increment(1),
+                    },
+                }
+                : {}),
+            ...(isNewRole
+                ? {
+                    demoCounts: {
+                        [`unique_${profile}`]: admin.firestore.FieldValue.increment(1),
+                    },
+                }
+                : {}),
+        }, { merge: true });
+    });
+    const customToken = await admin.auth().createCustomToken(authUid, {
+        companyId,
+        role,
+        employeeId: authUid,
+    });
+    const summary = await buildPublicDemoAccessSummary();
+    return {
+        ok: true,
+        profile,
+        customToken,
+        targetRoute: profile === 'accountant' ? '/accountant-companies' : '/home',
+        visitors: summary.visitors,
+        companyUnique: summary.companyUnique,
+        accountantUnique: summary.accountantUnique,
+    };
+});
+exports.platformGetDemoAccessConfig = functions.https.onCall(async (_data, context) => {
+    const claims = assertClaims(context);
+    const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+    assertPlatformAdmin(claims, userProfile);
+    const snap = await demoAccessConfigRef().get();
+    const config = buildDefaultDemoAccessConfig(asRecord(snap.data()));
+    return {
+        ok: true,
+        config,
+    };
+});
+exports.platformUpdateDemoAccessConfig = functions.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+    assertPlatformAdmin(claims, userProfile);
+    const beforeSnap = await demoAccessConfigRef().get();
+    const beforeConfig = buildDefaultDemoAccessConfig(asRecord(beforeSnap.data()));
+    const d = asRecord(data);
+    const nested = d.config;
+    const clientConfig = nested != null && typeof nested === 'object' && !Array.isArray(nested)
+        ? asRecord(nested)
+        : d;
+    const nextConfig = buildDefaultDemoAccessConfig(clientConfig);
+    const ownerCompanyId = asTrimmedString(nextConfig.ownerCompanyId);
+    const accountantCompanyId = asTrimmedString(nextConfig.accountantCompanyId);
+    if (ownerCompanyId) {
+        const ownerCompanySnap = await admin
+            .firestore()
+            .collection('company_settings')
+            .doc(ownerCompanyId)
+            .get();
+        if (!ownerCompanySnap.exists) {
+            throw new functions.https.HttpsError('invalid-argument', 'ownerCompanyId do demo empresa nao encontrado.');
+        }
+    }
+    if (accountantCompanyId) {
+        const accountantCompanySnap = await admin
+            .firestore()
+            .collection('company_settings')
+            .doc(accountantCompanyId)
+            .get();
+        if (!accountantCompanySnap.exists) {
+            throw new functions.https.HttpsError('invalid-argument', 'accountantCompanyId do demo contador nao encontrado.');
+        }
+    }
+    await demoAccessConfigRef().set({
+        ...nextConfig,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedByPlatformUid: claims.uid,
+    }, { merge: true });
+    await writeAudit({
+        claims,
+        module: 'platform',
+        action: 'update_demo_access_config',
+        entityPath: 'platform_public',
+        entityId: 'demo_access',
+        before: beforeConfig,
+        after: nextConfig,
+    });
+    return {
+        ok: true,
+        config: nextConfig,
     };
 });
 exports.platformGetPublicSalesConfig = functions.https.onCall(async () => {
@@ -8579,6 +9944,44 @@ exports.publicCreateSalesPreRegistration = functions.https.onCall(async (data) =
             smtpAppPassword: emailCfg.smtpAppPassword,
         });
     }
+    try {
+        await provisionLightweightOfficeAccess({
+            officeName: accountantName || 'Escritorio em configuracao',
+            responsibleName: accountantName || 'Contador',
+            email: accountantEmail,
+            source: 'sales_preregistration',
+        });
+    }
+    catch (error) {
+        functions.logger.warn('Falha ao provisionar acesso leve do escritorio no pre-cadastro', {
+            leadId: leadRef.id,
+            email: accountantEmail,
+            error: errorMessage(error, 'unknown'),
+        });
+    }
+    try {
+        await provisionLightweightCompanyAccess({
+            ownerEmail: customerEmail,
+            ownerName: customerName,
+            companyName: customerName,
+            source: 'sales_preregistration',
+        });
+    }
+    catch (error) {
+        functions.logger.warn('Falha ao provisionar acesso leve da empresa no pre-cadastro', {
+            leadId: leadRef.id,
+            email: customerEmail,
+            error: errorMessage(error, 'unknown'),
+        });
+    }
+    await notificarNovoCadastroAdministrativo({
+        signupType: 'company_preregistration',
+        companyName: customerName,
+        responsibleName: customerName,
+        responsibleEmail: customerEmail,
+        accountantName,
+        accountantEmail,
+    });
     return {
         ok: true,
         leadId: leadRef.id,
@@ -9274,6 +10677,45 @@ exports.publicSubmitAccountingOfficeSignup = functions.https.onCall(async (data)
         message: 'O escritorio foi cadastrado com sucesso. Agora o proximo passo e entrar no login do contador e cadastrar a primeira empresa da carteira.',
     };
 });
+exports.publicCreateAccountantWorkspaceAccess = functions.https.onCall(async (data) => {
+    const officeName = asTrimmedString(data?.officeName) || 'Escritorio em configuracao';
+    const responsibleName = asTrimmedString(data?.responsibleName);
+    const email = asTrimmedString(data?.email).toLowerCase();
+    const password = String(data?.password ?? '');
+    const confirmPassword = String(data?.confirmPassword ?? '');
+    if (!responsibleName || !email || !password) {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe nome, email e senha para criar o acesso do contador.');
+    }
+    if (password !== confirmPassword) {
+        throw new functions.https.HttpsError('invalid-argument', 'A confirmacao de senha nao confere.');
+    }
+    const result = await provisionLightweightOfficeAccess({
+        officeName,
+        responsibleName,
+        email,
+        password,
+        source: 'public_lightweight_signup',
+    });
+    await notificarNovoCadastroAdministrativo({
+        signupType: 'office',
+        officeId: result.officeId,
+        officeName,
+        responsibleName,
+        responsibleEmail: email,
+    });
+    return {
+        ok: true,
+        officeId: result.officeId,
+        officeName,
+        email,
+        loginUrl: result.loginUrl,
+        emailDispatched: result.emailDispatched,
+        platformLinked: true,
+        message: result.emailDispatched
+            ? 'Acesso do contador criado. Enviamos o e-mail com criacao de senha, link web e orientacao da Play Store.'
+            : 'Acesso do contador criado. Entre no sistema e complete o perfil real do escritorio quando quiser.',
+    };
+});
 exports.accountantRegisterCompanyIndication = functions.https.onCall(async (data, context) => {
     const { uid } = assertAuth(context);
     const claims = assertClaims(context);
@@ -9639,11 +11081,6 @@ exports.publicRegisterCompanyDirectSignup = functions.https.onCall(async (data) 
         }
         trialInviteSnap = inviteQuery.docs[0];
     }
-    const ownerUserRef = admin.firestore().collection('users');
-    const ownerUserSnap = await ownerUserRef.where('email', '==', ownerEmail).limit(1).get();
-    if (!ownerUserSnap.empty) {
-        throw new functions.https.HttpsError('already-exists', 'Este email de acesso ja esta em uso. Use outro email ou recupere a senha.');
-    }
     let existingCompanySnap = await admin
         .firestore()
         .collection('company_settings')
@@ -9655,22 +11092,55 @@ exports.publicRegisterCompanyDirectSignup = functions.https.onCall(async (data) 
         throw new functions.https.HttpsError('already-exists', 'Ja existe empresa cadastrada com este CNPJ no sistema.');
     }
     let ownerRecord;
+    let previousLightweightCompanyId = '';
     try {
-        ownerRecord = await admin.auth().createUser({
-            email: ownerEmail,
+        ownerRecord = await admin.auth().getUserByEmail(ownerEmail);
+        const existingUserSnap = await admin.firestore().collection('users').doc(ownerRecord.uid).get();
+        if (!existingUserSnap.exists) {
+            throw new functions.https.HttpsError('already-exists', 'Este email de acesso ja esta em uso. Use outro email ou recupere a senha.');
+        }
+        const existingUser = asRecord(existingUserSnap.data());
+        const reusableLightweight = roleParaFirestore(existingUser.role) === 'OWNER' &&
+            existingUser.lightweightProfilePending === true;
+        if (!reusableLightweight) {
+            throw new functions.https.HttpsError('already-exists', 'Este email de acesso ja esta em uso. Use outro email ou recupere a senha.');
+        }
+        previousLightweightCompanyId = asTrimmedString(existingUser.companyId);
+        await admin.auth().updateUser(ownerRecord.uid, {
             password: ownerPassword,
             displayName: ownerName,
-            emailVerified: false,
         });
     }
     catch (error) {
         const typed = error;
-        if (typed.code === 'auth/email-already-exists') {
-            throw new functions.https.HttpsError('already-exists', 'Este email de acesso ja esta em uso. Use outro email ou recupere a senha.');
+        if (typed.code === 'auth/user-not-found') {
+            try {
+                ownerRecord = await admin.auth().createUser({
+                    email: ownerEmail,
+                    password: ownerPassword,
+                    displayName: ownerName,
+                    emailVerified: false,
+                });
+            }
+            catch (innerError) {
+                const innerTyped = innerError;
+                if (innerTyped.code === 'auth/email-already-exists') {
+                    throw new functions.https.HttpsError('already-exists', 'Este email de acesso ja esta em uso. Use outro email ou recupere a senha.');
+                }
+                throw new functions.https.HttpsError('internal', 'Nao foi possivel criar o acesso inicial da empresa.');
+            }
         }
-        throw new functions.https.HttpsError('internal', 'Nao foi possivel criar o acesso inicial da empresa.');
+        else {
+            throw error;
+        }
     }
     const companyId = `comp_${Date.now()}`;
+    if (previousLightweightCompanyId && previousLightweightCompanyId !== companyId) {
+        await markSupersededLightweightCompany({
+            previousCompanyId: previousLightweightCompanyId,
+            nextCompanyId: companyId,
+        });
+    }
     const companyDisplayCode = buildCompanyDisplayCode({
         cnpj,
         companyName: tradeName,
@@ -9819,6 +11289,7 @@ exports.publicRegisterCompanyDirectSignup = functions.https.onCall(async (data) 
         employeeId: ownerRecord.uid,
         mustChangePassword: false,
         companyData,
+        lightweightProfilePending: false,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -9886,6 +11357,28 @@ exports.publicRegisterCompanyDirectSignup = functions.https.onCall(async (data) 
         accountantName,
         accountantEmail,
     });
+    let emailDispatched = false;
+    try {
+        const emailCfg = obterConfigEmail();
+        const resetLink = await admin.auth().generatePasswordResetLink(ownerEmail);
+        const loginUrl = `https://gestao-ponto-certo.com/login-empresa?email=${encodeURIComponent(ownerEmail)}`;
+        await enviarEmailAcessoInicialEmpresa({
+            email: ownerEmail,
+            nome: ownerName,
+            companyName: tradeName,
+            resetLink,
+            loginUrl,
+            apkUrl: emailCfg.apkUrl,
+            fromEmail: emailCfg.fromEmail,
+            sendgridKey: emailCfg.sendgridKey,
+            smtpUser: emailCfg.smtpUser,
+            smtpAppPassword: emailCfg.smtpAppPassword,
+        });
+        emailDispatched = true;
+    }
+    catch (_) {
+        emailDispatched = false;
+    }
     return {
         ok: true,
         companyId,
@@ -9901,6 +11394,197 @@ exports.publicRegisterCompanyDirectSignup = functions.https.onCall(async (data) 
         released: allowLogin,
         paymentLinkUrl: asTrimmedString(billingData.paymentLinkUrl),
         requiresPayment: trialInviteSnap ? false : !paidMatch.found,
+        emailDispatched,
+    };
+});
+exports.publicCreateCompanyWorkspaceAccess = functions.https.onCall(async (data) => {
+    const ownerEmail = asTrimmedString(data?.ownerEmail).toLowerCase();
+    const ownerPassword = String(data?.ownerPassword ?? '');
+    const confirmPassword = String(data?.confirmPassword ?? '');
+    const ownerName = asTrimmedString(data?.ownerName);
+    const companyName = asTrimmedString(data?.companyName) || 'Empresa em configuracao';
+    if (!ownerEmail || !ownerPassword || !ownerName) {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe nome, email e senha para criar o acesso da empresa.');
+    }
+    if (ownerPassword !== confirmPassword) {
+        throw new functions.https.HttpsError('invalid-argument', 'A confirmacao de senha nao confere.');
+    }
+    const result = await provisionLightweightCompanyAccess({
+        ownerEmail,
+        ownerName,
+        companyName,
+        password: ownerPassword,
+        source: 'public_lightweight_access',
+    });
+    await notificarNovoCadastroAdministrativo({
+        signupType: 'company_direct',
+        companyId: result.companyId,
+        companyName,
+        responsibleName: ownerName,
+        responsibleEmail: ownerEmail,
+    });
+    return {
+        ok: true,
+        companyId: result.companyId,
+        companyName,
+        emailDispatched: result.emailDispatched,
+    };
+});
+exports.companyCompleteWorkspaceProfile = functions.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    assertRole(claims, ['OWNER']);
+    await assertNotDemoReadOnly(claims);
+    const ownerProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+    const ownerName = asTrimmedString(data?.ownerName);
+    const legalName = asTrimmedString(data?.legalName);
+    const tradeName = asTrimmedString(data?.tradeName) || legalName;
+    const cnpj = onlyDigits(data?.cnpj);
+    const businessCategory = asTrimmedString(data?.businessCategory) || 'service';
+    const stateRegistration = asTrimmedString(data?.stateRegistration);
+    const municipalRegistration = asTrimmedString(data?.municipalRegistration);
+    const phone = asTrimmedString(data?.phone);
+    const companyEmailRaw = asTrimmedString(data?.companyEmail).toLowerCase();
+    const address = asTrimmedString(data?.address);
+    const accountantName = asTrimmedString(data?.accountantName);
+    const accountantEmail = asTrimmedString(data?.accountantEmail).toLowerCase();
+    const registrySnapshot = asRecord(data?.registrySnapshot);
+    if (!ownerName || !legalName || !tradeName) {
+        throw new functions.https.HttpsError('invalid-argument', 'Preencha os dados principais do responsavel e da empresa.');
+    }
+    if (cnpj.length !== 14) {
+        throw new functions.https.HttpsError('invalid-argument', 'CNPJ invalido.');
+    }
+    if (!phone || !address) {
+        throw new functions.https.HttpsError('invalid-argument', 'Telefone e endereco sao obrigatorios.');
+    }
+    if (businessCategory !== 'service' && !stateRegistration) {
+        throw new functions.https.HttpsError('invalid-argument', 'Inscricao estadual obrigatoria para esse ramo.');
+    }
+    if (businessCategory === 'service' && !municipalRegistration) {
+        throw new functions.https.HttpsError('invalid-argument', 'Inscricao municipal obrigatoria para servicos.');
+    }
+    if (accountantEmail && !accountantName) {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe o nome do contador junto com o email.');
+    }
+    const existingCompanySnap = await admin
+        .firestore()
+        .collection('company_settings')
+        .where('companyData.cnpj', '==', cnpj)
+        .limit(1)
+        .get();
+    if (!existingCompanySnap.empty && existingCompanySnap.docs[0].id !== claims.companyId) {
+        throw new functions.https.HttpsError('already-exists', 'Ja existe empresa cadastrada com este CNPJ no sistema.');
+    }
+    const lookupPayload = Object.keys(registrySnapshot).length > 0 ? registrySnapshot : await fetchCnpjPayload(cnpj);
+    const legalNature = asTrimmedString(data?.legalNature) || asTrimmedString(lookupPayload.legalNature);
+    const companySize = asTrimmedString(data?.companySize) || asTrimmedString(lookupPayload.companySize);
+    const mainCnaeDescription = asTrimmedString(data?.mainCnaeDescription) || asTrimmedString(lookupPayload.mainCnaeDescription);
+    const state = asTrimmedString(data?.state) || asTrimmedString(lookupPayload.state);
+    const city = asTrimmedString(data?.city) || asTrimmedString(lookupPayload.city);
+    const zipCode = onlyDigits(data?.zipCode || lookupPayload.zipCode);
+    const street = asTrimmedString(data?.street) || asTrimmedString(lookupPayload.street) || address;
+    const number = asTrimmedString(data?.number || lookupPayload.number);
+    const neighborhood = asTrimmedString(data?.neighborhood || lookupPayload.neighborhood);
+    const complement = asTrimmedString(data?.complement || lookupPayload.complement);
+    const classification = classifyDirectSignupCompany({
+        legalNature,
+        companySize,
+        mainCnaeDescription,
+    });
+    const companyEmail = companyEmailRaw || asTrimmedString(ownerProfile.email).toLowerCase();
+    const companyDisplayCode = buildCompanyDisplayCode({
+        cnpj,
+        companyName: tradeName,
+    });
+    const companyData = {
+        razaoSocial: legalName,
+        nomeFantasia: tradeName,
+        cnpj,
+        businessCategory,
+        inscricaoEstadual: businessCategory === 'service' ? '' : stateRegistration,
+        inscricaoEstadualDispensada: businessCategory === 'service',
+        inscricaoMunicipalObrigatoria: businessCategory === 'service',
+        inscricaoMunicipal: municipalRegistration,
+        telefone: phone,
+        email: companyEmailRaw,
+        endereco: address || street,
+        companyType: classification.companyType,
+        companyPlan: classification.companyPlan,
+        companyDisplayCode,
+        legalNature,
+        companySize,
+        mainCnaeDescription,
+        cep: zipCode,
+        rua: street,
+        numero: number,
+        bairro: neighborhood,
+        complemento: complement,
+        cidade: city,
+        estado: state.toUpperCase(),
+    };
+    const settingsRef = admin.firestore().collection('company_settings').doc(claims.companyId);
+    await settingsRef.set({
+        companyId: claims.companyId,
+        companyData,
+        companyExperience: {
+            type: classification.companyType,
+            plan: classification.companyPlan === 'SOLO' ? 'Solo' : 'Equipe',
+            validationLabel: classification.validationLabel,
+            validationReason: classification.reason,
+        },
+        directSignup: {
+            source: 'public_lightweight_access',
+            lightweightProfilePending: false,
+            classificationReason: classification.reason,
+            classificationValidationLabel: classification.validationLabel,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await admin.firestore().collection('users').doc(claims.uid).set({
+        nome: ownerName,
+        companyName: tradeName,
+        companyData,
+        lightweightProfilePending: false,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    if (accountantEmail) {
+        await ensureAccountantAccessForCompany({
+            companyId: claims.companyId,
+            companyName: tradeName,
+            companyDisplayCode,
+            companyDocument: cnpj,
+            linkedByUserId: claims.uid,
+            linkedByName: ownerName,
+            accountantName,
+            accountantEmail,
+        });
+        await settingsRef.set({
+            accountantOnboardingPending: {
+                accountantName,
+                accountantEmail,
+                status: 'pending_accountant_link',
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+        }, { merge: true });
+    }
+    try {
+        await refreshCompanyProvisioningState({
+            claims,
+            companyData: companyData,
+        });
+    }
+    catch (error) {
+        functions.logger.warn('refreshCompanyProvisioningState after companyCompleteWorkspaceProfile', {
+            companyId: claims.companyId,
+            error: errorMessage(error, 'unknown'),
+        });
+    }
+    return {
+        ok: true,
+        companyId: claims.companyId,
+        companyName: tradeName,
+        companyDisplayCode,
     };
 });
 exports.accountantRegisterCompanyTrial30d = functions.https.onCall(async (data, context) => {
@@ -9962,9 +11646,24 @@ exports.accountantRegisterCompanyTrial30d = functions.https.onCall(async (data, 
         throw new functions.https.HttpsError('already-exists', 'Ja existe uma empresa cadastrada com este CNPJ.');
     }
     let ownerRecord;
+    let previousLightweightCompanyId = '';
     try {
         ownerRecord = await admin.auth().getUserByEmail(ownerEmail);
-        throw new functions.https.HttpsError('already-exists', 'Este email de responsavel ja esta em uso. Use outro email ou recupere a senha.');
+        const existingUserSnap = await admin.firestore().collection('users').doc(ownerRecord.uid).get();
+        if (!existingUserSnap.exists) {
+            throw new functions.https.HttpsError('already-exists', 'Este email de responsavel ja esta em uso. Use outro email ou recupere a senha.');
+        }
+        const existingUser = asRecord(existingUserSnap.data());
+        const reusableLightweight = roleParaFirestore(existingUser.role) === 'OWNER' &&
+            existingUser.lightweightProfilePending === true;
+        if (!reusableLightweight) {
+            throw new functions.https.HttpsError('already-exists', 'Este email de responsavel ja esta em uso. Use outro email ou recupere a senha.');
+        }
+        previousLightweightCompanyId = asTrimmedString(existingUser.companyId);
+        await admin.auth().updateUser(ownerRecord.uid, {
+            password: gerarSenhaTemporaria(),
+            displayName: ownerName,
+        });
     }
     catch (error) {
         const typed = error;
@@ -9980,6 +11679,12 @@ exports.accountantRegisterCompanyTrial30d = functions.https.onCall(async (data, 
         });
     }
     const companyId = `comp_${Date.now()}`;
+    if (previousLightweightCompanyId && previousLightweightCompanyId !== companyId) {
+        await markSupersededLightweightCompany({
+            previousCompanyId: previousLightweightCompanyId,
+            nextCompanyId: companyId,
+        });
+    }
     const companyDisplayCode = buildCompanyDisplayCode({
         cnpj,
         companyName: tradeName,
@@ -10057,6 +11762,7 @@ exports.accountantRegisterCompanyTrial30d = functions.https.onCall(async (data, 
         employeeId: ownerRecord.uid,
         mustChangePassword: false,
         companyData,
+        lightweightProfilePending: false,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -10101,6 +11807,7 @@ exports.accountantRegisterCompanyTrial30d = functions.https.onCall(async (data, 
     }
     const emailCfg = obterConfigEmail();
     const resetLink = await admin.auth().generatePasswordResetLink(ownerEmail);
+    const loginUrl = `https://gestao-ponto-certo.com/login-empresa?email=${encodeURIComponent(ownerEmail)}`;
     const ownerHtml = `
     <div style="font-family: Arial, Helvetica, sans-serif; color: #111; line-height: 1.5;">
       <h2 style="margin: 0 0 12px 0;">Bem-vindo: sua empresa no Ponto Certo</h2>
@@ -10118,8 +11825,12 @@ exports.accountantRegisterCompanyTrial30d = functions.https.onCall(async (data, 
         <li>Na area Fiscal, complete o que faltar para emissao — o sistema guia cada etapa.</li>
       </ol>
       <p style="margin: 0 0 12px 0;">
-        <a href="${resetLink}" style="font-weight:bold;">Criar senha e acessar a empresa</a>
+        <a href="${resetLink}" style="font-weight:bold;">Criar senha de acesso</a>
       </p>
+      <p style="margin: 0 0 12px 0;">
+        <a href="${loginUrl}" style="font-weight:bold;">Entrar no painel web da empresa</a>
+      </p>
+      ${buildPlayStoreAccessNoticeHtml(emailCfg.apkUrl)}
       <p style="margin: 0 0 0 0; color: #374151;">
         Ao fim do teste, orientamos sobre continuidade e formalizacao — sem surpresas.
       </p>
@@ -12784,6 +14495,7 @@ exports.employeesGetBaseSnapshot = functions.https.onCall(async (_data, context)
 exports.paymentsCreate = functions.https.onCall(async (data, context) => {
     const claims = await assertOperatorFromProfile(context);
     assertRole(claims, ['OWNER', 'MANAGER', 'ACCOUNTANT']);
+    await assertNotDemoReadOnly(claims);
     const employeeId = String(data?.employeeId ?? '').trim();
     const competenceYear = parsePositiveInt(data?.competenceYear, 'competenceYear');
     const competenceMonth = parsePositiveInt(data?.competenceMonth, 'competenceMonth');
@@ -12894,6 +14606,7 @@ exports.paymentsCreate = functions.https.onCall(async (data, context) => {
 exports.paymentsCreateBulk = functions.https.onCall(async (data, context) => {
     const claims = await assertOperatorFromProfile(context);
     assertRole(claims, ['OWNER', 'MANAGER', 'ACCOUNTANT']);
+    await assertNotDemoReadOnly(claims);
     const competenceYear = parsePositiveInt(data?.competenceYear, 'competenceYear');
     const competenceMonth = parsePositiveInt(data?.competenceMonth, 'competenceMonth');
     const rawItems = Array.isArray(data?.items) ? data.items : [];
@@ -13071,6 +14784,7 @@ exports.paymentsCreateBulk = functions.https.onCall(async (data, context) => {
 exports.paymentsUpdate = functions.https.onCall(async (data, context) => {
     const claims = await assertOperatorFromProfile(context);
     assertRole(claims, ['OWNER', 'MANAGER']);
+    await assertNotDemoReadOnly(claims);
     const paymentId = String(data?.paymentId ?? '').trim();
     const employeeId = String(data?.employeeId ?? '').trim();
     const competenceYear = parsePositiveInt(data?.competenceYear, 'competenceYear');
@@ -13139,6 +14853,7 @@ exports.paymentsUpdate = functions.https.onCall(async (data, context) => {
 exports.paymentsMarkPaid = functions.https.onCall(async (data, context) => {
     const claims = await assertOperatorFromProfile(context);
     assertRole(claims, ['OWNER', 'MANAGER']);
+    await assertNotDemoReadOnly(claims);
     const paymentId = String(data?.paymentId ?? '').trim();
     if (!paymentId) {
         throw new functions.https.HttpsError('invalid-argument', 'paymentId obrigatorio.');
@@ -13186,6 +14901,7 @@ exports.paymentsMarkPaid = functions.https.onCall(async (data, context) => {
 });
 exports.paymentsConfirm = functions.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
+    await assertNotDemoReadOnly(claims);
     const paymentId = String(data?.paymentId ?? '').trim();
     if (!paymentId) {
         throw new functions.https.HttpsError('invalid-argument', 'paymentId obrigatorio.');
@@ -13238,6 +14954,7 @@ exports.paymentsConfirm = functions.https.onCall(async (data, context) => {
 });
 exports.paymentsContest = functions.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
+    await assertNotDemoReadOnly(claims);
     const paymentId = String(data?.paymentId ?? '').trim();
     const reason = String(data?.reason ?? '').trim();
     if (!paymentId || !reason) {
@@ -13294,6 +15011,7 @@ exports.paymentsContest = functions.https.onCall(async (data, context) => {
 exports.paymentsCancel = functions.https.onCall(async (data, context) => {
     const claims = await assertOperatorFromProfile(context);
     assertRole(claims, ['OWNER', 'MANAGER']);
+    await assertNotDemoReadOnly(claims);
     const paymentId = String(data?.paymentId ?? '').trim();
     if (!paymentId) {
         throw new functions.https.HttpsError('invalid-argument', 'paymentId obrigatorio.');
@@ -13338,6 +15056,7 @@ exports.paymentsCancel = functions.https.onCall(async (data, context) => {
 exports.debtsCreate = functions.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
     assertRole(claims, ['OWNER', 'MANAGER']);
+    await assertNotDemoReadOnly(claims);
     const employeeId = String(data?.employeeId ?? '').trim();
     const title = String(data?.title ?? '').trim();
     const type = String(data?.type ?? '').trim().toUpperCase();
@@ -13399,6 +15118,7 @@ exports.debtsCreate = functions.https.onCall(async (data, context) => {
 exports.debtsSettle = functions.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
     assertRole(claims, ['OWNER', 'MANAGER']);
+    await assertNotDemoReadOnly(claims);
     const debtId = String(data?.debtId ?? '').trim();
     if (!debtId) {
         throw new functions.https.HttpsError('invalid-argument', 'debtId obrigatorio.');
@@ -13447,6 +15167,7 @@ exports.debtsSettle = functions.https.onCall(async (data, context) => {
 exports.debtsCancel = functions.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
     assertRole(claims, ['OWNER', 'MANAGER']);
+    await assertNotDemoReadOnly(claims);
     const debtId = String(data?.debtId ?? '').trim();
     if (!debtId) {
         throw new functions.https.HttpsError('invalid-argument', 'debtId obrigatorio.');
@@ -13541,6 +15262,7 @@ exports.fiscalSyncFocusCompany = HEAVY_RUNTIME.https.onCall(async (_data, contex
 exports.fiscalIssueServiceInvoice = HEAVY_RUNTIME.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
     assertRole(claims, ['OWNER', 'MANAGER', 'ACCOUNTANT']);
+    await assertNotDemoReadOnly(claims);
     const invoiceId = String(data?.invoiceId ?? '').trim();
     if (!invoiceId) {
         throw new functions.https.HttpsError('invalid-argument', 'invoiceId obrigatorio.');
@@ -13702,6 +15424,7 @@ exports.fiscalIssueServiceInvoice = HEAVY_RUNTIME.https.onCall(async (data, cont
 exports.fiscalCancelServiceInvoice = HEAVY_RUNTIME.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
     assertRole(claims, ['OWNER', 'MANAGER', 'ACCOUNTANT']);
+    await assertNotDemoReadOnly(claims);
     const invoiceId = String(data?.invoiceId ?? '').trim();
     const reason = String(data?.reason ?? '').trim();
     if (!invoiceId) {
