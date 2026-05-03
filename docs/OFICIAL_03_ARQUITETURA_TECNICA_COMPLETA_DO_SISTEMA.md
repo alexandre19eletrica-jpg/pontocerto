@@ -52,6 +52,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 #### IAM / Auth Admin (`signBlob`)
 
 - `createCustomToken` (demo: `publicOpenDemoAccess`) e `generatePasswordResetLink` podem falhar em producao quando a conta de servico que corre as Functions nao pode assinar blobs na conta firebase-adminsdk; nesse caso devolve-se `HttpsError` `failed-precondition` com orientacao IAM (`roles/iam.serviceAccountTokenCreator`), em vez de `internal` apenas com stack técnico.
+- **`publicOpenDemoAccess`** pode usar `runWith({ secrets: [ADMIN_SDK_AUTH_CERT_JSON] })`: se existir Firebase Secret **`ADMIN_SDK_AUTH_CERT_JSON`** (JSON completo da conta `firebase-adminsdk-*`), inicializa segunda app Firebase Admin (`adm_sdk_custom_tokens`) com `credential.cert(...)` para assinar o `customToken` sem depender de IAM **`signBlob`** no runtime (fallback quando politicas/metadata bloqueiam o caminho habitual).
 - Deteccao de falha IAM percorre tambem texto aninhado do erro SDK (`collectErrorTextDeep`).
 - Web: `PublicDemoAccessPage` deixa de manter spinner apos erro; oferece links para a documentacao de custom tokens e para a lista de contas IAM do projeto (via `firebase_options`).
 

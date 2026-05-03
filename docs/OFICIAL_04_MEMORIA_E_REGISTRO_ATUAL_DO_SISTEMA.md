@@ -3,6 +3,9 @@
 Data base: 02/05/2026
 Projeto: Ponto Certo
 
+**Registo (03/05/2026 — demo custom token fallback Secret):** apesar IAM `Token Creator` + `serviceAccountUser` em `firebase-adminsdk`, producao continuava com `signBlob` negado; `publicOpenDemoAccess` ganhou Secret **`ADMIN_SDK_AUTH_CERT_JSON`** (`defineSecret`), segunda app Admin com cert JSON e criacao local do token; mensagens IAM referenciam esse fallback operacional — chave gerada apenas fora do Git; `firebase functions:secrets:set` + redeploy.
+
+
 **Registo (03/05/2026 — livro demo governanca sem rede/aparelho):** `platformListPublicDemoAccessLedger` deixa de devolver IP, hash parcial, user-agent, visitorIds, idioma, resolucao e tipo de dispositivo — apenas contagens, papeis demo (empresa/contador) e datas de primeiro/ultimo acesso; dedupe continua no documento `dv1_*` no Firestore. UI Governanca e textos de cabecalho alinhados.
 
 **Registo (03/05/2026 — governanca cadastro real pos-teste + demo erro UX):** callable `platformListGovernanceRealRegistrations` lista empresas/escritorios que completaram perfil pos-entrada leve (excl. demo fixo); UI Governanca ganha cartao **Cadastro real (acompanhamento pos-teste)**. Pagina `/demo-*` (`PublicDemoAccessPage`): remover spinner quando falha, links para Firebase custom tokens + consola de contas de servico GCP do `projectId` actual. IAM em producao permanece obrigatorio: **Token Creator** da SA das Functions sobre **firebase-adminsdk**.
