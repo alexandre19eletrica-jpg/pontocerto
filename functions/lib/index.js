@@ -97,8 +97,6 @@ const APPDISTRIBUTION_APP_ID = (0, params_1.defineString)('APPDISTRIBUTION_APP_I
 const ASAAS_WEBHOOK_TOKEN = (0, params_1.defineString)('ASAAS_WEBHOOK_TOKEN');
 const ASAAS_API_KEY = (0, params_1.defineString)('ASAAS_API_KEY');
 const ASAAS_ENVIRONMENT = (0, params_1.defineString)('ASAAS_ENVIRONMENT');
-/** JSON completo da conta `firebase-adminsdk` (Secret Manager via Firebase CLI). Opcional mas resolve `signBlob` quando IAM/metadata falham. */
-const ADMIN_SDK_AUTH_CERT_JSON_SECRET = (0, params_1.defineSecret)('ADMIN_SDK_AUTH_CERT_JSON');
 const CUSTOM_TOKEN_SIGNING_APP_NAME = 'adm_sdk_custom_tokens';
 const DEFAULT_PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=br.com.alexandresousa.pontocerto';
 const DEFAULT_REAL_ENVIRONMENT_URL = DEFAULT_PLAY_STORE_URL;
@@ -10180,9 +10178,7 @@ exports.publicGetDemoAccessSummary = functions.https.onCall(async () => {
         accountantUnique: summary.accountantUnique,
     };
 });
-exports.publicOpenDemoAccess = functions
-    .runWith({ secrets: [ADMIN_SDK_AUTH_CERT_JSON_SECRET] })
-    .https.onCall(async (data, context) => {
+exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
     try {
         const profile = normalizePublicDemoProfile(data?.profile);
         const configSnap = await demoAccessConfigRef().get();
@@ -10321,9 +10317,8 @@ exports.publicOpenDemoAccess = functions
         });
         if (isLikelyFirebaseAdminIamSigningError(error)) {
             throw new functions.https.HttpsError('failed-precondition', 'O demo precisa de permissao IAM no Google Cloud: na conta de servico que executa as Cloud Functions, ' +
-                'conceda o papel "Token Creator de Conta de Servico" (roles/iam.serviceAccountTokenCreator) ' +
-                'sobre a conta firebase-adminsdk do projeto (veja firebase.google.com/docs/auth/admin/create-custom-tokens). ' +
-                'Ou configure o Firebase Secret ADMIN_SDK_AUTH_CERT_JSON com JSON completo da mesma conta (evita IAM signBlob).');
+                'conceda o papel Service Account Token Creator (roles/iam.serviceAccountTokenCreator) ' +
+                'sobre firebase-adminsdk-fbsvc@pontocerto-e1dab.iam.gserviceaccount.com (idem para appspot-default e Compute default quando aplicavel). Documentacao Google: firebase.google.com/docs/auth/admin/create-custom-tokens.');
         }
         throw new functions.https.HttpsError('internal', `Demo indisponivel no momento: ${msg}`);
     }
@@ -11395,9 +11390,8 @@ exports.publicCreateAccountantWorkspaceAccess = functions.https.onCall(async (da
         });
         if (isLikelyFirebaseAdminIamSigningError(error)) {
             throw new functions.https.HttpsError('failed-precondition', 'O pre-cadastro precisa de permissao IAM no Google Cloud: na conta de servico que executa as Cloud Functions, ' +
-                'conceda o papel "Token Creator de Conta de Servico" (roles/iam.serviceAccountTokenCreator) ' +
-                'sobre a conta firebase-adminsdk do projeto (necessario para links de redefinicao de senha). ' +
-                'Ou configure o Firebase Secret ADMIN_SDK_AUTH_CERT_JSON com JSON completo da mesma conta.');
+                'conceda o papel Service Account Token Creator (roles/iam.serviceAccountTokenCreator) ' +
+                'sobre firebase-adminsdk-fbsvc@pontocerto-e1dab.iam.gserviceaccount.com (necessario para links de redefinicao de senha e tokens relacionados ao Admin SDK).');
         }
         throw new functions.https.HttpsError('internal', `Nao foi possivel concluir o pre-cadastro do contador: ${msg}`);
     }

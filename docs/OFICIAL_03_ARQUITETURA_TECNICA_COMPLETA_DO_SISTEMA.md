@@ -51,8 +51,8 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 
 #### IAM / Auth Admin (`signBlob`)
 
-- `createCustomToken` (demo: `publicOpenDemoAccess`) e `generatePasswordResetLink` podem falhar em producao quando a conta de servico que corre as Functions nao pode assinar blobs na conta firebase-adminsdk; nesse caso devolve-se `HttpsError` `failed-precondition` com orientacao IAM (`roles/iam.serviceAccountTokenCreator`), em vez de `internal` apenas com stack técnico.
-- **`publicOpenDemoAccess`** pode usar `runWith({ secrets: [ADMIN_SDK_AUTH_CERT_JSON] })`: se existir Firebase Secret **`ADMIN_SDK_AUTH_CERT_JSON`** (JSON completo da conta `firebase-adminsdk-*`), inicializa segunda app Firebase Admin (`adm_sdk_custom_tokens`) com `credential.cert(...)` para assinar o `customToken` sem depender de IAM **`signBlob`** no runtime (fallback quando politicas/metadata bloqueiam o caminho habitual).
+- `createCustomToken` (demo: `publicOpenDemoAccess`) e `generatePasswordResetLink` falham quando a conta das Cloud Functions nao pode assinar em nome da conta **firebase-adminsdk**. Em `pontocerto-e1dab`, o runtime padrao (Compute default `{num}-compute@developer.gserviceaccount.com` e App Engine default `{project-id}@appspot.gserviceaccount.com`) deve ter **`roles/iam.serviceAccountTokenCreator`** (e habitualmente **`roles/iam.serviceAccountUser`**) concedidos sobre `firebase-adminsdk-fbsvc@pontocerto-e1dab.iam.gserviceaccount.com`. Mensagem utilizador: `HttpsError` `failed-precondition`.
+- **`publicOpenDemoAccess`** usa `functions.https.onCall` **sem** `secrets` declarados pela CLI Firebase. `resolveAuthForCustomTokens()` continua compativel com variavel de ambiente `ADMIN_SDK_AUTH_CERT_JSON` apenas se alguem a definir manualmente no runtime GCP (uso excepcional); sem isso usa `admin.auth()` e IAM conforme bullets anteriores.
 - Deteccao de falha IAM percorre tambem texto aninhado do erro SDK (`collectErrorTextDeep`).
 - Web: `PublicDemoAccessPage` deixa de manter spinner apos erro; oferece links para a documentacao de custom tokens e para a lista de contas IAM do projeto (via `firebase_options`).
 

@@ -229,9 +229,9 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 - `/vendas` (landing geral): botoes explicitos lado a lado — teste empresa (`/cadastro-empresa`) e **Cadastrar escritorio de contabilidade** (`/cadastro-escritorio-contabil`); as seccoes "Teste sem risco" e fecho repetem o mesmo par.
 - `/inicio`: "Criar acesso da empresa" mantem destaque texto; navegacao primeiro, depois pixel de trial empresa.
 - `/login-empresa`: link texto "Criar acesso da empresa" para o pre-cadastro.
-- `/vendas-empresa`: atalho texto "Sou contador — cadastro do escritorio" para `/cadastro-escritorio-contabil`.
-- `/vendas-empresa`: heroi alinhado ao pre-cadastro direto da empresa com contador opcional (sem obrigar escritorio primeiro).
-- `/vendas-empresa` e `/vendas-contador`: marcadores (**badges**) e subhead alinhados a mesma linha institucional (demonstracao gratuita antes de primeira adesao; ate trinta dias de uso avaliativo inicial apos adesao formal); card seguinte repetido sob titulo **Demonstracao gratuita do sistema**.
+- `/vendas-empresa`: removido o atalho "Sou contador — cadastro do escritorio"; contadores prosseguem pela rota comercial `/vendas-contador` ou `/cadastro-escritorio-contabil`. Copy revisada para deixar explicito MEI/quem faz cadastro fiscal sozinho sem contador pode seguir sem contratar escritorio obrigatorio; destaque ao WhatsApp comercial ja presente nesta landing (heroi, card de demo, passos modelo atual, bullets de signup, oferta tarifaria).
+- `/vendas-empresa`: heroi alinhado ao pre-cadastro direto da empresa com um badge novo sobre MEI/cadastro fiscal sem contador; subhead refere WhatsApp quando nao existe obrigacao de contratar.
+- `/vendas-empresa` e `/vendas-contador`: marcadores (**badges**) e subhead alinhados a mesma linha institucional (demonstracao gratuita antes de primeira adesao; ate trinta dias de uso avaliativo inicial apos adesao formal); card seguinte repetido sob titulo **Demonstracao gratuita do sistema** (texto atualizado na versao empresa: demo + opcional escritorio/WhatsApp sem link para escritorio dentro do card empresa).
 - `/cadastro-empresa` (leve) e pre-cadastro comercial (`SalesPreRegistrationPage`): texto de confirmacao quando o envio por e-mail nao foi concluido.
 
 ## Regra de manutencao
