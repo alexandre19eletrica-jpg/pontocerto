@@ -224,6 +224,10 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 - Pre-cadastro comercial (`SalesPreRegistrationPage`): titulos e textos de apoio alinhados ao follow-up comercial/operacional sem checklist longo de condutas do contador.
 - Cadastro leve da empresa (`/cadastro-empresa`): botao final descreve solicitacao por e-mail; sem campo de senha no formulario leve e no cadastro publico completo.
 - Cadastro leve do escritorio (`/cadastro-escritorio-contabil`): texto de apoio menciona senha definida via link; campos de senha removidos da UI.
+- `/vendas` (landing geral): botoes explicitos lado a lado — teste empresa (`/cadastro-empresa`) e **Cadastrar escritorio de contabilidade** (`/cadastro-escritorio-contabil`); as seccoes "Teste sem risco" e fecho repetem o mesmo par.
+- `/inicio`: "Criar acesso da empresa" mantem destaque texto; navegacao primeiro, depois pixel de trial empresa.
+- `/login-empresa`: link texto "Criar acesso da empresa" para o pre-cadastro.
+- `/vendas-empresa`: atalho texto "Sou contador — cadastro do escritorio" para `/cadastro-escritorio-contabil`.
 
 ## Regra de manutencao
 

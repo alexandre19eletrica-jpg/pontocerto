@@ -135,8 +135,8 @@ class PaginaInicio extends ConsumerWidget {
                       const SizedBox(height: 8),
                       TextButton(
                         onPressed: () {
-                          metaFbqTrackStartTrialEscritorio();
                           context.go('/cadastro-empresa');
+                          metaFbqTrackStartTrialEmpresa();
                         },
                         child: const Text('Criar acesso da empresa'),
                       ),

@@ -104,6 +104,17 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                             'Abra o demo da empresa e veja como a rotina sai do improviso e entra num fluxo com emissao, financeiro e documentos organizados no mesmo ambiente.',
                           ),
                           const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: () =>
+                                  context.go('/cadastro-escritorio-contabil'),
+                              child: const Text(
+                                'Sou contador — cadastro do escritorio',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
                           OutlinedButton.icon(
                             onPressed: () => context.go('/demo-empresa'),
                             icon: const Icon(Icons.storefront_outlined),

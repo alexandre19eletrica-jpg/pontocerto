@@ -172,6 +172,8 @@ Base:
 - os templates de email voltados a escritorio e contador devem compartilhar uma mesma assinatura institucional centralizada no backend, para evitar divergencia de narrativa entre convites, acessos e onboarding
 - o cadastro do escritorio contabil passa a gravar metadados comerciais proprios de assinatura base e isencao por parceria
 - a entrada publica comercial deve operar com trial real de 30 dias, sem cobranca de implantacao, exigindo indicacao de contador para conduzir o cadastro inicial da empresa
+- landing `/vendas` (Flutter `SalesPage`): CTAs duplos empresa/escritorio; eventos Meta distintos `metaFbqTrackStartTrialEmpresa` vs `metaFbqTrackStartTrialEscritorio`
+- `publicOpenDemoAccess` + `ensurePublicDemoAuthUser`: resiliente a remocao de utilizadores demo no Firebase Auth (recriacao ou reutilizacao por e-mail; tratamento de colisoes no `createUser`)
 
 ## Arquitetura oficial do modulo Documentos
 

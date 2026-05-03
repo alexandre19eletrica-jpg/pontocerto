@@ -282,6 +282,14 @@ Antes de qualquer implementacao nova:
 
 O **que** se pretende fazer em seguranca — certificadora (fluxo contador → estado → encaixe em `company_settings` / fiscal existente) e preparacao **IBS/CBS** sem quebrar emissao — esta **apenas descrito** em [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md). **Nada disto foi ligado a producao** na rodada que registou o plano; implementar so apos `OFICIAL_01`–`03` e aprovacao.
 
+## Fluxo publico de entrada e demo (03/05/2026)
+
+- A landing `/vendas` apresenta **dois** CTAs claros (empresa vs escritorio) no heroi e nas seccoes de oferta/fecho onde antes existia um unico "Comecar teste gratis"; o escritorio vai sempre para `/cadastro-escritorio-contabil` e o pre-cadastro da empresa para `/cadastro-empresa`.
+- `/inicio`: "Criar acesso da empresa" garante primeiro `context.go('/cadastro-empresa')` e depois o evento Meta `metaFbqTrackStartTrialEmpresa()` (trial empresa), separado do evento do escritorio.
+- `/login-empresa`: link "Criar acesso da empresa" para `/cadastro-empresa`.
+- Landing `/vendas-empresa`: atalho de texto para o contador abrir cadastro do escritorio.
+- **Demo publico** (`publicOpenDemoAccess`): o backend assume que contas demo em Auth podem ter sido apagadas; `ensurePublicDemoAuthUser` recria o utilizador canonico, ou reaproveita por e-mail, tratando colisoes `auth/email-already-exists` e `auth/uid-already-exists` no `createUser`, para evitar falha `internal` no cliente.
+
 ## Documentos relacionados
 
 - [OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md)

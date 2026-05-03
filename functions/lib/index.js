@@ -700,15 +700,17 @@ async function ensurePublicDemoUser(params) {
     }, { merge: true });
 }
 async function ensurePublicDemoAuthUser(params) {
+    const emailRaw = params.email.trim();
+    const desiredEmail = emailRaw.toLowerCase();
+    const displayName = params.displayName;
     try {
         const user = await admin.auth().getUser(params.uid);
         const currentEmail = asTrimmedString(user.email).toLowerCase();
-        const desiredEmail = params.email.toLowerCase();
-        if (currentEmail !== desiredEmail || asTrimmedString(user.displayName) !== params.displayName) {
+        if (currentEmail !== desiredEmail) {
             try {
                 await admin.auth().updateUser(user.uid, {
-                    email: params.email,
-                    displayName: params.displayName,
+                    email: emailRaw,
+                    displayName,
                     disabled: false,
                     emailVerified: true,
                 });
@@ -716,17 +718,27 @@ async function ensurePublicDemoAuthUser(params) {
             catch (error) {
                 const typed = error;
                 if (typed.code === 'auth/email-already-exists') {
-                    const userByEmail = await admin.auth().getUserByEmail(params.email);
-                    await admin.auth().updateUser(userByEmail.uid, {
-                        displayName: params.displayName,
+                    const holder = await admin.auth().getUserByEmail(emailRaw);
+                    await admin.auth().updateUser(holder.uid, {
+                        displayName,
                         disabled: false,
                         emailVerified: true,
                     });
-                    return userByEmail.uid;
+                    functions.logger.warn('demo_auth_email_holder', {
+                        canonicalUid: params.uid,
+                        holderUid: holder.uid,
+                    });
+                    return holder.uid;
                 }
                 throw error;
             }
+            return params.uid;
         }
+        await admin.auth().updateUser(user.uid, {
+            displayName,
+            disabled: false,
+            emailVerified: true,
+        });
         return user.uid;
     }
     catch (error) {
@@ -736,13 +748,19 @@ async function ensurePublicDemoAuthUser(params) {
         }
     }
     try {
-        const userByEmail = await admin.auth().getUserByEmail(params.email);
-        await admin.auth().updateUser(userByEmail.uid, {
-            displayName: params.displayName,
+        const byEmail = await admin.auth().getUserByEmail(emailRaw);
+        await admin.auth().updateUser(byEmail.uid, {
+            displayName,
             disabled: false,
             emailVerified: true,
         });
-        return userByEmail.uid;
+        if (byEmail.uid !== params.uid) {
+            functions.logger.warn('demo_auth_uid_mismatch_existing_email', {
+                canonicalUid: params.uid,
+                actualUid: byEmail.uid,
+            });
+        }
+        return byEmail.uid;
     }
     catch (error) {
         const typed = error;
@@ -750,14 +768,42 @@ async function ensurePublicDemoAuthUser(params) {
             throw error;
         }
     }
-    const created = await admin.auth().createUser({
-        uid: params.uid,
-        email: params.email,
-        displayName: params.displayName,
-        emailVerified: true,
-        disabled: false,
-    });
-    return created.uid;
+    try {
+        const created = await admin.auth().createUser({
+            uid: params.uid,
+            email: emailRaw,
+            displayName,
+            emailVerified: true,
+            disabled: false,
+        });
+        return created.uid;
+    }
+    catch (error) {
+        const typed = error;
+        if (typed.code === 'auth/email-already-exists') {
+            const holder = await admin.auth().getUserByEmail(emailRaw);
+            await admin.auth().updateUser(holder.uid, {
+                displayName,
+                disabled: false,
+                emailVerified: true,
+            });
+            functions.logger.warn('demo_auth_create_email_collision', {
+                canonicalUid: params.uid,
+                holderUid: holder.uid,
+            });
+            return holder.uid;
+        }
+        if (typed.code === 'auth/uid-already-exists') {
+            const u = await admin.auth().getUser(params.uid);
+            await admin.auth().updateUser(u.uid, {
+                displayName,
+                disabled: false,
+                emailVerified: true,
+            });
+            return u.uid;
+        }
+        throw error;
+    }
 }
 async function ensurePublicDemoAccountantLink(params) {
     await admin

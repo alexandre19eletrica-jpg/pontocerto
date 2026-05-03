@@ -143,6 +143,12 @@ class _PaginaLoginEmpresaState extends ConsumerState<PaginaLoginEmpresa> {
                         onPressed: _carregando ? null : _esqueciSenha,
                         child: const Text('Esqueci minha senha'),
                       ),
+                      TextButton(
+                        onPressed: _carregando
+                            ? null
+                            : () => context.go('/cadastro-empresa'),
+                        child: const Text('Criar acesso da empresa'),
+                      ),
                     ],
                   ),
                 ),

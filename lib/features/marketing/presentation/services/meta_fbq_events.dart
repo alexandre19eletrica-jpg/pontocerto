@@ -41,6 +41,9 @@ void metaFbqTrackContactWhatsapp() => impl.metaFbqTrackContactWhatsapp();
 /// Início do teste grátis do escritório (CTA para cadastro / contratar).
 void metaFbqTrackStartTrialEscritorio() => impl.metaFbqTrackStartTrialEscritorio();
 
+/// Pré-cadastro / trial da empresa (`/cadastro-empresa` e páginas de entrada).
+void metaFbqTrackStartTrialEmpresa() => impl.metaFbqTrackStartTrialEmpresa();
+
 /// Pre-cadastro de lead (tela de solicitacao de teste) enviado.
 void metaFbqTrackLeadPreCadastro({
   required String leadId,

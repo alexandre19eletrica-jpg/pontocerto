@@ -27,3 +27,5 @@ void metaFbqTrackLeadPreCadastro({
 void metaFbqTrackContactWhatsapp() {}
 
 void metaFbqTrackStartTrialEscritorio() {}
+
+void metaFbqTrackStartTrialEmpresa() {}

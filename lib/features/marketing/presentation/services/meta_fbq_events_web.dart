@@ -154,6 +154,17 @@ void metaFbqTrackStartTrialEscritorio() {
   });
 }
 
+void metaFbqTrackStartTrialEmpresa() {
+  _runWhenFbq(() {
+    _callFbqTrack('StartTrial', {
+      'value': 0,
+      'currency': 'BRL',
+      'predicted_ltv': 0,
+      'content_name': 'Ponto_Certo_trial_empresa_precadastro_30d',
+    });
+  });
+}
+
 void metaFbqTrackLeadPreCadastro({
   required String leadId,
   required String planCode,

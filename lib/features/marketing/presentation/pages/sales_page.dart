@@ -9,9 +9,14 @@ const _primary = Color(0xFF1E4FD7);
 const _surface = Color(0xFFF4F7FB);
 const _line = Color(0xFFDCE5EF);
 
-void _irContratarTrialEscritorio(BuildContext context) {
-  metaFbqTrackStartTrialEscritorio();
+void _irPreCadastroEmpresa(BuildContext context) {
   context.go('/cadastro-empresa');
+  metaFbqTrackStartTrialEmpresa();
+}
+
+void _irCadastroEscritorio(BuildContext context) {
+  context.go('/cadastro-escritorio-contabil');
+  metaFbqTrackStartTrialEscritorio();
 }
 
 class SalesPage extends StatefulWidget {
@@ -230,9 +235,33 @@ class _HeroSection extends StatelessWidget {
             ],
           ),
         if (demoSummary != null) const SizedBox(height: 18),
-        _PrimaryButton(
-          label: 'Começar teste grátis',
-          onPressed: () => _irContratarTrialEscritorio(context),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _PrimaryButton(
+              label: 'Começar teste grátis (empresa)',
+              onPressed: () => _irPreCadastroEmpresa(context),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: compact ? double.infinity : null,
+              child: OutlinedButton.icon(
+                onPressed: () => _irCadastroEscritorio(context),
+                icon: const Icon(Icons.business_center_outlined),
+                label: const Text('Cadastrar escritório de contabilidade'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _ink,
+                  side: BorderSide(color: _primary.withValues(alpha: 0.7), width: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -580,6 +609,7 @@ class _OfferSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 760;
     return _SectionCard(
       color: const Color(0xFF092B63),
       child: Column(
@@ -592,10 +622,39 @@ class _OfferSection extends StatelessWidget {
             items: ['30 dias grátis', 'Sem contrato', 'Sem implantação'],
           ),
           const SizedBox(height: 24),
-          _PrimaryButton(
-            label: 'Começar teste grátis agora',
-            light: true,
-            onPressed: () => _irContratarTrialEscritorio(context),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PrimaryButton(
+                label: 'Começar teste grátis (empresa)',
+                light: true,
+                onPressed: () => _irPreCadastroEmpresa(context),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: compact ? double.infinity : null,
+                child: OutlinedButton.icon(
+                  onPressed: () => _irCadastroEscritorio(context),
+                  icon: Icon(
+                    Icons.business_center_outlined,
+                    color: Colors.white.withValues(alpha: 0.95),
+                  ),
+                  label:
+                      const Text('Cadastrar escritório de contabilidade'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side:
+                        BorderSide(color: Colors.white.withValues(alpha: 0.85)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -637,6 +696,7 @@ class _ClosingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 760;
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -660,9 +720,34 @@ class _ClosingSection extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('E isso dá pra resolver.', style: _bodyStyle),
           const SizedBox(height: 24),
-          _PrimaryButton(
-            label: 'Começar teste grátis',
-            onPressed: () => _irContratarTrialEscritorio(context),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PrimaryButton(
+                label: 'Começar teste grátis (empresa)',
+                onPressed: () => _irPreCadastroEmpresa(context),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: compact ? double.infinity : null,
+                child: OutlinedButton.icon(
+                  onPressed: () => _irCadastroEscritorio(context),
+                  icon: const Icon(Icons.business_center_outlined),
+                  label: const Text('Cadastrar escritório de contabilidade'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _ink,
+                    side: BorderSide(
+                        color: _primary.withValues(alpha: 0.7), width: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

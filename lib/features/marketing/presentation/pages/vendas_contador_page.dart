@@ -44,8 +44,8 @@ class VendasContadorPage extends StatelessWidget {
                     '30 dias de teste grátis',
                   ],
                   onPrimary: () {
-                    metaFbqTrackStartTrialEscritorio();
                     context.go('/cadastro-escritorio-contabil');
+                    metaFbqTrackStartTrialEscritorio();
                   },
                   primaryLabel: 'CADASTRAR ESCRITORIO DE CONTABILIDADE',
                   secondaryLabel: 'Falar com alguém',
@@ -228,8 +228,8 @@ class VendasContadorPage extends StatelessWidget {
                           width: double.infinity,
                           child: FilledButton(
                             onPressed: () {
-                              metaFbqTrackStartTrialEscritorio();
                               context.go('/cadastro-escritorio-contabil');
+                              metaFbqTrackStartTrialEscritorio();
                             },
                             style: FilledButton.styleFrom(
                               backgroundColor: Colors.white,
