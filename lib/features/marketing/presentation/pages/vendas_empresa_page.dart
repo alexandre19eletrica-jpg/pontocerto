@@ -65,7 +65,8 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                     accentLine:
                         'Sua empresa precisa emitir com seguranca e manter a operacao organizada sem depender de improviso.',
                     subhead:
-                        'No modelo comercial atual, o pre-cadastro da empresa comeca pelo cadastro do escritorio contabil indicado. Depois disso, a empresa entra no sistema com emissao, financeiro e documentos no mesmo fluxo.',
+                        'A empresa pode iniciar o pre-cadastro direto no sistema e completar os dados fiscais depois. '
+                        'Se ja tiver escritorio contabil, pode tambem indica-lo ao avancar — e o contador pode abrir o cadastro do escritorio pelo atalho abaixo.',
                     badges: const [
                       'Pre-cadastro direto da empresa',
                       'Emissao pelo celular ou computador',

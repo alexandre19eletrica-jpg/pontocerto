@@ -635,11 +635,19 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
           'ownerName': responsavel,
           'companyName': nomeFantasia,
         });
-        Map<String, dynamic>.from(response.data as Map);
+        final map = Map<String, dynamic>.from(response.data as Map);
+        final emailOk = map['emailDispatched'] == true;
         if (!mounted) return;
-        _msg(
-          'Pedido registrado. Verifique sua caixa de entrada para criar a senha e entrar pelo link enviado.',
-        );
+        if (emailOk) {
+          _msg(
+            'Pedido registrado. Verifique sua caixa de entrada para criar a senha e entrar pelo link enviado.',
+          );
+        } else {
+          _msg(
+            'Conta preparada, mas o envio automatico por e-mail falhou. '
+            'Use Esqueci minha senha na tela de login ou confira se o servidor tem SMTP/SendGrid configurados.',
+          );
+        }
         context.go('/login-empresa?email=${Uri.encodeComponent(email)}');
       } catch (e) {
         _msg(AppErrorMapper.messageFrom(e, fallback: 'Erro ao criar acesso.'));

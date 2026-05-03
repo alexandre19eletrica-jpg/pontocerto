@@ -174,6 +174,8 @@ Base:
 - a entrada publica comercial deve operar com trial real de 30 dias, sem cobranca de implantacao, exigindo indicacao de contador para conduzir o cadastro inicial da empresa
 - landing `/vendas` (Flutter `SalesPage`): CTAs duplos empresa/escritorio; eventos Meta distintos `metaFbqTrackStartTrialEmpresa` vs `metaFbqTrackStartTrialEscritorio`
 - `publicOpenDemoAccess` + `ensurePublicDemoAuthUser`: resiliente a remocao de utilizadores demo no Firebase Auth (recriacao ou reutilizacao por e-mail; tratamento de colisoes no `createUser`)
+- `buildDefaultCommercialSettings`: objeto final passa por `omitUndefinedForFirestore` antes da persistencia nas rotas que o consomem, para nunca enviar `undefined` ao Firestore
+- `findSalesLeadDocByCustomerEmailAndPlan` / `findSalesOnboardingDocByRecipientEmailAndPlan`: leitura por e-mail apenas e filtro de `planCode` em aplicacao onde antes havia dois `where` combinados (`sales_public_leads`, `sales_onboarding_requests`)
 
 ## Arquitetura oficial do modulo Documentos
 

@@ -113,9 +113,16 @@ class _SalesPreRegistrationPageState extends State<SalesPreRegistrationPage> {
         planCode: widget.planCode,
       );
       if (!mounted) return;
-      context.showUserSuccess(
-        'Registro recebido. A equipe do Ponto Certo entra em contato usando os e-mails informados.',
-      );
+      final empresaOk = result.precadastroEmpresaEmailOk;
+      final parceiroOk = result.conviteParceiroEmailOk;
+      final msg = empresaOk && parceiroOk
+          ? 'Registro recebido. Enviamos orientacoes para o e-mail da empresa e do contador.'
+          : empresaOk
+              ? 'Registro recebido. Enviamos orientacoes para o e-mail da empresa; o e-mail ao contador pode falhar se o envio estiver incompleto.'
+              : parceiroOk
+                  ? 'Registro recebido; o e-mail da empresa nao foi enviado automaticamente. Confira spam ou use outro contato.'
+                  : 'Registro recebido, mas os e-mails automaticos nao foram enviados — confira SMTP/SendGrid nas Functions (MAIL_FROM, SMTP ou SendGrid).';
+      context.showUserSuccess(msg);
     } catch (error) {
       if (!mounted) return;
       if (context.mounted) { context.showUserError(AppErrorMapper.messageFrom(error)); }

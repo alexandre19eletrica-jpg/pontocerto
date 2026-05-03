@@ -520,6 +520,52 @@ async function reserveAssistantBurstQuota(claims) {
 function commercialSettings(settingsData) {
     return asRecord(settingsData.commercialSettings);
 }
+/**
+ * Firestore rejeita `undefined`. Remove chaves indefinidas (recursivo), preservando
+ * Timestamp / GeoPoint / DocumentReference / FieldValue e valores primitivos.
+ */
+function omitUndefinedForFirestore(value) {
+    if (value === undefined) {
+        return undefined;
+    }
+    if (value === null ||
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean') {
+        return value;
+    }
+    if (value instanceof admin.firestore.Timestamp) {
+        return value;
+    }
+    if (value instanceof admin.firestore.GeoPoint) {
+        return value;
+    }
+    if (value instanceof admin.firestore.DocumentReference) {
+        return value;
+    }
+    if (typeof admin.firestore.FieldValue !== 'undefined' &&
+        value instanceof admin.firestore.FieldValue) {
+        return value;
+    }
+    if (Array.isArray(value)) {
+        return value
+            .map((entry) => omitUndefinedForFirestore(entry))
+            .filter((entry) => entry !== undefined);
+    }
+    if (typeof value === 'object' && value !== null) {
+        const out = {};
+        for (const [k, v] of Object.entries(value)) {
+            if (v === undefined)
+                continue;
+            const nv = omitUndefinedForFirestore(v);
+            if (nv !== undefined) {
+                out[k] = nv;
+            }
+        }
+        return out;
+    }
+    return value;
+}
 function publicSalesConfigRef() {
     return admin.firestore().collection('platform_public').doc('sales_page');
 }
@@ -581,6 +627,30 @@ function salesOnboardingRef() {
 }
 function salesLeadRef() {
     return admin.firestore().collection('sales_public_leads');
+}
+/** Evita indice composto customerEmail + planCode em leads publicos. */
+async function findSalesLeadDocByCustomerEmailAndPlan(customerEmail, planCode) {
+    const normalized = customerEmail.trim().toLowerCase();
+    if (!normalized)
+        return null;
+    const wantPlan = planCode.trim().toLowerCase();
+    const snap = await salesLeadRef()
+        .where('customerEmail', '==', normalized)
+        .limit(50)
+        .get();
+    return (snap.docs.find((doc) => asTrimmedString(asRecord(doc.data()).planCode).toLowerCase() === wantPlan) ?? null);
+}
+/** Evita indice composto em onboarding publico (customerEmail + planCode). */
+async function findSalesOnboardingDocByRecipientEmailAndPlan(recipientEmail, planCode) {
+    const normalized = recipientEmail.trim().toLowerCase();
+    if (!normalized)
+        return null;
+    const wantPlan = planCode.trim().toLowerCase();
+    const snap = await salesOnboardingRef()
+        .where('customerEmail', '==', normalized)
+        .limit(80)
+        .get();
+    return (snap.docs.find((doc) => asTrimmedString(asRecord(doc.data()).planCode).toLowerCase() === wantPlan) ?? null);
 }
 function employeeTesterLeadRef() {
     return admin.firestore().collection('employee_tester_leads');
@@ -1175,7 +1245,7 @@ function buildDefaultCommercialSettings(current) {
         platformNote: asTrimmedString(currentCommercial.platformNote),
     };
     if (isSupremePlatformCompany(inferredCompanyId)) {
-        return {
+        const supremeCommercial = {
             ...currentCommercial,
             ...defaults,
             plan: 'supreme',
@@ -1200,11 +1270,12 @@ function buildDefaultCommercialSettings(current) {
                 blockReason: '',
             },
         };
+        return omitUndefinedForFirestore(supremeCommercial);
     }
-    return {
+    return omitUndefinedForFirestore({
         ...currentCommercial,
         ...defaults,
-    };
+    });
 }
 function normalizeActivationCode(value) {
     return asTrimmedString(value).toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -6709,8 +6780,22 @@ async function provisionLightweightCompanyAccess(params) {
         });
         emailDispatched = true;
     }
-    catch (_) {
+    catch (err) {
         emailDispatched = false;
+        try {
+            const cfg = obterConfigEmail();
+            functions.logger.warn('Email acesso leve empresa nao enviado', {
+                ownerEmail,
+                missing: missingInviteConfig(cfg),
+                error: errorMessage(err, 'unknown'),
+            });
+        }
+        catch (_) {
+            functions.logger.warn('Email acesso leve empresa nao enviado', {
+                ownerEmail,
+                error: errorMessage(err, 'unknown'),
+            });
+        }
     }
     return {
         companyId,
@@ -7330,12 +7415,8 @@ async function createOrRefreshPublicSalesOnboarding(params) {
         customerEmail.split('@')[0];
     const paymentId = asTrimmedString(params.payment.id);
     const subscriptionId = asTrimmedString(params.payment.subscription);
-    const leadSnap = await salesLeadRef()
-        .where('customerEmail', '==', customerEmail.toLowerCase())
-        .where('planCode', '==', asTrimmedString(plan.code))
-        .limit(1)
-        .get();
-    const leadData = leadSnap.empty ? {} : asRecord(leadSnap.docs[0].data());
+    const matchedLeadDoc = await findSalesLeadDocByCustomerEmailAndPlan(customerEmail.toLowerCase(), asTrimmedString(plan.code));
+    const leadData = matchedLeadDoc ? asRecord(matchedLeadDoc.data()) : {};
     const implementationMode = asTrimmedString(leadData.implementationMode) || 'platform';
     const recipientEmail = implementationMode === 'accountant'
         ? asTrimmedString(leadData.accountantEmail).toLowerCase() || customerEmail.toLowerCase()
@@ -7343,14 +7424,10 @@ async function createOrRefreshPublicSalesOnboarding(params) {
     const recipientName = implementationMode === 'accountant'
         ? asTrimmedString(leadData.accountantName) || customerName
         : customerName;
-    const existingSnap = await salesOnboardingRef()
-        .where('customerEmail', '==', recipientEmail)
-        .where('planCode', '==', asTrimmedString(plan.code))
-        .limit(1)
-        .get();
+    const onboardingDocMatch = await findSalesOnboardingDocByRecipientEmailAndPlan(recipientEmail, asTrimmedString(plan.code));
     const token = generatePublicToken();
     const tokenHash = hashPublicToken(token);
-    const requestRef = existingSnap.empty ? salesOnboardingRef().doc() : existingSnap.docs[0].ref;
+    const requestRef = onboardingDocMatch ? onboardingDocMatch.ref : salesOnboardingRef().doc();
     const requestId = requestRef.id;
     const onboardingUrl = `https://gestao-ponto-certo.com/boas-vindas-empresa?token=${encodeURIComponent(token)}`;
     const emailCfg = obterConfigEmail();
@@ -7377,9 +7454,9 @@ async function createOrRefreshPublicSalesOnboarding(params) {
         lastWebhookEventId: params.eventId,
         lastWebhookEvent: params.eventName,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        createdAt: existingSnap.empty
-            ? admin.firestore.FieldValue.serverTimestamp()
-            : existingSnap.docs[0].data().createdAt ?? admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: onboardingDocMatch
+            ? onboardingDocMatch.data().createdAt ?? admin.firestore.FieldValue.serverTimestamp()
+            : admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
     await enviarEmailBoasVindasClientePlano({
         email: recipientEmail,
@@ -7411,15 +7488,15 @@ async function createOrRefreshPublicSalesOnboarding(params) {
     await requestRef.set({
         welcomeEmailSentAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
-    if (!leadSnap.empty) {
-        await leadSnap.docs[0].ref.set({
+    if (matchedLeadDoc) {
+        await matchedLeadDoc.ref.set({
             status: 'paid',
             onboardingRequestId: requestId,
             onboardingUrl,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
     }
-    return { requestId, created: existingSnap.empty };
+    return { requestId, created: !onboardingDocMatch };
 }
 async function findExistingPaidDirectSignup(params) {
     const ownerEmail = params.ownerEmail.trim().toLowerCase();
@@ -7432,13 +7509,13 @@ async function findExistingPaidDirectSignup(params) {
             paymentStatus: '',
         };
     }
-    const onboardingMatches = await salesOnboardingRef()
-        .where('planCode', '==', params.planCode)
+    const onboardingRecipientSnap = await salesOnboardingRef()
         .where('customerEmail', '==', ownerEmail)
-        .limit(5)
+        .limit(40)
         .get()
         .catch(() => null);
-    const onboardingDocs = onboardingMatches?.docs ?? [];
+    const wantPlan = params.planCode.trim().toLowerCase();
+    const onboardingDocs = (onboardingRecipientSnap?.docs ?? []).filter((doc) => asTrimmedString(asRecord(doc.data()).planCode).toLowerCase() === wantPlan);
     for (const doc of onboardingDocs) {
         const item = asRecord(doc.data());
         const paymentStatus = asTrimmedString(item.paymentStatus).toLowerCase();
@@ -7454,13 +7531,12 @@ async function findExistingPaidDirectSignup(params) {
             };
         }
     }
-    const buyerMatches = await salesOnboardingRef()
-        .where('planCode', '==', params.planCode)
+    const buyerSnap = await salesOnboardingRef()
         .where('originalBuyerEmail', '==', ownerEmail)
-        .limit(5)
+        .limit(40)
         .get()
         .catch(() => null);
-    for (const doc of buyerMatches?.docs ?? []) {
+    for (const doc of (buyerSnap?.docs ?? []).filter((d) => asTrimmedString(asRecord(d.data()).planCode).toLowerCase() === wantPlan)) {
         const item = asRecord(doc.data());
         const paymentStatus = asTrimmedString(item.paymentStatus).toLowerCase();
         if (['received', 'confirmed', 'paid', 'active'].includes(paymentStatus) ||
@@ -7475,13 +7551,9 @@ async function findExistingPaidDirectSignup(params) {
             };
         }
     }
-    const leadSnap = await salesLeadRef()
-        .where('customerEmail', '==', ownerEmail)
-        .where('planCode', '==', params.planCode)
-        .limit(5)
-        .get();
-    for (const doc of leadSnap.docs) {
-        const item = asRecord(doc.data());
+    const leadPaid = await findSalesLeadDocByCustomerEmailAndPlan(ownerEmail, params.planCode);
+    if (leadPaid) {
+        const item = asRecord(leadPaid.data());
         const status = asTrimmedString(item.status).toLowerCase();
         if (status === 'paid') {
             return {
@@ -9597,121 +9669,134 @@ exports.publicGetDemoAccessSummary = functions.https.onCall(async () => {
     };
 });
 exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
-    const profile = normalizePublicDemoProfile(data?.profile);
-    const configSnap = await demoAccessConfigRef().get();
-    const config = buildDefaultDemoAccessConfig(asRecord(configSnap.data()));
-    if (config.enabled !== true) {
-        throw new functions.https.HttpsError('failed-precondition', 'O acesso demo publico esta desativado no momento.');
-    }
-    const companyId = PUBLIC_DEMO_COMPANY_ID;
-    const visitorId = asTrimmedString(data?.visitorId);
-    if (!visitorId) {
-        throw new functions.https.HttpsError('invalid-argument', 'visitorId obrigatorio para acesso demo.');
-    }
-    const metadata = readPublicRequestMetadata(context);
-    const sessionId = asTrimmedString(data?.sessionId);
-    const pagePath = asTrimmedString(data?.pagePath) || '/vendas';
-    const deviceType = sanitizeMarketingKey(data?.deviceType);
-    const language = asTrimmedString(data?.language).slice(0, 32);
-    const screenWidth = Number(data?.screenWidth ?? 0) || 0;
-    const screenHeight = Number(data?.screenHeight ?? 0) || 0;
-    const uid = profile === 'accountant' ? PUBLIC_DEMO_ACCOUNTANT_UID : PUBLIC_DEMO_OWNER_UID;
-    const role = profile === 'accountant' ? 'ACCOUNTANT' : 'OWNER';
-    const displayName = profile === 'accountant'
-        ? asTrimmedString(config.accountantDisplayName) || PUBLIC_DEMO_OFFICE_NAME
-        : asTrimmedString(config.ownerDisplayName) || PUBLIC_DEMO_COMPANY_NAME;
-    await ensurePublicDemoWorkspace(companyId);
-    const authUid = await ensurePublicDemoAuthUser({
-        uid,
-        email: `${uid}@demo.pontocerto.local`,
-        displayName,
-    });
-    await ensurePublicDemoUser({
-        uid: authUid,
-        companyId,
-        role,
-        displayName,
-        demoProfile: profile,
-    });
-    if (profile === 'accountant') {
-        await ensurePublicDemoAccountantLink({
-            accountantUid: authUid,
-            companyId,
+    try {
+        const profile = normalizePublicDemoProfile(data?.profile);
+        const configSnap = await demoAccessConfigRef().get();
+        const config = buildDefaultDemoAccessConfig(asRecord(configSnap.data()));
+        if (config.enabled !== true) {
+            throw new functions.https.HttpsError('failed-precondition', 'O acesso demo publico esta desativado no momento.');
+        }
+        const companyId = PUBLIC_DEMO_COMPANY_ID;
+        const visitorId = asTrimmedString(data?.visitorId);
+        if (!visitorId) {
+            throw new functions.https.HttpsError('invalid-argument', 'visitorId obrigatorio para acesso demo.');
+        }
+        const metadata = readPublicRequestMetadata(context);
+        const sessionId = asTrimmedString(data?.sessionId);
+        const pagePath = asTrimmedString(data?.pagePath) || '/vendas';
+        const deviceType = sanitizeMarketingKey(data?.deviceType);
+        const language = asTrimmedString(data?.language).slice(0, 32);
+        const screenWidth = Number(data?.screenWidth ?? 0) || 0;
+        const screenHeight = Number(data?.screenHeight ?? 0) || 0;
+        const uid = profile === 'accountant' ? PUBLIC_DEMO_ACCOUNTANT_UID : PUBLIC_DEMO_OWNER_UID;
+        const role = profile === 'accountant' ? 'ACCOUNTANT' : 'OWNER';
+        const displayName = profile === 'accountant'
+            ? asTrimmedString(config.accountantDisplayName) || PUBLIC_DEMO_OFFICE_NAME
+            : asTrimmedString(config.ownerDisplayName) || PUBLIC_DEMO_COMPANY_NAME;
+        await ensurePublicDemoWorkspace(companyId);
+        const authUid = await ensurePublicDemoAuthUser({
+            uid,
+            email: `${uid}@demo.pontocerto.local`,
+            displayName,
         });
-        await admin.firestore().collection('users').doc(authUid).set({
-            officeId: PUBLIC_DEMO_OFFICE_ID,
-            officeName: PUBLIC_DEMO_OFFICE_NAME,
-            officeBillingChoiceDefault: 'office',
-        }, { merge: true });
+        await ensurePublicDemoUser({
+            uid: authUid,
+            companyId,
+            role,
+            displayName,
+            demoProfile: profile,
+        });
+        if (profile === 'accountant') {
+            await ensurePublicDemoAccountantLink({
+                accountantUid: authUid,
+                companyId,
+            });
+            await admin.firestore().collection('users').doc(authUid).set({
+                officeId: PUBLIC_DEMO_OFFICE_ID,
+                officeName: PUBLIC_DEMO_OFFICE_NAME,
+                officeBillingChoiceDefault: 'office',
+            }, { merge: true });
+        }
+        const accessRef = demoPublicAccessRef().doc(visitorId);
+        const dateKey = marketingDateKey();
+        const dailyRef = marketingDailyRef(dateKey);
+        await admin.firestore().runTransaction(async (tx) => {
+            const snap = await tx.get(accessRef);
+            const current = asRecord(snap.data());
+            const roles = asRecord(current.roles);
+            const isNewVisitor = !snap.exists;
+            const isNewRole = roles[profile] !== true;
+            tx.set(accessRef, {
+                visitorId,
+                firstSeenAt: snap.exists
+                    ? current.firstSeenAt ?? admin.firestore.FieldValue.serverTimestamp()
+                    : admin.firestore.FieldValue.serverTimestamp(),
+                lastSeenAt: admin.firestore.FieldValue.serverTimestamp(),
+                lastSessionId: sessionId,
+                lastPagePath: pagePath,
+                deviceType,
+                language,
+                screenWidth,
+                screenHeight,
+                ipHash: metadata.ipHash,
+                userAgent: metadata.userAgent,
+                accessCount: admin.firestore.FieldValue.increment(1),
+                roles: {
+                    ...roles,
+                    [profile]: true,
+                },
+            }, { merge: true });
+            tx.set(dailyRef, {
+                dateKey,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                eventCounts: {
+                    [`demo_open_${profile}`]: admin.firestore.FieldValue.increment(1),
+                },
+                ...(isNewVisitor
+                    ? {
+                        demoCounts: {
+                            uniqueVisitors: admin.firestore.FieldValue.increment(1),
+                        },
+                    }
+                    : {}),
+                ...(isNewRole
+                    ? {
+                        demoCounts: {
+                            [`unique_${profile}`]: admin.firestore.FieldValue.increment(1),
+                        },
+                    }
+                    : {}),
+            }, { merge: true });
+        });
+        const customToken = await admin.auth().createCustomToken(authUid, {
+            companyId,
+            role,
+            employeeId: authUid,
+            demoReadOnly: true,
+            demoProfile: profile,
+        });
+        const summary = await buildPublicDemoAccessSummary();
+        return {
+            ok: true,
+            profile,
+            customToken,
+            targetRoute: profile === 'accountant' ? '/accountant-companies' : '/home',
+            visitors: summary.visitors,
+            companyUnique: summary.companyUnique,
+            accountantUnique: summary.accountantUnique,
+        };
     }
-    const accessRef = demoPublicAccessRef().doc(visitorId);
-    const dateKey = marketingDateKey();
-    const dailyRef = marketingDailyRef(dateKey);
-    await admin.firestore().runTransaction(async (tx) => {
-        const snap = await tx.get(accessRef);
-        const current = asRecord(snap.data());
-        const roles = asRecord(current.roles);
-        const isNewVisitor = !snap.exists;
-        const isNewRole = roles[profile] !== true;
-        tx.set(accessRef, {
-            visitorId,
-            firstSeenAt: snap.exists
-                ? current.firstSeenAt ?? admin.firestore.FieldValue.serverTimestamp()
-                : admin.firestore.FieldValue.serverTimestamp(),
-            lastSeenAt: admin.firestore.FieldValue.serverTimestamp(),
-            lastSessionId: sessionId,
-            lastPagePath: pagePath,
-            deviceType,
-            language,
-            screenWidth,
-            screenHeight,
-            ipHash: metadata.ipHash,
-            userAgent: metadata.userAgent,
-            accessCount: admin.firestore.FieldValue.increment(1),
-            roles: {
-                ...roles,
-                [profile]: true,
-            },
-        }, { merge: true });
-        tx.set(dailyRef, {
-            dateKey,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            eventCounts: {
-                [`demo_open_${profile}`]: admin.firestore.FieldValue.increment(1),
-            },
-            ...(isNewVisitor
-                ? {
-                    demoCounts: {
-                        uniqueVisitors: admin.firestore.FieldValue.increment(1),
-                    },
-                }
-                : {}),
-            ...(isNewRole
-                ? {
-                    demoCounts: {
-                        [`unique_${profile}`]: admin.firestore.FieldValue.increment(1),
-                    },
-                }
-                : {}),
-        }, { merge: true });
-    });
-    const customToken = await admin.auth().createCustomToken(authUid, {
-        companyId,
-        role,
-        employeeId: authUid,
-        demoReadOnly: true,
-        demoProfile: profile,
-    });
-    const summary = await buildPublicDemoAccessSummary();
-    return {
-        ok: true,
-        profile,
-        customToken,
-        targetRoute: profile === 'accountant' ? '/accountant-companies' : '/home',
-        visitors: summary.visitors,
-        companyUnique: summary.companyUnique,
-        accountantUnique: summary.accountantUnique,
-    };
+    catch (error) {
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        const msg = errorMessage(error, 'unknown');
+        functions.logger.error('publicOpenDemoAccess error', {
+            message: msg,
+            stack: error instanceof Error ? error.stack : undefined,
+        });
+        throw new functions.https.HttpsError('internal', `Demo indisponivel no momento: ${msg}`);
+    }
 });
 exports.platformGetDemoAccessConfig = functions.https.onCall(async (_data, context) => {
     const claims = assertClaims(context);
@@ -9902,12 +9987,11 @@ exports.publicCreateSalesPreRegistration = functions.https.onCall(async (data) =
         (!accountantName || !accountantEmail)) {
         throw new functions.https.HttpsError('invalid-argument', 'Informe nome e email do contador para esse fluxo.');
     }
-    const existing = await salesLeadRef()
-        .where('customerEmail', '==', customerEmail)
-        .where('planCode', '==', asTrimmedString(plan.code))
-        .limit(1)
-        .get();
-    const leadRef = existing.empty ? salesLeadRef().doc() : existing.docs[0].ref;
+    const matchedLead = await findSalesLeadDocByCustomerEmailAndPlan(customerEmail, asTrimmedString(plan.code));
+    const leadRef = matchedLead ? matchedLead.ref : salesLeadRef().doc();
+    const preservedLeadCreatedAt = matchedLead
+        ? matchedLead.data().createdAt
+        : undefined;
     const partnerInviteToken = implementationMode == 'accountant' ? generatePublicToken() : '';
     const partnerInviteTokenHash = partnerInviteToken === ''
         ? ''
@@ -9940,9 +10024,7 @@ exports.publicCreateSalesPreRegistration = functions.https.onCall(async (data) =
         utmTerm,
         referrerHost,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        createdAt: existing.empty
-            ? admin.firestore.FieldValue.serverTimestamp()
-            : existing.docs[0].data().createdAt ?? admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: preservedLeadCreatedAt ?? admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
     const emailCfg = obterConfigEmail();
     let precadastroEmpresaEmailOk = false;

@@ -289,6 +289,9 @@ O **que** se pretende fazer em seguranca — certificadora (fluxo contador → e
 - `/login-empresa`: link "Criar acesso da empresa" para `/cadastro-empresa`.
 - Landing `/vendas-empresa`: atalho de texto para o contador abrir cadastro do escritorio.
 - **Demo publico** (`publicOpenDemoAccess`): o backend assume que contas demo em Auth podem ter sido apagadas; `ensurePublicDemoAuthUser` recria o utilizador canonico, ou reaproveita por e-mail, tratando colisoes `auth/email-already-exists` e `auth/uid-already-exists` no `createUser`, para evitar falha `internal` no cliente.
+- **Firestore:** `commercialSettings` de `buildDefaultCommercialSettings` e sanitizado (sem `undefined`) antes de persistir em `company_settings`, evitando erro interno em acesso leve empresa e workspace demo quando campos opcionais do ciclo de ativacao nao existem.
+- **Leads publicos (`publicCreateSalesPreRegistration`):** usa um unico filtro Firestore por e-mail do cliente e compara `planCode` na aplicacao para nao depender de indice composto para o primeiro `get`.
+- **E-mails transaccionais:** sem `MAIL_FROM`/SMTP ou SendGrid validos nos parametros das Functions, o servidor pode responder `ok` com `emailDispatched` ou `precadastroEmpresaEmailOk`/`conviteParceiroEmailOk` falsos; o utilizador usa recuperacao de senha ou configuracao do provedor nas Functions.
 
 ## Documentos relacionados
 

@@ -228,6 +228,8 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 - `/inicio`: "Criar acesso da empresa" mantem destaque texto; navegacao primeiro, depois pixel de trial empresa.
 - `/login-empresa`: link texto "Criar acesso da empresa" para o pre-cadastro.
 - `/vendas-empresa`: atalho texto "Sou contador — cadastro do escritorio" para `/cadastro-escritorio-contabil`.
+- `/vendas-empresa`: heroi alinhado ao pre-cadastro direto da empresa com contador opcional (sem obrigar escritorio primeiro).
+- `/cadastro-empresa` (leve) e pre-cadastro comercial (`SalesPreRegistrationPage`): texto de confirmacao quando o envio por e-mail nao foi concluido.
 
 ## Regra de manutencao
 

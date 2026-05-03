@@ -35,17 +35,23 @@ class SalesPreRegistrationResult {
     required this.leadId,
     required this.checkoutUrl,
     required this.partnerInviteUrl,
+    required this.precadastroEmpresaEmailOk,
+    required this.conviteParceiroEmailOk,
   });
 
   final String leadId;
   final String checkoutUrl;
   final String partnerInviteUrl;
+  final bool precadastroEmpresaEmailOk;
+  final bool conviteParceiroEmailOk;
 
   factory SalesPreRegistrationResult.fromMap(Map<String, dynamic> map) {
     return SalesPreRegistrationResult(
       leadId: map['leadId']?.toString() ?? '',
       checkoutUrl: map['checkoutUrl']?.toString() ?? '',
       partnerInviteUrl: map['partnerInviteUrl']?.toString() ?? '',
+      precadastroEmpresaEmailOk: map['precadastroEmpresaEmailOk'] == true,
+      conviteParceiroEmailOk: map['conviteParceiroEmailOk'] == true,
     );
   }
 }

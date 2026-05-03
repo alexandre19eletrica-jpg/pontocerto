@@ -644,6 +644,56 @@ function commercialSettings(settingsData: Record<string, unknown>): Record<strin
   return asRecord(settingsData.commercialSettings);
 }
 
+/**
+ * Firestore rejeita `undefined`. Remove chaves indefinidas (recursivo), preservando
+ * Timestamp / GeoPoint / DocumentReference / FieldValue e valores primitivos.
+ */
+function omitUndefinedForFirestore(value: unknown): unknown {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (value instanceof admin.firestore.Timestamp) {
+    return value;
+  }
+  if (value instanceof admin.firestore.GeoPoint) {
+    return value;
+  }
+  if (value instanceof admin.firestore.DocumentReference) {
+    return value;
+  }
+  if (
+    typeof admin.firestore.FieldValue !== 'undefined' &&
+    value instanceof admin.firestore.FieldValue
+  ) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => omitUndefinedForFirestore(entry))
+      .filter((entry) => entry !== undefined);
+  }
+  if (typeof value === 'object' && value !== null) {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === undefined) continue;
+      const nv = omitUndefinedForFirestore(v);
+      if (nv !== undefined) {
+        out[k] = nv;
+      }
+    }
+    return out;
+  }
+  return value;
+}
+
 function publicSalesConfigRef(): FirebaseFirestore.DocumentReference {
   return admin.firestore().collection('platform_public').doc('sales_page');
 }
@@ -717,6 +767,46 @@ function salesOnboardingRef(): FirebaseFirestore.CollectionReference {
 
 function salesLeadRef(): FirebaseFirestore.CollectionReference {
   return admin.firestore().collection('sales_public_leads');
+}
+
+/** Evita indice composto customerEmail + planCode em leads publicos. */
+async function findSalesLeadDocByCustomerEmailAndPlan(
+  customerEmail: string,
+  planCode: string,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
+  const normalized = customerEmail.trim().toLowerCase();
+  if (!normalized) return null;
+  const wantPlan = planCode.trim().toLowerCase();
+  const snap = await salesLeadRef()
+    .where('customerEmail', '==', normalized)
+    .limit(50)
+    .get();
+  return (
+    snap.docs.find(
+      (doc) =>
+        asTrimmedString(asRecord(doc.data()).planCode).toLowerCase() === wantPlan,
+    ) ?? null
+  );
+}
+
+/** Evita indice composto em onboarding publico (customerEmail + planCode). */
+async function findSalesOnboardingDocByRecipientEmailAndPlan(
+  recipientEmail: string,
+  planCode: string,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
+  const normalized = recipientEmail.trim().toLowerCase();
+  if (!normalized) return null;
+  const wantPlan = planCode.trim().toLowerCase();
+  const snap = await salesOnboardingRef()
+    .where('customerEmail', '==', normalized)
+    .limit(80)
+    .get();
+  return (
+    snap.docs.find(
+      (doc) =>
+        asTrimmedString(asRecord(doc.data()).planCode).toLowerCase() === wantPlan,
+    ) ?? null
+  );
 }
 
 function employeeTesterLeadRef(): FirebaseFirestore.CollectionReference {
@@ -1452,7 +1542,7 @@ function buildDefaultCommercialSettings(
   };
 
   if (isSupremePlatformCompany(inferredCompanyId)) {
-    return {
+    const supremeCommercial = {
       ...currentCommercial,
       ...defaults,
       plan: 'supreme',
@@ -1477,12 +1567,13 @@ function buildDefaultCommercialSettings(
         blockReason: '',
       },
     };
+    return omitUndefinedForFirestore(supremeCommercial) as Record<string, unknown>;
   }
 
-  return {
+  return omitUndefinedForFirestore({
     ...currentCommercial,
     ...defaults,
-  };
+  }) as Record<string, unknown>;
 }
 
 function normalizeActivationCode(value: unknown): string {
@@ -8467,8 +8558,21 @@ async function provisionLightweightCompanyAccess(params: {
       smtpAppPassword: emailCfg.smtpAppPassword,
     });
     emailDispatched = true;
-  } catch (_) {
+  } catch (err) {
     emailDispatched = false;
+    try {
+      const cfg = obterConfigEmail();
+      functions.logger.warn('Email acesso leve empresa nao enviado', {
+        ownerEmail,
+        missing: missingInviteConfig(cfg),
+        error: errorMessage(err, 'unknown'),
+      });
+    } catch (_) {
+      functions.logger.warn('Email acesso leve empresa nao enviado', {
+        ownerEmail,
+        error: errorMessage(err, 'unknown'),
+      });
+    }
   }
 
   return {
@@ -9273,12 +9377,11 @@ async function createOrRefreshPublicSalesOnboarding(params: {
     customerEmail.split('@')[0];
   const paymentId = asTrimmedString(params.payment.id);
   const subscriptionId = asTrimmedString(params.payment.subscription);
-  const leadSnap = await salesLeadRef()
-    .where('customerEmail', '==', customerEmail.toLowerCase())
-    .where('planCode', '==', asTrimmedString(plan.code))
-    .limit(1)
-    .get();
-  const leadData = leadSnap.empty ? {} : asRecord(leadSnap.docs[0].data());
+  const matchedLeadDoc = await findSalesLeadDocByCustomerEmailAndPlan(
+    customerEmail.toLowerCase(),
+    asTrimmedString(plan.code),
+  );
+  const leadData = matchedLeadDoc ? asRecord(matchedLeadDoc.data()) : {};
   const implementationMode = asTrimmedString(leadData.implementationMode) || 'platform';
   const recipientEmail =
     implementationMode === 'accountant'
@@ -9288,15 +9391,14 @@ async function createOrRefreshPublicSalesOnboarding(params: {
     implementationMode === 'accountant'
       ? asTrimmedString(leadData.accountantName) || customerName
       : customerName;
-  const existingSnap = await salesOnboardingRef()
-    .where('customerEmail', '==', recipientEmail)
-    .where('planCode', '==', asTrimmedString(plan.code))
-    .limit(1)
-    .get();
+  const onboardingDocMatch = await findSalesOnboardingDocByRecipientEmailAndPlan(
+    recipientEmail,
+    asTrimmedString(plan.code),
+  );
 
   const token = generatePublicToken();
   const tokenHash = hashPublicToken(token);
-  const requestRef = existingSnap.empty ? salesOnboardingRef().doc() : existingSnap.docs[0].ref;
+  const requestRef = onboardingDocMatch ? onboardingDocMatch.ref : salesOnboardingRef().doc();
   const requestId = requestRef.id;
   const onboardingUrl =
     `https://gestao-ponto-certo.com/boas-vindas-empresa?token=${encodeURIComponent(token)}`;
@@ -9326,9 +9428,9 @@ async function createOrRefreshPublicSalesOnboarding(params: {
       lastWebhookEventId: params.eventId,
       lastWebhookEvent: params.eventName,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdAt: existingSnap.empty
-        ? admin.firestore.FieldValue.serverTimestamp()
-        : existingSnap.docs[0].data().createdAt ?? admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: onboardingDocMatch
+        ? onboardingDocMatch.data().createdAt ?? admin.firestore.FieldValue.serverTimestamp()
+        : admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true },
   );
@@ -9371,8 +9473,8 @@ async function createOrRefreshPublicSalesOnboarding(params: {
     { merge: true },
   );
 
-  if (!leadSnap.empty) {
-    await leadSnap.docs[0].ref.set(
+  if (matchedLeadDoc) {
+    await matchedLeadDoc.ref.set(
       {
         status: 'paid',
         onboardingRequestId: requestId,
@@ -9383,7 +9485,7 @@ async function createOrRefreshPublicSalesOnboarding(params: {
     );
   }
 
-  return { requestId, created: existingSnap.empty };
+  return { requestId, created: !onboardingDocMatch };
 }
 
 async function findExistingPaidDirectSignup(params: {
@@ -9407,13 +9509,16 @@ async function findExistingPaidDirectSignup(params: {
     };
   }
 
-  const onboardingMatches = await salesOnboardingRef()
-    .where('planCode', '==', params.planCode)
+  const onboardingRecipientSnap = await salesOnboardingRef()
     .where('customerEmail', '==', ownerEmail)
-    .limit(5)
+    .limit(40)
     .get()
     .catch(() => null);
-  const onboardingDocs = onboardingMatches?.docs ?? [];
+  const wantPlan = params.planCode.trim().toLowerCase();
+  const onboardingDocs = (onboardingRecipientSnap?.docs ?? []).filter(
+    (doc) =>
+      asTrimmedString(asRecord(doc.data()).planCode).toLowerCase() === wantPlan,
+  );
   for (const doc of onboardingDocs) {
     const item = asRecord(doc.data());
     const paymentStatus = asTrimmedString(item.paymentStatus).toLowerCase();
@@ -9432,13 +9537,15 @@ async function findExistingPaidDirectSignup(params: {
     }
   }
 
-  const buyerMatches = await salesOnboardingRef()
-    .where('planCode', '==', params.planCode)
+  const buyerSnap = await salesOnboardingRef()
     .where('originalBuyerEmail', '==', ownerEmail)
-    .limit(5)
+    .limit(40)
     .get()
     .catch(() => null);
-  for (const doc of buyerMatches?.docs ?? []) {
+  for (const doc of (buyerSnap?.docs ?? []).filter(
+    (d) =>
+      asTrimmedString(asRecord(d.data()).planCode).toLowerCase() === wantPlan,
+  )) {
     const item = asRecord(doc.data());
     const paymentStatus = asTrimmedString(item.paymentStatus).toLowerCase();
     if (
@@ -9456,13 +9563,12 @@ async function findExistingPaidDirectSignup(params: {
     }
   }
 
-  const leadSnap = await salesLeadRef()
-    .where('customerEmail', '==', ownerEmail)
-    .where('planCode', '==', params.planCode)
-    .limit(5)
-    .get();
-  for (const doc of leadSnap.docs) {
-    const item = asRecord(doc.data());
+  const leadPaid = await findSalesLeadDocByCustomerEmailAndPlan(
+    ownerEmail,
+    params.planCode,
+  );
+  if (leadPaid) {
+    const item = asRecord(leadPaid.data());
     const status = asTrimmedString(item.status).toLowerCase();
     if (status === 'paid') {
       return {
@@ -12016,6 +12122,7 @@ exports.publicGetDemoAccessSummary = functions.https.onCall(async () => {
 });
 
 exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
+  try {
   const profile = normalizePublicDemoProfile(data?.profile);
   const configSnap = await demoAccessConfigRef().get();
   const config = buildDefaultDemoAccessConfig(asRecord(configSnap.data()));
@@ -12158,6 +12265,20 @@ exports.publicOpenDemoAccess = functions.https.onCall(async (data, context) => {
     companyUnique: summary.companyUnique,
     accountantUnique: summary.accountantUnique,
   };
+  } catch (error: unknown) {
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    const msg = errorMessage(error, 'unknown');
+    functions.logger.error('publicOpenDemoAccess error', {
+      message: msg,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw new functions.https.HttpsError(
+      'internal',
+      `Demo indisponivel no momento: ${msg}`,
+    );
+  }
 });
 
 exports.platformGetDemoAccessConfig = functions.https.onCall(async (_data, context) => {
@@ -12398,12 +12519,14 @@ exports.publicCreateSalesPreRegistration = functions.https.onCall(async (data) =
     );
   }
 
-  const existing = await salesLeadRef()
-    .where('customerEmail', '==', customerEmail)
-    .where('planCode', '==', asTrimmedString(plan.code))
-    .limit(1)
-    .get();
-  const leadRef = existing.empty ? salesLeadRef().doc() : existing.docs[0].ref;
+  const matchedLead = await findSalesLeadDocByCustomerEmailAndPlan(
+    customerEmail,
+    asTrimmedString(plan.code),
+  );
+  const leadRef = matchedLead ? matchedLead.ref : salesLeadRef().doc();
+  const preservedLeadCreatedAt = matchedLead
+    ? (matchedLead.data().createdAt as FirebaseFirestore.Timestamp | undefined)
+    : undefined;
   const partnerInviteToken = implementationMode == 'accountant' ? generatePublicToken() : '';
   const partnerInviteTokenHash = partnerInviteToken === ''
     ? ''
@@ -12438,9 +12561,7 @@ exports.publicCreateSalesPreRegistration = functions.https.onCall(async (data) =
       utmTerm,
       referrerHost,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdAt: existing.empty
-        ? admin.firestore.FieldValue.serverTimestamp()
-        : existing.docs[0].data().createdAt ?? admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: preservedLeadCreatedAt ?? admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true },
   );
