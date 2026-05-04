@@ -67,11 +67,9 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                     subhead:
                         'Comece na plataforma com o pre-cadastro da empresa e deixe a documentacao mais sensivel para quando seu escritorio calendarizar o fiscal.'
                         ' Se ja opera com escritorio contabil externo, indique esse vinculo ao avancar; escritorios usam rota comercial propria dedicada a contadores.'
-                        ' Se voce e MEI, nao mantem contador e consegue concluir o cadastro fiscal e os dados obrigatorios da empresa por conta propria no que couber ao seu caso, usar o Ponto Certo aqui nao exige contratar escritorio nem contador atraves da nossa ferramenta — pode apenas avancar, contratar apoio quando fizer sentido ou tirar duvidas pelo WhatsApp que ja aparece mais abaixo e no topo.'
                         ' Pode abrir antes a demonstracao seguinte (somente navegacao demonstrativa) ou avancar direto; apos primeira adesao formal, garantimos ate trinta dias para uso avaliativo antes de cobranca inicial acordada nos termos comerciais comunicados nessa fase.',
                     badges: const [
                       'Demonstracao gratuita antes de primeira adesao',
-                      'MEI sem contador pode finalizar cadastro fiscal e seguir solo se souber obrigacoes do seu caso',
                       'Pre-cadastro com complemento fiscal no seu ritmo',
                       'Emissao no celular ou no computador',
                       'Trinta dias de avaliacao apos primeira adesao',
@@ -213,7 +211,7 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                     title:
                         'A empresa entra primeiro. O apoio contabil pode entrar depois, se desejar.',
                     subtitle:
-                        'Hoje o caminho correto e simples: voce faz o pre-cadastro da empresa, entra no sistema e organiza a operacao. Se ja conhece suas obrigacoes fiscais e cadastrais (comum em alguns perfis MEI), seguir assim e suficiente; se quiser escritorio mais tarde, conecte quando precisar. Para perguntas comerciais antes de entrar, o WhatsApp desta landing responde no mesmo lugar.',
+                        'Hoje o caminho correto e simples: voce faz o pre-cadastro da empresa, entra no sistema e organiza a operacao. Se quiser apoio contabil mais tarde, conecte quando precisar. Para perguntas comerciais, o WhatsApp desta landing responde no mesmo lugar.',
                     child: VendasStepsRow(
                       compact: narrowGrid,
                       steps: const [
@@ -230,7 +228,7 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                         VendasStepItem(
                           title: '3. Apoio contabil opcional',
                           body:
-                              'Sem contador proprio mas confortavel com cadastro fiscal e dados da empresa: continua usando o sistema; com tempo, pode contratar apoio contabil ou apenas esclarecer pelo WhatsApp o que faz sentido para voce.',
+                              'Se mais tarde integrar um contador, ele encontra a operacao com mais organizacao e contexto; a decisao fica sempre no seu tempo.',
                         ),
                       ],
                     ),
@@ -304,7 +302,7 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'O pre-cadastro da empresa e direto. Voce abre o acesso, estrutura a operacao e, se mantiver contador, pode integrar o fluxo quando fizer sentido; se opera sem contador (como varios MEI) mas conhece suas obrigacoes, tambem nao precisa contratar escritorio obrigatorio por aqui - use o WhatsApp desta pagina para duvidas antes de clicar.',
+                              'O pre-cadastro da empresa e direto. Voce abre o acesso, estrutura a operacao e, se quiser, depois integra um contador ao fluxo sem travar o comeco.',
                               style: TextStyle(
                                 fontSize: compact ? 17 : 17,
                                 fontWeight: FontWeight.w600,
@@ -356,7 +354,7 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                                   const _EmpresaSignupBullet(
                                     icon: Icons.check_circle_outline,
                                     text:
-                                        'Contratar escritorio opcional — MEI ou quem faz fiscal so pode continuar assim; duvidas antes de iniciar ficam pelo WhatsApp desta pagina.',
+                                        'Quando decidir por apoio contabil, pode alinhar com o fluxo da operacao mais madura.',
                                   ),
                                   const SizedBox(height: 20),
                                   FilledButton(
@@ -415,7 +413,7 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                           bullets: const [
                             '30 dias de teste gratis para validar o fluxo real da empresa',
                             'R\$ 97,90/mes por empresa - fiscal, painel, financeiro e documentos no mesmo fluxo',
-                            'Sem contador e confortavel com cadastro fiscal: ninguem obriga a contratar — pode apenas seguir ou falar primeiro no WhatsApp',
+                            'Se desejar, pode integrar escritorio ou contador depois, sem travar o inicio',
                           ],
                           primaryChild: SizedBox(
                             width: double.infinity,

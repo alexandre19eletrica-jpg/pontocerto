@@ -7,6 +7,8 @@ Projeto: Ponto Certo
 
 **Registo (03/05/2026 — performance web cargas):** `main.dart` paraleliza `initFirebase()` com `lerNomeEmpresaCache()`; Firestore **`persistenceEnabled: true`** apos init; `web/index.html` preconnect+dns-prefetch + Meta Pixel apos **`load`**; navegacao interna na web usa **`FadeUpwardsPageTransitionsBuilder`**; Hosting long-cache **`*.wasm`** e **`canvaskit/**`** (`firebase.json`).
 
+**Registo (04/05/2026 — copy `/vendas-empresa` sem redundancia MEI/contador):** removidos da heroi (subhead/badge), modelo atual, passo 3, bloco pre-cadastro e bullets tarifarios os trechos que repetiam "nao obriga contador/MEI/WhatsApp"; esse argumento ficou apenas no paragrafo do cartao **Demonstracao gratuita do sistema** sob orientacao ao demo. Ver `OFICIAL_01` e `OFICIAL_02`.
+
 **Registo (03/05/2026 — copy vendas empresa/contador demo + avaliacao):** `/vendas-empresa` e `/vendas-contador` alinham heroi (subhead e badges) e card **Demonstracao gratuita do sistema** com linguagem institucional unificada (demonstracao antes de adesao; trinta dias avaliativos apos adesao formal). Ver `OFICIAL_01`.
 
 
