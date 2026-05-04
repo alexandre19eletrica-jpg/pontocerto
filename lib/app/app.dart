@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:pontocerto/core/auth/session_bootstrap.dart';
@@ -106,14 +106,19 @@ class App extends StatelessWidget {
         backgroundColor: AppBrandColors.ink,
         contentTextStyle: TextStyle(color: Colors.white),
       ),
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {
-          TargetPlatform.android: _AppFadeSlideTransitionsBuilder(),
-          TargetPlatform.iOS: _AppFadeSlideTransitionsBuilder(),
-          TargetPlatform.windows: _AppFadeSlideTransitionsBuilder(),
-          TargetPlatform.macOS: _AppFadeSlideTransitionsBuilder(),
-          TargetPlatform.linux: _AppFadeSlideTransitionsBuilder(),
-        },
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: kIsWeb
+            ? {
+                for (final p in TargetPlatform.values)
+                  p: const FadeUpwardsPageTransitionsBuilder(),
+              }
+            : {
+                TargetPlatform.android: const _AppFadeSlideTransitionsBuilder(),
+                TargetPlatform.iOS: const _AppFadeSlideTransitionsBuilder(),
+                TargetPlatform.windows: const _AppFadeSlideTransitionsBuilder(),
+                TargetPlatform.macOS: const _AppFadeSlideTransitionsBuilder(),
+                TargetPlatform.linux: const _AppFadeSlideTransitionsBuilder(),
+              },
       ),
     );
 

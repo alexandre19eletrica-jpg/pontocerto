@@ -3,6 +3,10 @@
 Data base: 02/05/2026
 Projeto: Ponto Certo
 
+
+
+**Registo (03/05/2026 — performance web cargas):** `main.dart` paraleliza `initFirebase()` com `lerNomeEmpresaCache()`; Firestore **`persistenceEnabled: true`** apos init; `web/index.html` preconnect+dns-prefetch + Meta Pixel apos **`load`**; navegacao interna na web usa **`FadeUpwardsPageTransitionsBuilder`**; Hosting long-cache **`*.wasm`** e **`canvaskit/**`** (`firebase.json`).
+
 **Registo (03/05/2026 — copy vendas empresa/contador demo + avaliacao):** `/vendas-empresa` e `/vendas-contador` alinham heroi (subhead e badges) e card **Demonstracao gratuita do sistema** com linguagem institucional unificada (demonstracao antes de adesao; trinta dias avaliativos apos adesao formal). Ver `OFICIAL_01`.
 
 

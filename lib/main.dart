@@ -70,9 +70,18 @@ void main() {
       };
 
       var firebaseDisponivel = true;
-      final nomeEmpresaCache = await lerNomeEmpresaCache();
+      final prefsFuture = lerNomeEmpresaCache();
+      final firebaseFuture = initFirebase();
+
+      String? nomeEmpresaCache;
       try {
-        await initFirebase();
+        nomeEmpresaCache = await prefsFuture;
+      } catch (_) {
+        nomeEmpresaCache = null;
+      }
+
+      try {
+        await firebaseFuture;
       } catch (_) {
         firebaseDisponivel = false;
       }

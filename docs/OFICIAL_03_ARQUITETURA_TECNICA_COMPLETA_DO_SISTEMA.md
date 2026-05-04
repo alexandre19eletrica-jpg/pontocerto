@@ -16,8 +16,11 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 - **`SessionBootstrap`** usa **`loadRiverpodSessionForAuthUser`** (`session_hydrate_from_auth.dart`) igual ao fluxo demo apos token (evitar duplicar logica).
 - app Android para funcionario e acessos moveis
 - abertura de **WhatsApp** (`wa.me`) em landings marketing no **Web**: clique síncrono com `<a>` invisível — **`AnchorElement`** + **`click()`** na mesma stack do **`onPressed`** (`vendas_whatsapp_web_anchor_web.dart` vs stub), com navegação **na mesma aba** (`target: _self`) para evitar bloqueio silencioso de nova aba/pop-up; **FBQ / `sales_whatsapp_comercial`** apenas após **`Timer`(400 ms)** (`scheduleWhatsappComercialSignals` em `vendas_whatsapp_button.dart`), fora da stack do gesto, para não disputar com o browser nem com corrida Pixel/DOM. Nativo: `launchUrl`. O widget **`Link`** do `url_launcher` foi **descontinuado aqui**: no canvas Flutter pode falhar a sincronização entre sinal **`followLink`** e evento DOM (`viewId` / **`preventDefault`**), pelo que **não** aparecia navegação.
+- **`web/index.html`**: **`preconnect`/`dns-prefetch`** (`fonts.gstatic.com`, `www.gstatic.com`, `firebase.googleapis.com`, `connect.facebook.net`); Pixel base **defer** até **`window.load`** para nao disputar bootstrap Flutter.
+- **Web navegacao**: `PageTransitionsTheme` nativa (**`FadeUpwardsPageTransitionsBuilder`**) substitui **fade+slide** custom apenas em **`kIsWeb`** (menus internos menos trabalho GPU).
+- **Arranque `main.dart`**: `Firebase.initializeApp` e leitura leve **`lerNomeEmpresaCache`** iniciam **em paralelo** (antes em serie).
+- **Firestore**: apos init, **`Settings(persistenceEnabled: true)`** (cache local repetivel em `/` e rotas seguintes onde o SDK usar persistencia).
 
-## 2. Backend
 
 - Firebase Functions
 - integracoes operacionais e fiscais
