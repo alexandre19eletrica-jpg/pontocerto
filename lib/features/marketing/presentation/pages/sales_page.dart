@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pontocerto/core/auth/accountant_company_context_service.dart';
+import 'package:pontocerto/core/auth/session.dart';
+import 'package:pontocerto/core/auth/session_hydrate_from_auth.dart';
+import 'package:pontocerto/core/errors/app_error_mapper.dart';
+import 'package:pontocerto/core/ui/app_user_message.dart';
 import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_demo_access_service.dart';
 
@@ -28,6 +35,7 @@ class SalesPage extends StatefulWidget {
 
 class _SalesPageState extends State<SalesPage> {
   final _demoService = PublicDemoAccessService();
+  final _accountantContextService = AccountantCompanyContextService();
   PublicDemoAccessResult? _demoSummary;
   bool _openingDemoCompany = false;
   bool _openingDemoAccountant = false;
@@ -64,7 +72,38 @@ class _SalesPageState extends State<SalesPage> {
         pagePath: '/vendas',
       );
       if (!mounted) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (!mounted) return;
+        context.showUserError('Demo terminou sem sessao Firebase.');
+        return;
+      }
+
+      final container = ProviderScope.containerOf(context);
+      await loadRiverpodSessionForAuthUser(
+        container: container,
+        user: user,
+        accountantCompanyContextService: _accountantContextService,
+      );
+
+      if (!mounted) return;
+      if (container.read(sessionProvider) == null) {
+        context.showUserError('Demo nao conseguiu carregar o perfil. Tente de novo.');
+        return;
+      }
+
+      GoRouter.of(context).refresh();
       context.go(result.targetRoute);
+    } catch (e) {
+      if (mounted) {
+        context.showUserError(
+          AppErrorMapper.messageFrom(
+            e,
+            fallback:
+                'Nao foi possivel abrir o demo agora. Tente novamente em instantes.',
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {

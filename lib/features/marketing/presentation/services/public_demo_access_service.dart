@@ -1,5 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pontocerto/core/auth/claims_sync.dart';
 
 import 'sales_analytics_service.dart';
 
@@ -75,6 +76,11 @@ class PublicDemoAccessService {
       await Future<void>.delayed(const Duration(milliseconds: 250));
       await _auth.signInWithCustomToken(customToken);
     }
+    await syncClaimsForCurrentUser();
+    try {
+      await _auth.currentUser?.getIdToken(true);
+    } catch (_) {}
+
     return PublicDemoAccessResult.fromMap(data);
   }
 

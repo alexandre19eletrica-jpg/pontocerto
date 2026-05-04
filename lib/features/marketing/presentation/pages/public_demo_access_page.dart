@@ -1,5 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pontocerto/core/auth/accountant_company_context_service.dart';
+import 'package:pontocerto/core/auth/session.dart';
+import 'package:pontocerto/core/auth/session_hydrate_from_auth.dart';
 import 'package:pontocerto/core/errors/app_error_mapper.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_demo_access_service.dart';
 import 'package:pontocerto/firebase_options.dart';
@@ -16,11 +21,14 @@ class PublicDemoAccessPage extends StatefulWidget {
   final String sourcePath;
 
   @override
-  State<PublicDemoAccessPage> createState() => _PublicDemoAccessPageState();
+  State<PublicDemoAccessPage> createState() =>
+      _PublicDemoAccessPageState();
 }
 
 class _PublicDemoAccessPageState extends State<PublicDemoAccessPage> {
   final _service = PublicDemoAccessService();
+  final _accountantContextService = AccountantCompanyContextService();
+
   String _message = 'Preparando acesso demo...';
   bool _opening = true;
 
@@ -53,7 +61,27 @@ class _PublicDemoAccessPageState extends State<PublicDemoAccessPage> {
         profile: widget.profile,
         pagePath: widget.sourcePath,
       );
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw StateError('Demo terminou sem sessao Firebase Auth.');
+      }
+
       if (!mounted) return;
+      final container = ProviderScope.containerOf(context);
+      await loadRiverpodSessionForAuthUser(
+        container: container,
+        user: user,
+        accountantCompanyContextService: _accountantContextService,
+      );
+
+      if (!mounted) return;
+      final sessao = container.read(sessionProvider);
+      if (sessao == null) {
+        throw StateError('Demo nao inicializou a sessao do app.');
+      }
+
+      GoRouter.of(context).refresh();
       context.go(result.targetRoute);
     } catch (error) {
       if (!mounted) return;

@@ -14,8 +14,15 @@ const supremePlatformCompanyIds = <String>{
   'comp_1771754418259',
 };
 
+/// Espelha `PUBLIC_DEMO_COMPANY_ID` nas Cloud Functions (`public_demo_workspace`).
+const publicDemoWorkspaceCompanyId = 'public_demo_workspace';
+
 bool isSupremePlatformCompanyId(String companyId) {
   return supremePlatformCompanyIds.contains(companyId.trim());
+}
+
+bool isPublicDemoWorkspaceCompanyId(String companyId) {
+  return companyId.trim() == publicDemoWorkspaceCompanyId;
 }
 
 /// Dono da empresa suprema. Mesmo [companyId] em [supremePlatformCompanyIds] nao sofre

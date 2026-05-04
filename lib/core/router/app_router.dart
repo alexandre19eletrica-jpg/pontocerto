@@ -518,7 +518,8 @@ class RotasApp {
     final companyId = sessao.companyId.trim();
     if (companyId.isEmpty ||
         companyId == 'empresa_local' ||
-        isSupremePlatformCompanyId(companyId)) {
+        isSupremePlatformCompanyId(companyId) ||
+        isPublicDemoWorkspaceCompanyId(companyId)) {
       return false;
     }
     final doc = await FirebaseFirestore.instance
