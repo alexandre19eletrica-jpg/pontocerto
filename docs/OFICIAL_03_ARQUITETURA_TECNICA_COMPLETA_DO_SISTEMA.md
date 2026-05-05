@@ -35,8 +35,9 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 
 #### Plataforma admin (governanca — 03/05/2026)
 
-- Rotas: `/platform-admin/governanca`; menu shell > Plataforma > **Governanca**.
-- Callables: `platformListStandaloneLightweightCompanies`, `platformListPublicDemoAccessLedger` (devolve apenas contagens, perfis demo e datas de primeiro/ultimo acesso; **nao** expoe IP, hash, user-agent, visitorId ou dimensoes — dedupe continua no Firestore), `platformListGovernanceRealRegistrations` (empresas `company_settings` com `directSignup.source` em `public_lightweight_signup` / `public_lightweight_access` e `lightweightProfilePending` falso, excl. `public_demo_workspace`; escritorios `accounting_offices` com `source == public_lightweight_signup` e perfil leve resolvido, excl. demo), `platformListCompanies` (dedupe por `companyId`), `platformListLightweightTestOffices`, `platformDeleteLightweightTestCompany`, `platformDeleteLightweightTestOffice`.
+- Rotas: `/platform-admin/governanca` com visão **hub** por omissão; sub-paineis via **`?v=`** (`funil`, `precadastro_empresas`, `precadastro_escritorios`, `cadastro_completo`, `demo`, `links`). Widget `GovernanceHub` em `lib/features/platform_admin/presentation/widgets/governance/governance_hub.dart`.
+- Callables: `platformListStandaloneLightweightCompanies` (acrescenta `standaloneDeletionAllowed`/`standaloneDeletionBlockedReason` segundo `evaluateStandaloneLightweightTestDeletionGate`; devolve também **`leadOriginEstado`**, **`leadOriginCidade`**, **`leadOriginCep`** quando existirem em `directSignup.leadOrigin`), `platformListPublicDemoAccessLedger` (devolve apenas contagens, perfis demo e datas de primeiro/ultimo acesso; **nao** expoe IP, hash, user-agent, visitorId ou dimensoes — dedupe continua no Firestore), `platformListGovernanceRealRegistrations` (**enriquecido** com resumo ciclo billing + subscription Asaas quando existente + flag freeze administrativo quando existente nos mesmos filtros empresa/escritorio), `platformListCompanies`, `platformListLightweightTestOffices`, `platformDeleteLightweightTestCompany`, `platformDeleteLightweightTestOffice`, **`platformGovernanceCompanyCancelAsaasBilling`**, **`platformGovernanceCompanyCancelPendingAsaasPayments`**, **`platformGovernanceCompanySetSuspended`** (boolean `suspend`).
+- Métricas marketing agregadas: `platformGetMarketingDashboard` inclui **`companyLightPreregistrationViews`** e **`companyLightPreregistrationSubmits`** (eventos `company_light_preregistration_view` / `company_light_preregistration_submit` via `publicTrackMarketingEvent`).
 - Indice composto Firestore: `users` — `role` + `lightweightProfilePending` (`firestore.indexes.json`).
 
 #### `platformUpdateDemoAccessConfig`
@@ -51,6 +52,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 #### Entrada leve
 
 - `publicCreateCompanyWorkspaceAccess` e `publicCreateAccountantWorkspaceAccess` aceitam senha vazia no payload; o servidor gera senha interna e usa `generatePasswordResetLink` no fluxo de boas-vindas quando o correio envia.
+- `publicCreateCompanyWorkspaceAccess` aceita opcionalmente **`leadOrigin`** (`estado`/`uf`, `cidade`, `cep`); persiste em `company_settings.directSignup.leadOrigin` (merge com `directSignup` existente).
 - `provisionLightweightOfficeAccess` sanitiza payloads Firestore (`omitUndefinedForFirestore`) em paralelo ao fluxo da empresa e regista falha de e-mail nos logs (`missingInviteConfig` + mensagem).
 
 #### IAM / Auth Admin (`signBlob`)

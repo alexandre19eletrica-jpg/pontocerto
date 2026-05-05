@@ -455,8 +455,9 @@ class RotasApp {
           ),
           GoRoute(
             path: '/platform-admin/governanca',
-            builder: (context, state) => const PlatformAdminPage(
+            builder: (context, state) => PlatformAdminPage(
               section: PlatformAdminSection.governanca,
+              governancePanel: state.uri.queryParameters['v'],
             ),
           ),
           GoRoute(

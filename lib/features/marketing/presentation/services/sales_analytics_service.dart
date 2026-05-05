@@ -54,6 +54,24 @@ class SalesAnalyticsService {
     );
   }
 
+  /// Pré-cadastro empresa leve (`/cadastro-empresa`).
+  Future<void> trackCompanyLightPreregistrationView() async {
+    await _trackEvent(
+      eventName: 'company_light_preregistration_view',
+      pagePath: '/cadastro-empresa',
+    );
+  }
+
+  Future<void> trackCompanyLightPreregistrationSubmit({
+    String leadId = '',
+  }) async {
+    await _trackEvent(
+      eventName: 'company_light_preregistration_submit',
+      pagePath: '/cadastro-empresa',
+      leadId: leadId,
+    );
+  }
+
   /// Clique que abre o WhatsApp comercial (landing / vendas). Não indica envio da mensagem no app.
   Future<void> trackWhatsappComercial({String pagePath = ''}) async {
     final path = pagePath.trim().isEmpty

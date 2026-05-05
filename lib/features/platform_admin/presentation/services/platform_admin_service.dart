@@ -61,6 +61,46 @@ class PlatformAdminService {
     await callable.call(<String, dynamic>{'officeId': officeId});
   }
 
+  Future<Map<String, dynamic>> governanceCompanyCancelAsaasBilling({
+    required String companyId,
+    String? reason,
+  }) async {
+    final callable = _functions.httpsCallable(
+      'platformGovernanceCompanyCancelAsaasBilling',
+    );
+    final result = await callable.call(<String, dynamic>{
+      'companyId': companyId,
+      'reason': reason,
+    });
+    return Map<String, dynamic>.from(result.data as Map);
+  }
+
+  Future<Map<String, dynamic>> governanceCompanyCancelPendingAsaasPayments({
+    required String companyId,
+  }) async {
+    final callable = _functions.httpsCallable(
+      'platformGovernanceCompanyCancelPendingAsaasPayments',
+    );
+    final result = await callable.call(<String, dynamic>{
+      'companyId': companyId,
+    });
+    return Map<String, dynamic>.from(result.data as Map);
+  }
+
+  Future<Map<String, dynamic>> governanceCompanySetSuspended({
+    required String companyId,
+    required bool suspend,
+    String? reason,
+  }) async {
+    final callable = _functions.httpsCallable('platformGovernanceCompanySetSuspended');
+    final result = await callable.call(<String, dynamic>{
+      'companyId': companyId,
+      'suspend': suspend,
+      'reason': reason,
+    });
+    return Map<String, dynamic>.from(result.data as Map);
+  }
+
   Future<GovernanceRealRegistrationsResult> listGovernanceRealRegistrations() async {
     final callable = _functions.httpsCallable('platformListGovernanceRealRegistrations');
     final result = await callable.call();
@@ -718,9 +758,14 @@ class StandaloneLightweightCompanyRow {
     required this.ownerEmail,
     required this.companyName,
     required this.lightweightSource,
+    required this.leadOriginEstado,
+    required this.leadOriginCidade,
+    required this.leadOriginCep,
     required this.directSignupPending,
     required this.accountantPendingStatus,
     required this.updatedAtIso,
+    this.standaloneDeletionAllowed = true,
+    this.standaloneDeletionBlockedReason = '',
   });
 
   final String companyId;
@@ -729,9 +774,15 @@ class StandaloneLightweightCompanyRow {
   final String ownerEmail;
   final String companyName;
   final String lightweightSource;
+  /// UF e local informados no link (query string) quando o lead entrou.
+  final String leadOriginEstado;
+  final String leadOriginCidade;
+  final String leadOriginCep;
   final bool directSignupPending;
   final String accountantPendingStatus;
   final String updatedAtIso;
+  final bool standaloneDeletionAllowed;
+  final String standaloneDeletionBlockedReason;
 
   factory StandaloneLightweightCompanyRow.fromMap(Map<String, dynamic> map) {
     return StandaloneLightweightCompanyRow(
@@ -741,9 +792,14 @@ class StandaloneLightweightCompanyRow {
       ownerEmail: map['ownerEmail']?.toString() ?? '',
       companyName: map['companyName']?.toString() ?? '',
       lightweightSource: map['lightweightSource']?.toString() ?? '',
+      leadOriginEstado: map['leadOriginEstado']?.toString() ?? '',
+      leadOriginCidade: map['leadOriginCidade']?.toString() ?? '',
+      leadOriginCep: map['leadOriginCep']?.toString() ?? '',
       directSignupPending: map['directSignupPending'] == true,
       accountantPendingStatus: map['accountantPendingStatus']?.toString() ?? '',
       updatedAtIso: map['updatedAtIso']?.toString() ?? '',
+      standaloneDeletionAllowed: map['standaloneDeletionAllowed'] != false,
+      standaloneDeletionBlockedReason: map['standaloneDeletionBlockedReason']?.toString() ?? '',
     );
   }
 }
@@ -836,6 +892,12 @@ class GraduatedPublicCompanyRow {
     required this.ownerLightweightResolved,
     required this.accountantPendingStatus,
     required this.updatedAtIso,
+    this.lifecycleStatus = '',
+    this.billingStatus = '',
+    this.billingProvider = '',
+    this.asaasSubscriptionId = '',
+    this.allowLogin = true,
+    this.governanceAdministrativeFreezeActive = false,
   });
 
   final String companyId;
@@ -847,6 +909,12 @@ class GraduatedPublicCompanyRow {
   final bool ownerLightweightResolved;
   final String accountantPendingStatus;
   final String updatedAtIso;
+  final String lifecycleStatus;
+  final String billingStatus;
+  final String billingProvider;
+  final String asaasSubscriptionId;
+  final bool allowLogin;
+  final bool governanceAdministrativeFreezeActive;
 
   factory GraduatedPublicCompanyRow.fromMap(Map<String, dynamic> map) {
     return GraduatedPublicCompanyRow(
@@ -859,6 +927,12 @@ class GraduatedPublicCompanyRow {
       ownerLightweightResolved: map['ownerLightweightResolved'] == true,
       accountantPendingStatus: map['accountantPendingStatus']?.toString() ?? '',
       updatedAtIso: map['updatedAtIso']?.toString() ?? '',
+      lifecycleStatus: map['lifecycleStatus']?.toString() ?? '',
+      billingStatus: map['billingStatus']?.toString() ?? '',
+      billingProvider: map['billingProvider']?.toString() ?? '',
+      asaasSubscriptionId: map['asaasSubscriptionId']?.toString() ?? '',
+      allowLogin: map['allowLogin'] != false,
+      governanceAdministrativeFreezeActive: map['governanceAdministrativeFreezeActive'] == true,
     );
   }
 }
@@ -1372,6 +1446,8 @@ class PlatformMarketingMetrics {
     required this.preregViews,
     required this.planSelects,
     required this.preregSubmits,
+    required this.companyLightPreregistrationViews,
+    required this.companyLightPreregistrationSubmits,
     required this.hotVisitors,
     required this.recurringVisitors,
     required this.demoVisitors,
@@ -1388,6 +1464,8 @@ class PlatformMarketingMetrics {
   final int preregViews;
   final int planSelects;
   final int preregSubmits;
+  final int companyLightPreregistrationViews;
+  final int companyLightPreregistrationSubmits;
   final int hotVisitors;
   final int recurringVisitors;
   final int demoVisitors;
@@ -1405,6 +1483,10 @@ class PlatformMarketingMetrics {
       preregViews: (map['preregViews'] as num?)?.toInt() ?? 0,
       planSelects: (map['planSelects'] as num?)?.toInt() ?? 0,
       preregSubmits: (map['preregSubmits'] as num?)?.toInt() ?? 0,
+      companyLightPreregistrationViews:
+          (map['companyLightPreregistrationViews'] as num?)?.toInt() ?? 0,
+      companyLightPreregistrationSubmits:
+          (map['companyLightPreregistrationSubmits'] as num?)?.toInt() ?? 0,
       hotVisitors: (map['hotVisitors'] as num?)?.toInt() ?? 0,
       recurringVisitors: (map['recurringVisitors'] as num?)?.toInt() ?? 0,
       demoVisitors: (map['demoVisitors'] as num?)?.toInt() ?? 0,

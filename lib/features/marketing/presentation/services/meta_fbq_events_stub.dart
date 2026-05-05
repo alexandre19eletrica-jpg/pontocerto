@@ -19,6 +19,10 @@ void metaFbqTrackCompleteRegistrationEscritorio({
 
 void metaFbqTrackLeadConviteContadorLandingEmpresa({required String leadId}) {}
 
+void metaFbqTrackLeadPrecadastroEmpresaLeve({required String companyId}) {}
+
+void metaFbqTrackPrecadastroEmpresaLeveView() {}
+
 void metaFbqTrackLeadPreCadastro({
   required String leadId,
   required String planCode,

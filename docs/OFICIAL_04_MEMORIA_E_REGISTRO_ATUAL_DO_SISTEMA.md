@@ -5,7 +5,11 @@ Projeto: Ponto Certo
 
 
 
+**Registo (03/05/2026 — governanca modular + funil + origem de lead):** `/platform-admin/governanca` passou a hub com cartões e sub-paineis por query `?v=` (`funil`, `precadastro_empresas`, `precadastro_escritorios`, `cadastro_completo`, `demo`, `links`). O painel **Funil** usa `platformGetMarketingDashboard` com eventos dedicados de page view e lead do pré-cadastro empresa leve. O pré-cadastro empresa (`/cadastro-empresa`) pode levar `uf`/`estado`, `cidade`, `cep` na query: o servidor grava em `company_settings.directSignup.leadOrigin` e a governança mostra a origem na lista leve. Meta Pixel na web: `ViewContent` + `Lead` no fluxo leve. Ver `OFICIAL_02` e `OFICIAL_03`.
+
 **Registo (03/05/2026 — performance web cargas):** `main.dart` paraleliza `initFirebase()` com `lerNomeEmpresaCache()`; Firestore **`persistenceEnabled: true`** apos init; `web/index.html` preconnect+dns-prefetch + Meta Pixel apos **`load`**; navegacao interna na web usa **`FadeUpwardsPageTransitionsBuilder`**; Hosting long-cache **`*.wasm`** e **`canvaskit/**`** (`firebase.json`).
+
+**Registo (06/05/2026 — governanca SaaS: apagar teste alinhado + Asaas por empresa):** funcao partilhada `evaluateStandaloneLightweightTestDeletionGate`, campos `standaloneDeletionAllowed` na listagem, callables `platformGovernanceCompanyCancelAsaasBilling`, `platformGovernanceCompanyCancelPendingAsaasPayments`, `platformGovernanceCompanySetSuspended` e reorganizacao visual da pagina `/platform-admin/governanca`. Ver `OFICIAL_02` e `OFICIAL_03`.
 
 **Registo (04/05/2026 — copy `/vendas-empresa` sem redundancia MEI/contador):** removidos da heroi (subhead/badge), modelo atual, passo 3, bloco pre-cadastro e bullets tarifarios os trechos que repetiam "nao obriga contador/MEI/WhatsApp"; esse argumento ficou apenas no paragrafo do cartao **Demonstracao gratuita do sistema** sob orientacao ao demo. Ver `OFICIAL_01` e `OFICIAL_02`.
 

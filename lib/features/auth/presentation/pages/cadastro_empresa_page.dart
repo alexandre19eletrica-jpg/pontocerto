@@ -12,6 +12,8 @@ import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/utils/formatadores_input.dart';
 import 'package:pontocerto/core/widgets/botao_voltar_app.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
+import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
+import 'package:pontocerto/features/marketing/presentation/services/sales_analytics_service.dart';
 
 class PaginaCadastroEmpresa extends ConsumerStatefulWidget {
   const PaginaCadastroEmpresa({
@@ -62,6 +64,8 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
   Map<String, dynamic> _registrySnapshot = const {};
   bool _hasAccountant = false;
   bool _carregando = false;
+  bool _lightMarketingPrimed = false;
+  final SalesAnalyticsService _salesAnalytics = SalesAnalyticsService();
 
   final _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
 
@@ -108,6 +112,20 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
     }
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!widget.lightweightMode || _lightMarketingPrimed) {
+      return;
+    }
+    _lightMarketingPrimed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || !widget.lightweightMode) return;
+      await _salesAnalytics.trackCompanyLightPreregistrationView();
+      metaFbqTrackPrecadastroEmpresaLeveView();
+    });
+  }
+
   bool get _stateRegistrationRequired => _businessCategory != 'service';
 
   String _businessCategoryLabel(String value) {
@@ -150,14 +168,14 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                   : completionMode
                       ? 'Complete agora os dados reais da empresa para liberar a operacao com base fiscal correta.'
                       : lightweightMode
-                          ? 'Crie o acesso da empresa com nome, e-mail e confirmacao pelo link que enviamos.'
+                          ? 'Pré-cadastro da empresa'
                           : 'Crie a conta da empresa e entre no painel principal.',
               subtitle: accountantMode
                   ? 'Use este modulo para abrir uma nova empresa vinculada ao escritorio contabil. A cobranca e o acesso da empresa sao definidos no mesmo fluxo.'
                   : completionMode
                       ? 'Depois de entrar no sistema, a empresa conclui aqui o cadastro real e pode opcionalmente indicar um contador.'
                       : lightweightMode
-                          ? 'A empresa entra primeiro no sistema e completa os dados reais da empresa depois, ja dentro da plataforma.'
+                          ? 'Abra o acesso com nome e e-mail. No aplicativo, emita NFS-e e documentos fiscais com o fluxo oficial integrado — autonomia operacional no dia a dia, sem depender do escritório em cada emissão imediata.'
                           : 'Configure os dados principais da empresa e inicie o uso da plataforma administrativa.',
             ),
             const SizedBox(height: 16),
@@ -187,7 +205,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                             : completionMode
                                 ? 'Conclusao do cadastro real'
                                 : lightweightMode
-                                    ? 'Criacao do acesso inicial'
+                                    ? 'Acesso inicial'
                                     : 'Criacao da empresa',
                         style: tema.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w900,
@@ -201,7 +219,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                             : completionMode
                                 ? 'Preencha agora os dados reais da empresa. Se quiser, voce tambem pode indicar o contador neste passo.'
                                 : lightweightMode
-                                    ? 'Comece com nome e e-mail. Defina a senha pelo link do e-mail e complete os dados reais da empresa dentro do sistema.'
+                                    ? 'Informe nome de fantasia, responsável e e-mail. Depois de confirmar pelo link, use o aplicativo para emitir documentos fiscais válidos com trilha integrada, reduzindo dependência pontual do contador em cada nota.'
                                     : 'Preencha os dados da empresa para concluir o cadastro.',
                         style: tema.textTheme.bodyMedium?.copyWith(
                           color: AppBrandColors.softText,
@@ -625,17 +643,40 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
       }
       setState(() => _carregando = true);
       try {
-        final callable = _functions.httpsCallable(
-          'publicCreateCompanyWorkspaceAccess',
-        );
-        final response = await callable.call(<String, dynamic>{
+        final qp = GoRouterState.of(context).uri.queryParameters;
+        final leadOrigin = <String, dynamic>{};
+        final uf = (qp['uf'] ?? qp['estado'] ?? '').trim();
+        if (uf.isNotEmpty) {
+          leadOrigin['estado'] = uf;
+        }
+        final cidade = (qp['cidade'] ?? '').trim();
+        if (cidade.isNotEmpty) {
+          leadOrigin['cidade'] = cidade;
+        }
+        final cep = (qp['cep'] ?? '').trim();
+        if (cep.isNotEmpty) {
+          leadOrigin['cep'] = cep;
+        }
+        final payload = <String, dynamic>{
           'ownerEmail': email,
           'ownerPassword': '',
           'confirmPassword': '',
           'ownerName': responsavel,
           'companyName': nomeFantasia,
-        });
+        };
+        if (leadOrigin.isNotEmpty) {
+          payload['leadOrigin'] = leadOrigin;
+        }
+        final callable = _functions.httpsCallable(
+          'publicCreateCompanyWorkspaceAccess',
+        );
+        final response = await callable.call(payload);
         final map = Map<String, dynamic>.from(response.data as Map);
+        final companyId = map['companyId']?.toString() ?? '';
+        await _salesAnalytics.trackCompanyLightPreregistrationSubmit(
+          leadId: companyId,
+        );
+        metaFbqTrackLeadPrecadastroEmpresaLeve(companyId: companyId);
         final emailOk = map['emailDispatched'] == true;
         if (!mounted) return;
         if (emailOk) {

@@ -1388,12 +1388,16 @@ function marketingEventScore(eventName: string): number {
       return 1;
     case 'sales_preregistration_view':
       return 4;
+    case 'company_light_preregistration_view':
+      return 4;
     case 'sales_plan_select':
       return 8;
     case 'sales_whatsapp_comercial':
       return 10;
     case 'sales_preregistration_submit':
       return 20;
+    case 'company_light_preregistration_submit':
+      return 22;
     default:
       return 0;
   }
@@ -8535,12 +8539,35 @@ async function provisionLightweightOfficeAccess(params: {
   };
 }
 
+function compactSignupLeadOrigin(data: unknown): Record<string, string> | undefined {
+  const r = asRecord(data ?? {});
+  const estadoRaw = asTrimmedString(r.estado ?? r.uf);
+  const estado = estadoRaw ? estadoRaw.toUpperCase().slice(0, 2) : '';
+  const cidade = asTrimmedString(r.cidade).slice(0, 120);
+  const cep = onlyDigits(r.cep).slice(0, 9);
+  if (!estado && !cidade && !cep) {
+    return undefined;
+  }
+  const out: Record<string, string> = {};
+  if (estado) {
+    out.estado = estado;
+  }
+  if (cidade) {
+    out.cidade = cidade;
+  }
+  if (cep) {
+    out.cep = cep;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 async function provisionLightweightCompanyAccess(params: {
   ownerEmail: string;
   ownerName: string;
   companyName: string;
   password?: string;
   source: string;
+  leadOrigin?: Record<string, string>;
 }): Promise<{
   companyId: string;
   companyName: string;
@@ -8678,6 +8705,7 @@ async function provisionLightweightCompanyAccess(params: {
         source: params.source,
         lightweightProfilePending: true,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        ...(params.leadOrigin ? {leadOrigin: params.leadOrigin} : {}),
       },
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
@@ -10306,6 +10334,11 @@ exports.platformListStandaloneLightweightCompanies = functions.https.onCall(asyn
     const settingsData = asRecord(settingsSnap.data());
     const ds = asRecord(settingsData.directSignup);
     const ap = asRecord(settingsData.accountantOnboardingPending);
+    const accountantPendingStatus = asTrimmedString(ap.status);
+
+    const gate = await evaluateStandaloneLightweightTestDeletionGate(companyId);
+
+    const lo = asRecord(ds.leadOrigin);
     items.push({
       companyId,
       ownerUid: doc.id,
@@ -10315,9 +10348,14 @@ exports.platformListStandaloneLightweightCompanies = functions.https.onCall(asyn
         asTrimmedString(data.companyName) ||
         asTrimmedString(asRecord(data.companyData).nomeFantasia),
       lightweightSource: asTrimmedString(ds.source),
+      leadOriginEstado: asTrimmedString(lo.estado),
+      leadOriginCidade: asTrimmedString(lo.cidade),
+      leadOriginCep: asTrimmedString(lo.cep),
       directSignupPending: ds.lightweightProfilePending === true,
-      accountantPendingStatus: asTrimmedString(ap.status),
+      accountantPendingStatus,
       updatedAtIso: timestampToIsoString(settingsData.updatedAt),
+      standaloneDeletionAllowed: gate.allowed,
+      standaloneDeletionBlockedReason: gate.blockedReason ?? '',
     });
   }
 
@@ -10403,6 +10441,78 @@ exports.platformListLightweightTestOffices = functions.https.onCall(async (_data
   };
 });
 
+/**
+ * Critérios iguais a `platformDeleteLightweightTestCompany`, devolvendo texto curto quando o botão
+ * deve permanecer desativado para evitar confusão (lista só usava OWNER leve pendente antes).
+ */
+async function evaluateStandaloneLightweightTestDeletionGate(
+  companyId: string,
+): Promise<{allowed: boolean; blockedReason?: string}> {
+  if (!companyId || companyId === PUBLIC_DEMO_COMPANY_ID) {
+    return {
+      allowed: false,
+      blockedReason:
+        companyId === PUBLIC_DEMO_COMPANY_ID ? 'Workspace demo protegido.' : 'Empresa invalida.',
+    };
+  }
+
+  const settingsSnap = await admin.firestore().collection('company_settings').doc(companyId).get();
+  const settingsData = asRecord(settingsSnap.data());
+  const companyUsers = await admin
+    .firestore()
+    .collection('users')
+    .where('companyId', '==', companyId)
+    .limit(50)
+    .get();
+
+  if (!settingsSnap.exists && companyUsers.empty) {
+    return {allowed: false, blockedReason: 'Empresa nao encontrada.'};
+  }
+
+  if (settingsSnap.exists) {
+    const ds = asRecord(settingsData.directSignup);
+    if (ds.lightweightProfilePending !== true) {
+      return {
+        allowed: false,
+        blockedReason:
+          'Somente registros marcados cadastro leve em company_settings (directSignup.lightweightProfilePending).',
+      };
+    }
+  }
+
+  for (const d of companyUsers.docs) {
+    const u = asRecord(d.data());
+    if (roleParaFirestore(u.role) !== 'OWNER') {
+      return {
+        allowed: false,
+        blockedReason: 'Ha utilizadores alem do owner; apague manualmente primeiro.',
+      };
+    }
+    if (u.lightweightProfilePending !== true) {
+      return {
+        allowed: false,
+        blockedReason: 'O owner já saiu do modo cadastro leve nesta empresa.',
+      };
+    }
+  }
+
+  const activeLinks = await admin
+    .firestore()
+    .collection('accountant_links')
+    .where('companyId', '==', companyId)
+    .where('status', '==', 'active')
+    .limit(1)
+    .get();
+  if (!activeLinks.empty) {
+    return {
+      allowed: false,
+      blockedReason: 'Vinculo ativo empresa-contador; desvincule antes de apagar.',
+    };
+  }
+
+  return {allowed: true};
+}
+
 exports.platformDeleteLightweightTestCompany = functions.https.onCall(async (data, context) => {
   const claims = assertClaims(context);
   const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
@@ -10416,8 +10526,15 @@ exports.platformDeleteLightweightTestCompany = functions.https.onCall(async (dat
     );
   }
 
+  const gate = await evaluateStandaloneLightweightTestDeletionGate(companyId);
+  if (!gate.allowed) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      gate.blockedReason || 'Exclusao nao permitida.',
+    );
+  }
+
   const settingsSnap = await admin.firestore().collection('company_settings').doc(companyId).get();
-  const settingsData = asRecord(settingsSnap.data());
 
   const companyUsers = await admin
     .firestore()
@@ -10425,53 +10542,6 @@ exports.platformDeleteLightweightTestCompany = functions.https.onCall(async (dat
     .where('companyId', '==', companyId)
     .limit(50)
     .get();
-
-  if (!settingsSnap.exists && companyUsers.empty) {
-    throw new functions.https.HttpsError(
-      'not-found',
-      'Empresa nao encontrada.',
-    );
-  }
-
-  if (settingsSnap.exists) {
-    const ds = asRecord(settingsData.directSignup);
-    if (ds.lightweightProfilePending !== true) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'So e permitido apagar empresas ainda em cadastro leve (directSignup.lightweightProfilePending).',
-      );
-    }
-  }
-
-  for (const d of companyUsers.docs) {
-    const u = asRecord(d.data());
-    if (roleParaFirestore(u.role) !== 'OWNER') {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'Esta empresa tem utilizadores alem do owner. Nao e possivel apagar automaticamente.',
-      );
-    }
-    if (u.lightweightProfilePending !== true) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'O owner ja nao esta em modo cadastro leve; exclusao abortada por seguranca.',
-      );
-    }
-  }
-
-  const activeLinks = await admin
-    .firestore()
-    .collection('accountant_links')
-    .where('companyId', '==', companyId)
-    .where('status', '==', 'active')
-    .limit(1)
-    .get();
-  if (!activeLinks.empty) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Empresa com vinculo ativo ao contador. Desvincule antes de apagar o registo de teste.',
-    );
-  }
 
   const allLinks = await admin
     .firestore()
@@ -10651,6 +10721,11 @@ exports.platformListGovernanceRealRegistrations = functions.https.onCall(async (
     const companyData = asRecord(data.companyData);
     const pending = asRecord(data.accountantOnboardingPending);
 
+    const commercialMerged = buildDefaultCommercialSettings(data);
+    const billing = asRecord(commercialMerged.billingIntegration);
+    const commercialRawFlat = {...commercialSettings(data)};
+    const freeze = asRecord(commercialRawFlat.governanceAdministrativeFreeze);
+
     const ownerSnap = await admin
       .firestore()
       .collection('users')
@@ -10686,6 +10761,12 @@ exports.platformListGovernanceRealRegistrations = functions.https.onCall(async (
       ownerLightweightResolved,
       accountantPendingStatus: asTrimmedString(pending.status),
       updatedAtIso: timestampToIsoString(data.updatedAt),
+      lifecycleStatus: asTrimmedString(commercialMerged.lifecycleStatus) || 'trial',
+      billingStatus: asTrimmedString(commercialMerged.billingStatus) || '',
+      billingProvider: asTrimmedString(billing.provider) || '',
+      asaasSubscriptionId: asTrimmedString(billing.subscriptionId) || '',
+      allowLogin: commercialMerged.allowLogin !== false,
+      governanceAdministrativeFreezeActive: freeze.active === true,
     });
   }
 
@@ -12528,6 +12609,10 @@ exports.platformGetMarketingDashboard = functions.https.onCall(async (data, cont
   const preregViews = eventTotals.get('sales_preregistration_view') ?? 0;
   const planSelects = eventTotals.get('sales_plan_select') ?? 0;
   const preregSubmits = eventTotals.get('sales_preregistration_submit') ?? 0;
+  const companyLightPreregistrationViews =
+    eventTotals.get('company_light_preregistration_view') ?? 0;
+  const companyLightPreregistrationSubmits =
+    eventTotals.get('company_light_preregistration_submit') ?? 0;
   const sessionCount = sessions.length;
 
   return {
@@ -12540,6 +12625,8 @@ exports.platformGetMarketingDashboard = functions.https.onCall(async (data, cont
       preregViews,
       planSelects,
       preregSubmits,
+      companyLightPreregistrationViews,
+      companyLightPreregistrationSubmits,
       hotVisitors,
       recurringVisitors,
       demoVisitors: demoVisitorsSnap.size,
@@ -15050,12 +15137,15 @@ exports.publicCreateCompanyWorkspaceAccess = functions.https.onCall(async (data)
     );
   }
 
+  const leadOrigin = compactSignupLeadOrigin(data?.leadOrigin);
+
   const result = await provisionLightweightCompanyAccess({
     ownerEmail,
     ownerName,
     companyName,
     password: ownerPassword.length > 0 ? ownerPassword : undefined,
     source: 'public_lightweight_access',
+    ...(leadOrigin ? {leadOrigin} : {}),
   });
 
   await notificarNovoCadastroAdministrativo({
@@ -16892,6 +16982,329 @@ exports.companyCancelBillingSubscription = functions.https.onCall(async (data, c
     accessUntil: accessUntil.toDate().toISOString(),
     status: 'canceled',
   };
+});
+
+exports.platformGovernanceCompanyCancelAsaasBilling = functions.https.onCall(async (data, context) => {
+  const claims = assertClaims(context);
+  const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+  assertPlatformAdmin(claims, userProfile);
+
+  const companyId = asTrimmedString(data?.companyId);
+  if (!companyId || isSupremePlatformCompany(companyId)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Informe uma empresa valida (nao aplicavel empresa suprema).',
+    );
+  }
+
+  const cfg = assertAsaasConfigured();
+  const settingsRef = admin.firestore().collection('company_settings').doc(companyId);
+  const settingsSnap = await settingsRef.get();
+  const settingsData = asRecord(settingsSnap.data());
+  const currentCommercial = buildDefaultCommercialSettings(settingsData);
+  const currentBilling = asRecord(currentCommercial.billingIntegration);
+  const subscriptionId = asTrimmedString(currentBilling.subscriptionId);
+
+  if (asTrimmedString(currentBilling.provider).toLowerCase() !== 'asaas' || !subscriptionId) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'A empresa nao possui assinatura Asaas para cancelamento administrativo.',
+    );
+  }
+
+  await asaasRequest(cfg, `/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: 'DELETE',
+  });
+
+  const canceledAt = admin.firestore.Timestamp.now();
+  const accessUntil = nextCancellationAccessDeadline(currentBilling);
+  const reason =
+    asTrimmedString(data?.reason) ||
+    'Assinatura Asaas encerrada pela administracao central (governanca plataforma).';
+  const nextBilling = {
+    ...currentBilling,
+    status: 'canceled',
+    blockReason: `Plano cancelado pela plataforma. Acesso liberado ate ${toIsoDateString(accessUntil.toDate())}.`,
+    graceUntil: accessUntil,
+    lastWebhookEvent: 'subscription.deleted',
+    lastWebhookAt: canceledAt,
+  };
+  const nextCommercial = {
+    ...currentCommercial,
+    billingStatus: 'canceled',
+    billingIntegration: nextBilling,
+    platformNote: reason,
+    updatedByPlatformAt: canceledAt,
+    updatedByPlatformUid: claims.uid,
+  };
+
+  await settingsRef.set(
+    {
+      companyId,
+      commercialSettings: nextCommercial,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  await writeAudit({
+    claims,
+    module: 'platform',
+    action: 'platform_cancel_company_billing_subscription_asaas',
+    entityPath: 'company_settings',
+    entityId: companyId,
+    before: {
+      subscriptionId,
+      billingStatus: asTrimmedString(currentCommercial.billingStatus),
+      currentPeriodEnd: timestampToIsoString(currentBilling.currentPeriodEnd),
+    },
+    after: {
+      billingStatus: 'canceled',
+      accessUntil: accessUntil.toDate().toISOString(),
+      reason,
+    },
+  });
+
+  return {
+    ok: true,
+    companyId,
+    subscriptionId,
+    accessUntil: accessUntil.toDate().toISOString(),
+    status: 'canceled',
+  };
+});
+
+exports.platformGovernanceCompanyCancelPendingAsaasPayments = functions.https.onCall(async (data, context) => {
+  const claims = assertClaims(context);
+  const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+  assertPlatformAdmin(claims, userProfile);
+
+  const companyId = asTrimmedString(data?.companyId);
+  if (!companyId || isSupremePlatformCompany(companyId)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Informe uma empresa valida (nao aplicavel empresa suprema).',
+    );
+  }
+
+  const cfg = assertAsaasConfigured();
+  const settingsSnap = await admin.firestore().collection('company_settings').doc(companyId).get();
+  const settingsData = asRecord(settingsSnap.data());
+  const commercial = buildDefaultCommercialSettings(settingsData);
+  const billing = asRecord(commercial.billingIntegration);
+  const subscriptionId = asTrimmedString(billing.subscriptionId);
+
+  if (asTrimmedString(billing.provider).toLowerCase() !== 'asaas' || !subscriptionId) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Sem assinatura Asaas registada nesta empresa para localizar cobrancas mensais.',
+    );
+  }
+
+  const paymentsResult = await asaasRequest(
+    cfg,
+    `/subscriptions/${encodeURIComponent(subscriptionId)}/payments`,
+  );
+  const paymentsRaw = paymentsResult?.data as unknown;
+  const paymentsArray = Array.isArray(paymentsRaw) ? paymentsRaw : [];
+
+  /** Boletos nao quitados continuam aparecendo no Asaas; cancelar remove o titulo quando o gateway aceita DELETE. */
+  const cancelable = new Set(['pending', 'overdue']);
+
+  let canceledCount = 0;
+  let attempted = 0;
+  const errorsOnCancel: Record<string, unknown>[] = [];
+
+  for (const p of paymentsArray) {
+    const pr = asRecord(p as Record<string, unknown>);
+    const id = asTrimmedString(pr.id);
+    const status = asTrimmedString(pr.status).toLowerCase();
+    if (!id || !cancelable.has(status)) {
+      continue;
+    }
+    attempted += 1;
+    try {
+      await asaasRequest(cfg, `/payments/${encodeURIComponent(id)}`, {method: 'DELETE'});
+      canceledCount += 1;
+    } catch (err) {
+      errorsOnCancel.push({
+        paymentId: id,
+        status,
+        detail: errorMessage(err, ''),
+      });
+    }
+  }
+
+  await writeAudit({
+    claims,
+    module: 'platform',
+    action: 'platform_cancel_pending_asaas_payments_batch',
+    entityPath: 'company_settings',
+    entityId: companyId,
+    before: {subscriptionId, attemptedEligible: attempted},
+    after: {
+      canceledCount,
+      subscriptionId,
+      errorsOnCancelPreview: errorsOnCancel.slice(0, 14),
+    },
+  });
+
+  return {
+    ok: true,
+    companyId,
+    subscriptionId,
+    attemptedEligible: attempted,
+    canceledCount,
+    errorsOnCancel: errorsOnCancel.slice(0, 30),
+    message:
+      errorsOnCancel.length > 0
+        ? `${canceledCount} cobranca(s) canceladas no Asaas; ${errorsOnCancel.length} com falha ao cancelar definitivamente na API — verifique o painel Asaas ou o erro retornado para cada cobranca.`
+        : `${canceledCount} cobranca(s) pendentes/a vencer foram canceladas no Asaas.`,
+  };
+});
+
+exports.platformGovernanceCompanySetSuspended = functions.https.onCall(async (data, context) => {
+  const claims = assertClaims(context);
+  const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+  assertPlatformAdmin(claims, userProfile);
+
+  const companyId = asTrimmedString(data?.companyId);
+  if (!companyId || isSupremePlatformCompany(companyId)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Informe uma empresa valida (nao aplicavel empresa suprema).',
+    );
+  }
+
+  if (typeof data?.suspend !== 'boolean') {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Informe o campo booleano suspend (true suspende pela governanca / false restaura valores guardados antes da suspensao).',
+    );
+  }
+  const suspend = data.suspend === true;
+  const administrativeReason =
+    asTrimmedString(data?.reason) ||
+    (suspend ? 'Suspensao administrativa via governanca plataforma.' : 'Retomada administrativa via governanca plataforma.');
+
+  const settingsRef = admin.firestore().collection('company_settings').doc(companyId);
+  const settingsSnap = await settingsRef.get();
+  const settingsData = asRecord(settingsSnap.data());
+
+  const built = buildDefaultCommercialSettings(settingsData);
+  const rawFlatCommercial: Record<string, unknown> = {...commercialSettings(settingsData)};
+  const existingFreeze = asRecord(rawFlatCommercial.governanceAdministrativeFreeze ?? {});
+
+  if (suspend) {
+    if (existingFreeze.active === true) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Empresa já suspensa por esta ferramenta. Reative antes de repetir.',
+      );
+    }
+
+    const priorLifecycleRaw = rawFlatCommercial.lifecycleStatus;
+    const builtLifecycle =
+      typeof priorLifecycleRaw === 'string' && priorLifecycleRaw.trim().length > 0
+        ? priorLifecycleRaw
+        : (asTrimmedString(built.lifecycleStatus) || 'trial');
+
+    let priorAllowLogin = true;
+    if (typeof rawFlatCommercial.allowLogin === 'boolean') {
+      priorAllowLogin = rawFlatCommercial.allowLogin;
+    } else {
+      priorAllowLogin = built.allowLogin !== false;
+    }
+
+    const nextCommercialFlat: Record<string, unknown> = {
+      ...rawFlatCommercial,
+      allowLogin: false,
+      lifecycleStatus: 'suspended',
+      governanceAdministrativeFreeze: {
+        active: true,
+        suspendedAt: admin.firestore.Timestamp.now(),
+        suspendedByUid: claims.uid,
+        priorLifecycleStatus: builtLifecycle,
+        priorAllowLogin,
+        reason: administrativeReason,
+      },
+      updatedByPlatformAt: admin.firestore.Timestamp.now(),
+      updatedByPlatformUid: claims.uid,
+      platformNote: administrativeReason,
+    };
+
+    await settingsRef.set(
+      {
+        companyId,
+        commercialSettings: nextCommercialFlat,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true},
+    );
+
+    await writeAudit({
+      claims,
+      module: 'platform',
+      action: 'platform_governance_company_suspend',
+      entityPath: 'company_settings',
+      entityId: companyId,
+      before: {allowLogin: priorAllowLogin, lifecycleStatus: builtLifecycle},
+      after: {allowLogin: false, lifecycleStatus: 'suspended'},
+    });
+
+    return {ok: true, companyId, suspended: true};
+  }
+
+  if (existingFreeze.active !== true) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Esta empresa nao esta marcada como suspensa por esta ferramenta (freeze inativo).',
+    );
+  }
+
+  const lifecycleRestore = asTrimmedString(existingFreeze.priorLifecycleStatus) || 'trial';
+  let allowRestore =
+    typeof existingFreeze.priorAllowLogin === 'boolean' ? !!existingFreeze.priorAllowLogin : true;
+
+  const nextCommercialFlat: Record<string, unknown> = {
+    ...rawFlatCommercial,
+    allowLogin: allowRestore,
+    lifecycleStatus: lifecycleRestore,
+    governanceAdministrativeFreeze: {
+      ...existingFreeze,
+      active: false,
+      resumedAt: admin.firestore.Timestamp.now(),
+      resumedByUid: claims.uid,
+      administrativeReasonReleased: administrativeReason,
+    },
+    updatedByPlatformAt: admin.firestore.Timestamp.now(),
+    updatedByPlatformUid: claims.uid,
+    platformNote: administrativeReason,
+  };
+
+  await settingsRef.set(
+    {
+      companyId,
+      commercialSettings: nextCommercialFlat,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    {merge: true},
+  );
+
+  await writeAudit({
+    claims,
+    module: 'platform',
+    action: 'platform_governance_company_resume',
+    entityPath: 'company_settings',
+    entityId: companyId,
+    before: {allowLogin: false, lifecycleStatus: 'suspended'},
+    after: {
+      allowLogin: allowRestore,
+      lifecycleStatus: lifecycleRestore,
+    },
+  });
+
+  return {ok: true, companyId, suspended: false};
 });
 
 exports.asaasWebhook = functions.https.onRequest(async (req, res) => {

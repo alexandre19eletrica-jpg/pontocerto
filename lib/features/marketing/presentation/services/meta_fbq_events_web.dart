@@ -165,6 +165,28 @@ void metaFbqTrackStartTrialEmpresa() {
   });
 }
 
+void metaFbqTrackLeadPrecadastroEmpresaLeve({required String companyId}) {
+  _runWhenFbq(() {
+    final map = <String, Object?>{
+      'content_name': 'Ponto_Certo_precadastro_empresa_leve_concluido',
+      'content_category': 'company_light_preregistration',
+    };
+    if (companyId.isNotEmpty) {
+      map['content_ids'] = <String>[companyId];
+    }
+    _callFbqTrack('Lead', map);
+  });
+}
+
+void metaFbqTrackPrecadastroEmpresaLeveView() {
+  _runWhenFbq(() {
+    _callFbqTrack('ViewContent', {
+      'content_type': 'registration',
+      'content_name': 'Ponto_Certo_precadastro_empresa_leve',
+    });
+  });
+}
+
 void metaFbqTrackLeadPreCadastro({
   required String leadId,
   required String planCode,

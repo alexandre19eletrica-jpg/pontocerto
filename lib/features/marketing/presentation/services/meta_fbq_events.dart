@@ -44,6 +44,15 @@ void metaFbqTrackStartTrialEscritorio() => impl.metaFbqTrackStartTrialEscritorio
 /// Pré-cadastro / trial da empresa (`/cadastro-empresa` e páginas de entrada).
 void metaFbqTrackStartTrialEmpresa() => impl.metaFbqTrackStartTrialEmpresa();
 
+/// Conclusão do pré-cadastro empresa leve (criação de tenant).
+void metaFbqTrackLeadPrecadastroEmpresaLeve({required String companyId}) {
+  return impl.metaFbqTrackLeadPrecadastroEmpresaLeve(companyId: companyId);
+}
+
+/// Visualização do formulário de pré-cadastro empresa leve.
+void metaFbqTrackPrecadastroEmpresaLeveView() =>
+    impl.metaFbqTrackPrecadastroEmpresaLeveView();
+
 /// Pre-cadastro de lead (tela de solicitacao de teste) enviado.
 void metaFbqTrackLeadPreCadastro({
   required String leadId,

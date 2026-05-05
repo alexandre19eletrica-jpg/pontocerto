@@ -18,13 +18,19 @@ import 'package:pontocerto/features/finance/presentation/utils/money.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_demo_config_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_sales_config_service.dart';
 import 'package:pontocerto/features/platform_admin/presentation/platform_admin_section.dart';
+import 'package:pontocerto/features/platform_admin/presentation/widgets/governance/governance_hub.dart';
 import 'package:pontocerto/features/platform_admin/presentation/services/platform_admin_service.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
 
 class PlatformAdminPage extends ConsumerStatefulWidget {
-  const PlatformAdminPage({super.key, required this.section});
+  const PlatformAdminPage({
+    super.key,
+    required this.section,
+    this.governancePanel,
+  });
 
   final PlatformAdminSection section;
+  final String? governancePanel;
 
   @override
   ConsumerState<PlatformAdminPage> createState() => _PlatformAdminPageState();
@@ -74,6 +80,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   String? _selectedAdminOfficeId;
   bool _officeActionBusy = false;
   final _accountingOfficeSearchEmail = TextEditingController();
+  final Set<String> _governanceActionBusyCompanies = <String>{};
 
   Future<List<PlatformAccountingOfficeSummary>>
   _listAccountingOfficesWithSearch() {
@@ -766,6 +773,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       _demoLedgerFuture = _service.listPublicDemoAccessLedger(limit: 200);
       _lightweightOfficesFuture = _service.listLightweightTestOffices();
       _realRegistrationsFuture = _service.listGovernanceRealRegistrations();
+      _marketingDashboardFuture = _service.getMarketingDashboard();
     });
   }
 
@@ -911,9 +919,9 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     switch (widget.section) {
       case PlatformAdminSection.governanca:
         return const AppWorkspaceHeader(
-          title: 'Governanca de acessos',
+          title: 'Governanca SaaS · acessos e cobranca cliente',
           subtitle:
-              'Empresas em teste sem escritorio vinculado e registos agregados de acesso aos demos publicos (dedupe tecnico apenas no servidor, sem exibir rede ou aparelho).',
+              'Fluxo ordenado: onboarding publico (empresa e escritorio de teste), clientes SaaS com accoes sobre Asaas e suspensao com snapshot reversivel, e por ultimo somente contagens anonimizadas de demos.',
           chips: [
             AppHeaderChip('Plataforma'),
             AppHeaderChip('Demo'),
@@ -953,6 +961,707 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     }
   }
 
+  Future<void> _withGovernanceCadastroRealBusy(
+    GraduatedPublicCompanyRow row,
+    Future<void> Function() job,
+    String successMessage,
+  ) async {
+    final id = row.companyId;
+    if (id.isEmpty || _governanceActionBusyCompanies.contains(id)) {
+      return;
+    }
+    setState(() => _governanceActionBusyCompanies.add(id));
+    try {
+      await job();
+      if (!mounted) return;
+      if (context.mounted) {
+        context.showUserMessage(successMessage);
+      }
+      _reloadGovernance();
+    } catch (e) {
+      if (!mounted) return;
+      if (context.mounted) {
+        context.showUserError(AppErrorMapper.messageFrom(e));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _governanceActionBusyCompanies.remove(id));
+      }
+    }
+  }
+
+  Widget _gvFlowCaption(String lines) => Padding(
+    padding: const EdgeInsets.only(top: 4, bottom: 8),
+    child: Text(
+      lines,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.w800,
+        color: const Color(0xFF0F766E),
+        height: 1.35,
+      ),
+    ),
+  );
+
+  Widget _buildGovernanceCadastroRealCompanyTile(GraduatedPublicCompanyRow c) {
+    final busy = _governanceActionBusyCompanies.contains(c.companyId);
+    final billingProviderLc = c.billingProvider.trim().toLowerCase();
+    final hasAsaasSub =
+        billingProviderLc == 'asaas' && c.asaasSubscriptionId.trim().isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          borderRadius: BorderRadius.circular(14),
+          color: const Color(0xFFF8FAFC),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                c.companyName.isEmpty ? c.companyId : c.companyName,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              SelectableText(
+                '${c.ownerEmail}\n'
+                '${c.companyId}\n'
+                'Origem leve: ${c.directSignupSource}\n'
+                '${c.accountantPendingStatus.isEmpty ? "" : "Onboarding contador: ${c.accountantPendingStatus}\n"}'
+                'Owner cadastro sem pendencia leve: ${c.ownerLightweightResolved ? "sim" : "nao"}\n'
+                'Lifecycle declarado (Firestore commercial): '
+                '${c.lifecycleStatus.isEmpty ? "-" : c.lifecycleStatus}\n'
+                'Billing status declarado (Firestore): '
+                '${c.billingStatus.isEmpty ? "-" : c.billingStatus}\n'
+                'Integracao billing: ${c.billingProvider.isEmpty ? "-" : c.billingProvider}'
+                '${c.asaasSubscriptionId.isEmpty ? "" : "\nAssinatura Asaas subscriptionId:\n${c.asaasSubscriptionId}"}\n'
+                'commercial.allowLogin directo gravado:\n${c.allowLogin ? "sim" : "nao"}'
+                '${c.updatedAtIso.isEmpty ? "" : "\ncompany_settings actualizado ISO:\n${c.updatedAtIso}"}'
+                '${c.governanceAdministrativeFreezeActive ? "\n[SUSPEND] Flag governanca com snapshot disponivel para retomar." : ""}',
+                style: const TextStyle(height: 1.38, fontSize: 13),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF92400E)),
+                    onPressed: busy
+                        ? null
+                        : () => context.go(
+                            '$kPlatformAdminFinanceiroPath?company=${Uri.encodeComponent(c.companyId)}',
+                          ),
+                    icon: const Icon(Icons.payments_outlined, size: 18),
+                    label: const Text('Financeiro cliente'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: busy
+                        ? null
+                        : () {
+                            final target = !c.governanceAdministrativeFreezeActive;
+                            final title =
+                                target ? 'Suspender empresa pela plataforma?' : 'Retomar acesso da empresa?';
+                            final explanation = target
+                                ? 'Suspende usando a governanca; guardamos ciclo/allowLogin anteriores e restauramos ao clicar Retomar.\n${c.companyName}'
+                                : 'Restaura valores guardados antes desta ferramenta de suspender.\n${c.companyName}';
+                            unawaited(
+                              showDialog<void>(
+                                context: context,
+                                builder: (dialogContext) {
+                                  return AlertDialog(
+                                    title: Text(title),
+                                    content: SingleChildScrollView(
+                                      child: Text(explanation),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(dialogContext).pop(),
+                                        child: const Text('Cancelar'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () {
+                                          Navigator.of(dialogContext).pop();
+                                          _withGovernanceCadastroRealBusy(
+                                            c,
+                                            () => _service.governanceCompanySetSuspended(
+                                                  companyId: c.companyId,
+                                                  suspend: target,
+                                                ),
+                                            target ? 'Suspensao pela governanca aplicada.' : 'Cliente reabilitado usando snapshot guardado.',
+
+                                          );
+                                        },
+                                        child: Text(target ? 'Suspender agora' : 'Retomar agora'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                    icon: Icon(
+                      c.governanceAdministrativeFreezeActive ? Icons.restore : Icons.pause_circle_outline,
+                      size: 18,
+                    ),
+                    label: Text(
+                      c.governanceAdministrativeFreezeActive ? 'Retomar acesso' : 'Suspender empresa',
+                    ),
+                  ),
+                  if (hasAsaasSub) ...[
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFB45309)),
+                      onPressed: busy
+                          ? null
+                          : () {
+                              unawaited(
+                                showDialog<void>(
+                                  context: context,
+                                  builder: (dialogContext) {
+                                    return AlertDialog(
+                                      title: const Text('Cancelar boletos/as parcelas em aberto no Asaas?'),
+                                      content: SingleChildScrollView(
+                                        child: Text(
+                                          'Chama DELETE cobranca no Asaas apenas para parcelas marcadas pendente/overdue até o gateway aceitar.\nCliente: ${c.companyName}',
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(dialogContext).pop(),
+                                          child: const Text('Fechar'),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () {
+                                            Navigator.of(dialogContext).pop();
+                                            _withGovernanceCadastroRealBusy(
+                                              c,
+                                              () async {
+                                                await _service
+                                                    .governanceCompanyCancelPendingAsaasPayments(
+                                                      companyId: c.companyId,
+                                                    );
+                                              },
+                                              'Pedido de cancelamento de boletos pendentes processado pelo servidor.',
+                                            );
+                                          },
+                                          child: const Text('Cancelar pendentes no Asaas'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                      icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                      label: const Text('Cancelar boletos/em aberto (Asaas)'),
+                    ),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFB91C1C),
+                        side: const BorderSide(color: Color(0xFFFECACA)),
+                      ),
+                      onPressed: busy
+                          ? null
+                          : () {
+                              unawaited(
+                                showDialog<void>(
+                                  context: context,
+                                  builder: (dialogContext) {
+                                    return AlertDialog(
+                                      title: const Text(
+                                        'ENCERRAR assinatura recorrente Asaas?',
+                                      ),
+                                      content: SingleChildScrollView(
+                                        child: Text(
+                                          'Envia DELETE /subscriptions no mesmo fluxo oficial do cliente. Encerra ciclo futuro no Asaas e marca billing como cancelado no Firestore assim que o servidor concluir o pedido HTTP.\nEmpresa ${c.companyName}',
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(dialogContext).pop(),
+                                          child: const Text('Abortar'),
+                                        ),
+                                        FilledButton(
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor:
+                                                const Color(0xFFB91C1C),
+                                          ),
+                                          onPressed: () {
+                                            Navigator.of(dialogContext).pop();
+                                            _withGovernanceCadastroRealBusy(
+                                              c,
+                                              () async {
+                                                await _service
+                                                    .governanceCompanyCancelAsaasBilling(
+                                                      companyId: c.companyId,
+                                                    );
+                                              },
+                                              'Assinatura Asaas encerrada e controlo cliente actualizado.',
+                                            );
+                                          },
+                                          child:
+                                              const Text('Encerrar assinatura AGORA'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                      icon: const Icon(Icons.unsubscribe_rounded, size: 18),
+                      label:
+                          const Text('Desactivar cobrança / cancelar ciclo'),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatLeadOriginLine(StandaloneLightweightCompanyRow r) {
+    final parts = <String>[];
+    if (r.leadOriginEstado.isNotEmpty) {
+      parts.add('UF ${r.leadOriginEstado}');
+    }
+    if (r.leadOriginCidade.isNotEmpty) {
+      parts.add(r.leadOriginCidade);
+    }
+    if (r.leadOriginCep.isNotEmpty) {
+      parts.add('CEP ${r.leadOriginCep}');
+    }
+    if (parts.isEmpty) {
+      return '';
+    }
+    return '\nOrigem (link): ${parts.join(' · ')}';
+  }
+
+  Widget _governanceBackToHub() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: () => context.go(kPlatformAdminGovernancaPath),
+        icon: const Icon(Icons.arrow_back_rounded),
+        label: const Text('Menu de governanca'),
+      ),
+    );
+  }
+
+  Widget _buildGovernanceFunilWorkspace() {
+    return FutureBuilder<PlatformMarketingDashboard>(
+      future: _marketingDashboardFuture,
+      builder: (context, snapshot) {
+        final dashboard =
+            snapshot.data ??
+            const PlatformMarketingDashboard(
+              days: 30,
+              metrics: PlatformMarketingMetrics(
+                visitors: 0,
+                sessions: 0,
+                salesViews: 0,
+                preregViews: 0,
+                planSelects: 0,
+                preregSubmits: 0,
+                companyLightPreregistrationViews: 0,
+                companyLightPreregistrationSubmits: 0,
+                hotVisitors: 0,
+                recurringVisitors: 0,
+                demoVisitors: 0,
+                demoCompanyUnique: 0,
+                demoAccountantUnique: 0,
+                demoOpenCount: 0,
+                preregConversionRate: 0,
+                planSelectRate: 0,
+              ),
+              topSources: <PlatformMarketingCount>[],
+              topCampaigns: <PlatformMarketingCount>[],
+              topPlans: <PlatformMarketingCount>[],
+              recentLeads: <PlatformMarketingLead>[],
+            );
+        final m = dashboard.metrics;
+        return AppWorkspaceCard(
+          title: 'Funil: page views e leads',
+          subtitle:
+              'Últimos ${dashboard.days} dias (coleção marketing). Use Atualizar no topo para recarregar.',
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              AppMetricCard(
+                label: 'Page views landing',
+                value: m.salesViews.toString(),
+                caption: 'Rota /vendas',
+              ),
+              AppMetricCard(
+                label: 'Page views (rotas genéricas)',
+                value: m.preregViews.toString(),
+                caption: 'Histórico agregado',
+              ),
+              AppMetricCard(
+                label: 'Page views pré-cadastro empresa',
+                value: m.companyLightPreregistrationViews.toString(),
+                caption: '/cadastro-empresa leve',
+              ),
+              AppMetricCard(
+                label: 'Leads formulário plano',
+                value: m.preregSubmits.toString(),
+                caption: 'Envio fluxo /contratar',
+              ),
+              AppMetricCard(
+                label: 'Leads empresa leve',
+                value: m.companyLightPreregistrationSubmits.toString(),
+                caption: 'Pré-cadastro concluído',
+              ),
+              AppMetricCard(
+                label: 'Demo empresa (únicos)',
+                value: m.demoCompanyUnique.toString(),
+                caption: 'Dispositivos demo',
+              ),
+              AppMetricCard(
+                label: 'Demo contador (únicos)',
+                value: m.demoAccountantUnique.toString(),
+                caption: 'Dispositivos demo',
+              ),
+              AppMetricCard(
+                label: 'Aberturas demo',
+                value: m.demoOpenCount.toString(),
+                caption: 'Total agregado',
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _governanceCampaignLinksCard() {
+    const base = kPublicWebAppOrigin;
+    final links = <(String label, String url)>[
+      ('Demo — perfil empresa', '$base/demo-empresa'),
+      ('Demo — perfil contador', '$base/demo-contador'),
+      (
+        'Pré-cadastro empresa (UF + cidade + CEP; ajuste o query)',
+        '$base/cadastro-empresa?uf=SP&cidade=SaoPaulo&cep=01310100',
+      ),
+      ('Pré-cadastro escritório contábil', '$base/cadastro-escritorio-contabil'),
+      (
+        'Atalho /contratar (redireciona para empresa leve; preserve UTM)',
+        '$base/contratar?utm_source=campanha&utm_medium=pago',
+      ),
+    ];
+    return AppWorkspaceCard(
+      title: 'Links para divulgação',
+      subtitle:
+          'Copie e adapte UTM e localização. Valores de UF/cidade/CEP vindos do link ficam no pré-cadastro.',
+      child: Column(
+        children: [
+          for (final item in links)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(item.$1),
+              subtitle: SelectableText(item.$2),
+              isThreeLine: false,
+              trailing: IconButton(
+                tooltip: 'Copiar',
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: item.$2));
+                  if (mounted) {
+                    context.showUserMessage('Link copiado.');
+                  }
+                },
+                icon: const Icon(Icons.copy_rounded),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _governanceTopBar() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            'Painel preparado como operacao SaaS. Actualizar recarrega listas e métricas no servidor. '
+            'Apagar empresa de teste so quando o servidor confirma modo leve e sem vinculo contador activo.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+        IconButton(
+          tooltip: 'Atualizar',
+          onPressed: _reloadGovernance,
+          icon: const Icon(Icons.refresh_rounded),
+        ),
+      ],
+    );
+  }
+
+  Widget _governancePassoACard(
+    Future<List<StandaloneLightweightCompanyRow>> standalone,
+  ) {
+    return _folderCard(
+      title: 'Passo A — Empresa onboarding publico sem escritorio',
+      subtitle:
+          'Owners ainda com lightweightProfilePending. Apagar só remove registos servidor quando company_settings directSignup marca cadastro leve e nao há vinculo contador.',
+      initiallyExpanded: true,
+      child: FutureBuilder<List<StandaloneLightweightCompanyRow>>(
+        future: standalone,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snap.hasError) {
+            return Text(AppErrorMapper.messageFrom(snap.error!));
+          }
+          final rows = snap.data ?? const [];
+          if (rows.isEmpty) {
+            return const Text(
+              'Nenhuma empresa nesta fila no momento.',
+            );
+          }
+          return Column(
+            children: [
+              for (final r in rows)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    r.companyName.isEmpty ? r.companyId : r.companyName,
+                  ),
+                  subtitle: Text(
+                    '${r.ownerEmail}\n${r.companyId}'
+                    '${_formatLeadOriginLine(r)}'
+                    '${r.accountantPendingStatus.isEmpty ? "" : "\ncontador pendente: ${r.accountantPendingStatus}"}'
+                    '${!r.standaloneDeletionAllowed && r.standaloneDeletionBlockedReason.isNotEmpty ? "\n[BLOQUEIO] ${r.standaloneDeletionBlockedReason}" : ""}',
+                  ),
+                  isThreeLine: true,
+                  trailing: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 148),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextButton(
+                          onPressed: () =>
+                              _selectCompanyInAdminPanel(r.companyId),
+                          child: const Text('Financeiro'),
+                        ),
+                        IconButton(
+                          tooltip: r.standaloneDeletionAllowed
+                              ? 'Apagar teste servidor'
+                              : (r.standaloneDeletionBlockedReason.isEmpty
+                                  ? 'Nao pode apagar'
+                                  : r.standaloneDeletionBlockedReason),
+                          color: const Color(0xFFB91C1C),
+                          onPressed: r.standaloneDeletionAllowed
+                              ? () =>
+                                    _confirmDeleteLightweightTestCompany(r)
+                              : null,
+                          icon:
+                              const Icon(Icons.delete_forever_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _governancePassoBCard(
+    Future<List<StandaloneLightweightOfficeRow>> offices,
+  ) {
+    return _folderCard(
+      title: 'Passo B — Escritorio apenas em entrada leve',
+      subtitle:
+          'Pre-cadastro publico incompleto; sem carteira no indice nem empresas reais ligadas segundo regra servidor apagar escritorio sandbox.',
+      initiallyExpanded: true,
+      child: FutureBuilder<List<StandaloneLightweightOfficeRow>>(
+        future: offices,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snap.hasError) {
+            return Text(AppErrorMapper.messageFrom(snap.error!));
+          }
+          final rows = snap.data ?? const [];
+          if (rows.isEmpty) {
+            return const Text(
+              'Nenhum escritorio nesta fila (ou ja concluiram cadastro real).',
+            );
+          }
+          return Column(
+            children: [
+              for (final r in rows)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    r.officeName.isEmpty ? r.officeId : r.officeName,
+                  ),
+                  subtitle: Text(
+                    '${r.email}\n'
+                    '${r.officeId}\n'
+                    'carteira(index): ${r.linkedCompaniesInIndex} empresas | campo office: '
+                    '${r.linkedCompaniesCount}',
+                  ),
+                  isThreeLine: true,
+                  trailing: IconButton(
+                    tooltip:
+                        'Apagar apenas se carteira vazia (ver mensagem servidor)',
+                    color: const Color(0xFFB91C1C),
+                    onPressed: () =>
+                        _confirmDeleteLightweightTestOffice(r),
+                    icon: const Icon(Icons.delete_forever_rounded),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _governancePassoCCard(
+    Future<GovernanceRealRegistrationsResult> realRegs,
+  ) {
+    return _folderCard(
+      title: 'Passo C — Cadastro SaaS pos-onboarding leve',
+      subtitle:
+          'Empresas/escritorios que ja concluem perfil suficiente. Por empresa efectiva aparece suspensao reversivel snapshot, botoes para cancelar boletos pendente no Asaas e encerramento de assinatura (usa subscription registada quando provider e Asaas).',
+      initiallyExpanded: true,
+      child: FutureBuilder<GovernanceRealRegistrationsResult>(
+        future: realRegs,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snap.hasError) {
+            return Text(AppErrorMapper.messageFrom(snap.error!));
+          }
+          final data = snap.data ??
+              const GovernanceRealRegistrationsResult(
+                companies: <GraduatedPublicCompanyRow>[],
+                offices: <GraduatedPublicOfficeRow>[],
+              );
+          if (data.companies.isEmpty && data.offices.isEmpty) {
+            return const Text(
+              'Ainda sem registros: quando uma empresa ou escritorio de teste completar cadastro real, '
+              'a entrada surge nesta lista automaticamente.',
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (data.companies.isNotEmpty) ...[
+                const Text(
+                  'Empresas — comandos cliente',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                for (final c in data.companies)
+                  _buildGovernanceCadastroRealCompanyTile(c),
+                const SizedBox(height: 14),
+              ],
+              if (data.offices.isNotEmpty) ...[
+                const Text(
+                  'Escritorios',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                for (final r in data.offices)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      r.officeName.isEmpty ? r.officeId : r.officeName,
+                    ),
+                    subtitle: Text(
+                      '${r.email}\nCNPJ cadastrado: ${r.cnpj.isEmpty ? "—" : r.cnpj}\n'
+                      '${r.officeId} · status ${r.platformStatus}\n'
+                      'Carteira (indice Firestore): ${r.linkedCompaniesInIndex} empresa(s)',
+                    ),
+                    isThreeLine: true,
+                  ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _governanceDemoCard(
+    Future<List<PublicDemoAccessLedgerRow>> demos,
+  ) {
+    return _folderCard(
+      title: 'Livro de demos publicos (somente contagens)',
+      subtitle:
+          'Cada entrada agrega sessoes com a mesma chave tecnica interna para nao multiplicar o numero de acessos — sem mostrar rede, navegador ou dispositivo.',
+      initiallyExpanded: true,
+      child: FutureBuilder<List<PublicDemoAccessLedgerRow>>(
+        future: demos,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snap.hasError) {
+            return Text(AppErrorMapper.messageFrom(snap.error!));
+          }
+          final rows = snap.data ?? const [];
+          if (rows.isEmpty) {
+            return const Text(
+              'Sem registos agregados de demo nesta vista.',
+            );
+          }
+          return Column(
+            children: [
+              for (final r in rows)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    '${r.rolesCompany ? "Demo empresa" : ""}'
+                    '${r.rolesCompany && r.rolesAccountant ? " · " : ""}'
+                    '${r.rolesAccountant ? "Demo contador" : ""}'
+                    '${!r.rolesCompany && !r.rolesAccountant ? "(sem papel registrado)" : ""}'
+                    ' · ${r.accessCount}x',
+                  ),
+                  subtitle: Text(
+                    'Primeiro acesso: ${r.firstSeenAtIso}\n'
+                    'Ultimo acesso: ${r.lastSeenAtIso}',
+                  ),
+                  isThreeLine: true,
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildGovernanceSection() {
     final standalone = _standaloneLightFuture;
     final demos = _demoLedgerFuture;
@@ -967,280 +1676,121 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                'Atualize para recarregar. Use Apagar apenas para registos criados pelo cadastro publico leve '
-                '(teste). Vinculos ativos empresa-contador impedem exclusao ate desvincular.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-            IconButton(
-              tooltip: 'Atualizar',
-              onPressed: _reloadGovernance,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-          ],
-        ),
+    final panel = (widget.governancePanel ?? '').trim().toLowerCase();
+    final hubMode = panel.isEmpty || panel == 'hub';
+
+    Widget shell(List<Widget> children) {
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 32),
+        children: children,
+      );
+    }
+
+    final head = <Widget>[
+      if (!hubMode) ...[
+        _governanceBackToHub(),
         const SizedBox(height: 8),
+      ],
+      _governanceTopBar(),
+      const SizedBox(height: 8),
+    ];
+
+    if (hubMode) {
+      return shell([
+        ...head,
         OutlinedButton.icon(
           onPressed: () => context.go(kPlatformAdminEscritoriosPath),
           icon: const Icon(Icons.account_balance_outlined),
           label: const Text('Ir para Escritorios e carteira'),
         ),
         const SizedBox(height: 12),
-        _folderCard(
-          title: 'Empresas em teste direto (sem escritorio)',
-          subtitle:
-              'Cadastro publico leve ainda incompleto. Botao vermelho: apaga utilizador Auth, owners de teste, links pendentes e company_settings quando permitido pela regra de seguranca.',
-          initiallyExpanded: true,
-          child: FutureBuilder<List<StandaloneLightweightCompanyRow>>(
-            future: standalone,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snap.hasError) {
-                return Text(AppErrorMapper.messageFrom(snap.error!));
-              }
-              final rows = snap.data ?? const [];
-              if (rows.isEmpty) {
-                return const Text(
-                  'Nenhuma empresa nesta fila no momento.',
-                );
-              }
-              return Column(
-                children: [
-                  for (final r in rows)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        r.companyName.isEmpty ? r.companyId : r.companyName,
-                      ),
-                      subtitle: Text(
-                        '${r.ownerEmail}\n${r.companyId}'
-                        '${r.accountantPendingStatus.isEmpty ? "" : "\ncontador pendente: ${r.accountantPendingStatus}"}',
-                      ),
-                      isThreeLine: true,
-                      trailing: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 148),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            TextButton(
-                              onPressed: () =>
-                                  _selectCompanyInAdminPanel(r.companyId),
-                              child: const Text('Financeiro'),
-                            ),
-                            IconButton(
-                              tooltip: 'Apagar teste',
-                              color: const Color(0xFFB91C1C),
-                              onPressed: () =>
-                                  _confirmDeleteLightweightTestCompany(r),
-                              icon: const Icon(Icons.delete_forever_rounded),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
+        _gvFlowCaption(
+          'Cada cartão abre um painel dedicado. Para carteira real e vinculos contador, use Escritorios e carteira.',
         ),
-        _folderCard(
-          title: 'Cadastro real (acompanhamento pos-teste)',
-          subtitle:
-              'Empresas e escritorios que comecaram na entrada publica leve mas ja tem perfil/conclusao suficiente no Firestore '
-              '(nao aparecem mais como teste pendente acima). Empresas: origens public_lightweight_signup ou public_lightweight_access. Escritorios: public_lightweight_signup concluido.',
-          initiallyExpanded: true,
-          child: FutureBuilder<GovernanceRealRegistrationsResult>(
-            future: realRegs,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snap.hasError) {
-                return Text(AppErrorMapper.messageFrom(snap.error!));
-              }
-              final data = snap.data ??
-                  const GovernanceRealRegistrationsResult(
-                    companies: <GraduatedPublicCompanyRow>[],
-                    offices: <GraduatedPublicOfficeRow>[],
-                  );
-              if (data.companies.isEmpty && data.offices.isEmpty) {
-                return const Text(
-                  'Ainda sem registros: quando uma empresa ou escritorio de teste completar cadastro real, '
-                  'a entrada surge nesta lista automaticamente.',
-                );
-              }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (data.companies.isNotEmpty) ...[
-                    const Text(
-                      'Empresas',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 6),
-                    for (final c in data.companies)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          c.companyName.isEmpty ? c.companyId : c.companyName,
-                        ),
-                        subtitle: Text(
-                          '${c.ownerEmail}\n${c.companyId}\nOrigem leve: ${c.directSignupSource}'
-                          '${c.accountantPendingStatus.isEmpty ? "" : "\nOnboarding contador: ${c.accountantPendingStatus}"}'
-                          '\nOwner cadastro sem pendencia leve: ${c.ownerLightweightResolved ? "sim" : "nao"}'
-                          '${c.updatedAtIso.isEmpty ? "" : "\ncompany_settings atualizado (ISO): ${c.updatedAtIso}"}',
-                        ),
-                        isThreeLine: true,
-                        trailing: TextButton(
-                          onPressed: () =>
-                              _selectCompanyInAdminPanel(c.companyId),
-                          child: const Text('Financeiro'),
-                        ),
-                      ),
-                    const SizedBox(height: 14),
-                  ],
-                  if (data.offices.isNotEmpty) ...[
-                    const Text(
-                      'Escritorios',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 6),
-                    for (final r in data.offices)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          r.officeName.isEmpty ? r.officeId : r.officeName,
-                        ),
-                        subtitle: Text(
-                          '${r.email}\nCNPJ cadastrado: ${r.cnpj.isEmpty ? "—" : r.cnpj}\n'
-                          '${r.officeId} · status ${r.platformStatus}\n'
-                          'Carteira (indice Firestore): ${r.linkedCompaniesInIndex} empresa(s)',
-                        ),
-                        isThreeLine: true,
-                      ),
-                  ],
-                ],
-              );
-            },
-          ),
+        const SizedBox(height: 12),
+        const GovernanceHub(),
+      ]);
+    }
+
+    if (panel == 'funil') {
+      return shell([
+        ...head,
+        const SizedBox(height: 4),
+        _buildGovernanceFunilWorkspace(),
+      ]);
+    }
+
+    if (panel == 'precadastro_empresas') {
+      return shell([
+        ...head,
+        OutlinedButton.icon(
+          onPressed: () => context.go(kPlatformAdminEscritoriosPath),
+          icon: const Icon(Icons.account_balance_outlined),
+          label: const Text('Ir para Escritorios e carteira'),
         ),
-        _folderCard(
-          title: 'Escritorios em teste (cadastro leve)',
-          subtitle:
-              'Publicos vindos do pre-cadastro leve sem CNPJ completo. Sem empresas na carteira. Use Apagar para remover contador de teste e documento accounting_offices.',
-          initiallyExpanded: true,
-          child: FutureBuilder<List<StandaloneLightweightOfficeRow>>(
-            future: offices,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snap.hasError) {
-                return Text(AppErrorMapper.messageFrom(snap.error!));
-              }
-              final rows = snap.data ?? const [];
-              if (rows.isEmpty) {
-                return const Text(
-                  'Nenhum escritorio nesta fila (ou ja concluiram cadastro real).',
-                );
-              }
-              return Column(
-                children: [
-                  for (final r in rows)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        r.officeName.isEmpty ? r.officeId : r.officeName,
-                      ),
-                      subtitle: Text(
-                        '${r.email}\n'
-                        '${r.officeId}\n'
-                        'carteira(index): ${r.linkedCompaniesInIndex} empresas | campo office: '
-                        '${r.linkedCompaniesCount}',
-                      ),
-                      isThreeLine: true,
-                      trailing: IconButton(
-                        tooltip:
-                            'Apagar apenas se carteira vazia (ver mensagem servidor)',
-                        color: const Color(0xFFB91C1C),
-                        onPressed: () =>
-                            _confirmDeleteLightweightTestOffice(r),
-                        icon: const Icon(Icons.delete_forever_rounded),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
+        const SizedBox(height: 12),
+        _gvFlowCaption(
+          'Empresas em entrada publica sem escritorio vinculado (modo leve).',
         ),
-        _folderCard(
-          title: 'Livro de demos publicos (somente contagens)',
-          subtitle:
-              'Cada entrada agrega sessoes com a mesma chave tecnica interna para nao multiplicar o numero de acessos — sem mostrar rede, navegador ou dispositivo.',
-          initiallyExpanded: true,
-          child: FutureBuilder<List<PublicDemoAccessLedgerRow>>(
-            future: demos,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snap.hasError) {
-                return Text(AppErrorMapper.messageFrom(snap.error!));
-              }
-              final rows = snap.data ?? const [];
-              if (rows.isEmpty) {
-                return const Text(
-                  'Sem registos agregados de demo nesta vista.',
-                );
-              }
-              return Column(
-                children: [
-                  for (final r in rows)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        '${r.rolesCompany ? "Demo empresa" : ""}'
-                        '${r.rolesCompany && r.rolesAccountant ? " · " : ""}'
-                        '${r.rolesAccountant ? "Demo contador" : ""}'
-                        '${!r.rolesCompany && !r.rolesAccountant ? "(sem papel registrado)" : ""}'
-                        ' · ${r.accessCount}x',
-                      ),
-                      subtitle: Text(
-                        'Primeiro acesso: ${r.firstSeenAtIso}\n'
-                        'Ultimo acesso: ${r.lastSeenAtIso}',
-                      ),
-                      isThreeLine: true,
-                    ),
-                ],
-              );
-            },
-          ),
+        const SizedBox(height: 8),
+        _governancePassoACard(standalone),
+      ]);
+    }
+
+    if (panel == 'precadastro_escritorios') {
+      return shell([
+        ...head,
+        const SizedBox(height: 4),
+        _gvFlowCaption(
+          'Escritorios apenas com pre-cadastro publico / sandbox.',
         ),
-      ],
-    );
+        const SizedBox(height: 8),
+        _governancePassoBCard(offices),
+      ]);
+    }
+
+    if (panel == 'cadastro_completo') {
+      return shell([
+        ...head,
+        const SizedBox(height: 4),
+        _gvFlowCaption('Pos onboarding real: empresas com comandos e escritorios com carteira.'),
+        const SizedBox(height: 8),
+        _governancePassoCCard(realRegs),
+      ]);
+    }
+
+    if (panel == 'demo') {
+      return shell([
+        ...head,
+        const SizedBox(height: 4),
+        OutlinedButton.icon(
+          onPressed: () => context.go(kPlatformAdminEscritoriosPath),
+          icon: const Icon(Icons.account_balance_wallet_outlined),
+          label: const Text('Escritorios e carteira (numeros completos)'),
+        ),
+        const SizedBox(height: 12),
+        _gvFlowCaption(
+          'Demos agregam por chave interna; IP e browser apenas deduplicam — use a outra rota para carteira real de escritorio.',
+        ),
+        const SizedBox(height: 8),
+        _governanceDemoCard(demos),
+      ]);
+    }
+
+    if (panel == 'links') {
+      return shell([
+        ...head,
+        const SizedBox(height: 4),
+        _governanceCampaignLinksCard(),
+      ]);
+    }
+
+    return shell([
+      ...head,
+      const Text('Painel desconhecido. Voltando ao menu recomendado.'),
+      const SizedBox(height: 8),
+      const GovernanceHub(),
+    ]);
   }
 
   @override
@@ -3244,6 +3794,8 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                               preregViews: 0,
                               planSelects: 0,
                               preregSubmits: 0,
+                              companyLightPreregistrationViews: 0,
+                              companyLightPreregistrationSubmits: 0,
                               hotVisitors: 0,
                               recurringVisitors: 0,
                               demoVisitors: 0,
@@ -3332,6 +3884,22 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                                       .toString(),
                                   caption:
                                       'Acessos totais registrados no demo',
+                                ),
+                                AppMetricCard(
+                                  label: 'Page views pre-cadastro empresa',
+                                  value: dashboard
+                                      .metrics
+                                      .companyLightPreregistrationViews
+                                      .toString(),
+                                  caption: '/cadastro-empresa leve',
+                                ),
+                                AppMetricCard(
+                                  label: 'Leads empresa leve',
+                                  value: dashboard
+                                      .metrics
+                                      .companyLightPreregistrationSubmits
+                                      .toString(),
+                                  caption: 'Conta criada',
                                 ),
                               ],
                             ),
