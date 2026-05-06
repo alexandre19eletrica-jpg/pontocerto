@@ -300,6 +300,38 @@ Foi **registado** (sem implementar) o plano em [PLANEJAMENTO_SEGURO_CERTIFICADOR
 - Textos fiscais orientados ao utilizador normal e ao contador **omitiram** a marca comercial do integrador tecnico nas telas afectadas; empresa suprema mantem leitura tecnica completa onde aplicavel.
 - Cloud Function do assistente (`buildAssistantInstructions`): instrucao de sistema com **caminhos explicitos** dos quatro `OFICIAL_*.md` no repositorio e inventario/guia `/fiscal` neutralizados relativamente a marca do integrador.
 
+## Checkpoint publicacao one-shot e retorno Git (05/05/2026)
+
+**Objetivo:** fixar no registo oficial onde foi parada a linha de código e qual comando publica **Web + Functions + AAB** de seguida, para retorno ou auditoria.
+
+### Versao Android / nome no `pubspec.yaml`
+
+- `version: 1.0.88+1059` (`versionName` 1.0.88, `versionCode` / build 1059)
+
+### Commit Git do codigo funcional desta rodada (empresa/CNPJ, copy integrador, assistant, OFICIAL anteriores)
+
+- `8f8e8cd` — *Liberar edicao empresa com busca CNPJ, texto integrador neutro na UI e prompts do assistente alinhados aos OFICIAL.*
+
+Para inspeccionar apenas esse ponto: `git show 8f8e8cd --stat`
+
+Para **desfazer só essa alteracao** numa branch limpa: `git revert 8f8e8cd` *(gera um commit reverso; resolver conflitos se aparecerem).*
+
+O commit **posterior** na `master` que acrescenta **esta** secao do `OFICIAL_04` e o registo do comando one-shot; usar `git log -1 --oneline` após o push seguinte para gravar o SHA documental no teu caderno interno se precisares de rastreio fino.
+
+### Comando unico de publicacao (PowerShell)
+
+Executa **um** bloco, na ordem: dependencias Flutter, build **web** release, build **app bundle** release, copia do `.aab` para a **Area de trabalho**, compilacao **TypeScript** das Functions, **deploy** Hosting + Functions (*nao* inclui Play Console — o AAB sobe manualmente com o ficheiro gerado*).
+
+```powershell
+cd C:\Users\hp\pontocerto; flutter pub get; flutter build web --release --no-wasm-dry-run; flutter build appbundle --release; Copy-Item -Path "C:\Users\hp\pontocerto\build\app\outputs\bundle\release\app-release.aab" -Destination "$env:USERPROFILE\Desktop\app-release.aab" -Force; cd functions; npm run build; cd ..; firebase deploy --only hosting,functions --project pontocerto-e1dab
+```
+
+### Artefactos esperados após o comando
+
+- Web: saida em `build/web/` e ficheiros activos no Hosting apos deploy.
+- Android: `build\app\outputs\bundle\release\app-release.aab` e copia em `%USERPROFILE%\Desktop\app-release.aab`.
+- Functions: `functions\lib\` actualizado pelo `tsc` e codigo em producao apos `firebase deploy`.
+
 ## Documentos relacionados
 
 - [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md) — planeamento **nao implementado**
