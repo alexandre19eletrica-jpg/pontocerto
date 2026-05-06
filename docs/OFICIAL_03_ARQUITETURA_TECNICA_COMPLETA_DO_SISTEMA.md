@@ -105,7 +105,7 @@ Arquitetura de navegacao:
 - `ShellRoute` a envolver as rotas do **painel** autenticado: `AppRouteShell` (Consumer) aplica `AppShellScaffold` com `body: child` (outlet); o menu lateral e o mesmo eixo por sessao de shell, nao recriado por cada `GoRoute` filha
 - `shellPageChromeProvider` (Riverpod) define `ShellPageChrome` (titulo opcional, header, accoes) por pagina; titulo por omissao: `AppShellScaffold.titleForPath(matchedLocation)`
 - **Mensagens globais** (`app_user_message.dart`): `ValueNotifier` + entrada unica de `Overlay` inserida no `Navigator` raiz, com “bump” para o fim do stack de Overlays ao mostrar
-- no web, `MaterialApp.router` aplica `SelectionArea` sobre o filho das rotas; o `builder` empilha um `Stack`: conteudo (com `SelectionArea` na web) + `GlobalWhatsappSupportFab`; os **avisos globais** continuam no `Overlay` do `navigatorKey`, nao neste stack
+- no web, `MaterialApp.router` aplica `SelectionArea` sobre o filho das rotas; o `builder` empilha um `Stack` com **`StackFit.expand`** (conteudo + `GlobalWhatsappSupportFab`); os **avisos globais** continuam no `Overlay` do `navigatorKey`
 - rotas filtradas por papel
 
 ### Login, sessao e redirecionamento
@@ -143,9 +143,10 @@ O vinculo empresa-escritorio continua nas maos do contador, via fluxo de cadastr
 | `lib/core/navigation/shell_menu_scroll.dart` | `appShellMenuLastScrollOffset`, `appShellMenuCaptureOffsetFrom` — offset do menu entre rotas (com `ScrollController` por instancia do menu) |
 | `lib/core/router/app_router.dart` | `GoRouter(navigatorKey: appRootNavigatorKey)`, `ShellRoute` com rotas do painel |
 | `lib/core/ui/app_user_message.dart` | `appUserMessageNotifier`, insercao no `Overlay`, extensoes `showUserMessage` |
-| `lib/app/app.dart` | `MaterialApp.router`; `builder` com `Stack` (conteudo + FAB WhatsApp global) |
+| `lib/app/app.dart` | `MaterialApp.router`; `builder` com `Stack` (**`StackFit.expand`**) + conteudo + FAB WhatsApp global |
 | `lib/core/widgets/global_whatsapp_support_fab.dart` | Botao fixo inferior-direito: `wa.me` suporte (`abrirWhatsappVendas`) em todas as rotas |
 | `lib/core/constants/whatsapp_support.dart` | `kWhatsappSupportNumberE164` (DDI 55) — numero unico de suporte/leads WhatsApp |
+| `lib/core/widgets/external_labeled_field.dart` | Rotulo fixo acima de campo (pre-cadastro UF/cidade/CEP) |
 | `functions/src/index.ts` | Assistente: `buildAssistantInstructions`, OpenAI, Firestore auxiliar |
 
 As paginas do painel deixam de envolver `AppShellScaffold`: definem `shellPageChromeProvider` e devolvem so o `body` (lista alargada de ecras em `lib/features/**`).

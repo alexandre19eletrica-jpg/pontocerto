@@ -237,6 +237,11 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 - `/fiscal`: cartao **Documentos fiscais via Focus** (sinc NF-e / NFS-e nacional recebidas, chips de status sync, lista com download XML) igual ao utilizado na pagina **Declaracoes** do contador; em demo aparece apenas aviso sem botoes de sync.
 - Pre-cadastro leve empresa e escritorio (`/pre-cadastro-empresa`, `/pre-cadastro-escritorio`): layout alinhado heroi + logo + cartao de vidro nos dois; linha localizacao com **Estado (UF)** em largura proporcional (flex) e fundo branco nos campos para leitura uniforme; escritorio com mesma linguagem de CTAs; botao Voltar do escritorio leve retorna ao login do contador via `BotaoVoltarApp`.
 
+## Atualizacao visual (06/05/2026)
+
+- **Web/desktop + FAB WhatsApp:** o `builder` do `MaterialApp` usa `Stack` com **`StackFit.expand`** para o conteudo das rotas ocupar toda a viewport (evita erro de layout/branco em browser quando o filho nao recebia restricoes maximas).
+- **Pre-cadastro leve empresa e escritorio** (`/pre-cadastro-empresa`, modo leve em `cadastro_empresa_page`; `/pre-cadastro-escritorio` / `AccountingOfficeSignupPage`): **UF, Cidade e CEP** passam a usar **rotulo fixo acima** do campo (`ExternalLabeledField`) e **hints** dentro da caixa (sem label flutuante competindo com o texto); em largura \< **560px** os tres campos **empilham** em coluna para leitura confortavel no telemovel.
+
 ## Atualizacao visual (05/05/2026)
 
 - **WhatsApp global (suporte/dúvidas):** botao circular verde da marca (**56dp**), fixo ao canto **inferior-direito** com `SafeArea`, sobre **qualquer rota** (empresa, contador, vendas, pre-cadastro, logins): icone **`FontAwesome` WhatsApp** branco, elevacao discreta e **tooltip** "Suporte e informações no WhatsApp".

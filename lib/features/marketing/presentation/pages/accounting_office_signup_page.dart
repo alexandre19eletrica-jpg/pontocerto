@@ -6,6 +6,7 @@ import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/utils/formatadores_input.dart';
 import 'package:pontocerto/core/widgets/botao_voltar_app.dart';
+import 'package:pontocerto/core/widgets/external_labeled_field.dart';
 import 'package:pontocerto/features/fiscal/presentation/services/fiscal_registry_lookup_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/accounting_office_signup_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
@@ -436,83 +437,7 @@ class _AccountingOfficeSignupPageState
                               keyboardType: TextInputType.emailAddress,
                               lightSurface: true,
                             ),
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    flex: 22,
-                                    child: TextField(
-                                      controller: _stateController,
-                                      maxLength: 2,
-                                      textCapitalization:
-                                          TextCapitalization.characters,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Estado (UF) *',
-                                        hintText: 'Ex.: SP',
-                                        counterText: '',
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                      ),
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.allow(
-                                          RegExp(r'[a-zA-Z]'),
-                                        ),
-                                      ],
-                                      onChanged: (v) {
-                                        final u = v.toUpperCase().trim();
-                                        if (u != v) {
-                                          final c = u.length > 2
-                                              ? u.substring(0, 2)
-                                              : u;
-                                          _stateController.value =
-                                              TextEditingValue(
-                                            text: c,
-                                            selection:
-                                                TextSelection.collapsed(
-                                              offset: c.length,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    flex: 48,
-                                    child: _field(
-                                      controller: _cityController,
-                                      label: 'Cidade *',
-                                      icon: Icons.location_city_outlined,
-                                      lightSurface: true,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    flex: 30,
-                                    child: TextField(
-                                      controller: _cepSignupController,
-                                      keyboardType: TextInputType.number,
-                                      maxLength: 8,
-                                      decoration: const InputDecoration(
-                                        labelText: 'CEP *',
-                                        hintText: '00000000',
-                                        counterText: '',
-                                        prefixIcon: Icon(
-                                          Icons.markunread_mailbox_outlined,
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                      ),
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            _leadGeoRowOrColumnLight(),
                             Padding(
                               padding: const EdgeInsets.only(bottom: 14),
                               child: Text(
@@ -802,6 +727,108 @@ class _AccountingOfficeSignupPageState
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  static const double _kLeadGeoBreakpoint = 560;
+
+  Widget _leadGeoRowOrColumnLight() {
+    void onUfChanged(String v) {
+      final u = v.toUpperCase().trim();
+      if (u != v) {
+        final c = u.length > 2 ? u.substring(0, 2) : u;
+        _stateController.value = TextEditingValue(
+          text: c,
+          selection: TextSelection.collapsed(offset: c.length),
+        );
+      }
+    }
+
+    final ufField = TextField(
+      controller: _stateController,
+      maxLength: 2,
+      textCapitalization: TextCapitalization.characters,
+      decoration: const InputDecoration(
+        hintText: 'Ex.: SP',
+        counterText: '',
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z]')),
+      ],
+      onChanged: onUfChanged,
+    );
+
+    final cidadeField = TextField(
+      controller: _cityController,
+      decoration: const InputDecoration(
+        hintText: 'Nome da cidade',
+        prefixIcon: Icon(Icons.location_city_outlined),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+
+    final cepField = TextField(
+      controller: _cepSignupController,
+      keyboardType: TextInputType.number,
+      maxLength: 8,
+      decoration: const InputDecoration(
+        hintText: 'Somente numeros (8)',
+        counterText: '',
+        prefixIcon: Icon(Icons.markunread_mailbox_outlined),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+    );
+
+    final narrow = MediaQuery.sizeOf(context).width < _kLeadGeoBreakpoint;
+    if (narrow) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ExternalLabeledField(label: 'Estado (UF) *', child: ufField),
+          ExternalLabeledField(label: 'Cidade *', child: cidadeField),
+          ExternalLabeledField(label: 'CEP *', child: cepField),
+        ],
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 22,
+            child: ExternalLabeledField(
+              label: 'Estado (UF) *',
+              bottomSpacing: 0,
+              child: ufField,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 48,
+            child: ExternalLabeledField(
+              label: 'Cidade *',
+              bottomSpacing: 0,
+              child: cidadeField,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 30,
+            child: ExternalLabeledField(
+              label: 'CEP *',
+              bottomSpacing: 0,
+              child: cepField,
+            ),
+          ),
+        ],
       ),
     );
   }

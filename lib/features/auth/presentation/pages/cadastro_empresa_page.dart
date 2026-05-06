@@ -11,6 +11,7 @@ import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/utils/formatadores_input.dart';
 import 'package:pontocerto/core/widgets/botao_voltar_app.dart';
+import 'package:pontocerto/core/widgets/external_labeled_field.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
 import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
 import 'package:pontocerto/features/marketing/presentation/services/sales_analytics_service.dart';
@@ -408,79 +409,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                           icon: Icons.business_center_rounded,
                           unifiedFillSurface: true,
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 22,
-                                child: TextField(
-                                  controller: _leadUfController,
-                                  maxLength: 2,
-                                  textCapitalization:
-                                      TextCapitalization.characters,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Estado (UF) *',
-                                    hintText: 'Ex.: SP',
-                                    counterText: '',
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                  ),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(
-                                      RegExp(r'[a-zA-Z]'),
-                                    ),
-                                  ],
-                                  onChanged: (v) {
-                                    final upper = v.toUpperCase().trim();
-                                    if (upper != v) {
-                                      final cut = upper.length > 2
-                                          ? upper.substring(0, 2)
-                                          : upper;
-                                      _leadUfController.text = cut;
-                                      _leadUfController.selection =
-                                          TextSelection.collapsed(
-                                              offset: cut.length);
-                                    }
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 48,
-                                child: _campo(
-                                  controller: _leadCidadeController,
-                                  label: 'Cidade *',
-                                  icon: Icons.location_city_outlined,
-                                  unifiedFillSurface: true,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 30,
-                                child: TextField(
-                                  controller: _leadCepController,
-                                  keyboardType: TextInputType.number,
-                                  maxLength: 8,
-                                  decoration: const InputDecoration(
-                                    labelText: 'CEP *',
-                                    hintText: '00000000',
-                                    counterText: '',
-                                    prefixIcon: Icon(
-                                      Icons.markunread_mailbox_outlined,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                  ),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        _leadGeoRowOrColumn(),
                       ] else ...[
                       _campo(
                         controller: _responsavelController,
@@ -720,6 +649,109 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  static const double _kLeadGeoBreakpoint = 560;
+
+  /// UF / cidade / CEP: rotulo fixo acima; em ecras estreitos empilha para nao esmagar texto.
+  Widget _leadGeoRowOrColumn() {
+    void syncUfUppercase(String v) {
+      final upper = v.toUpperCase().trim();
+      if (upper != v) {
+        final cut = upper.length > 2 ? upper.substring(0, 2) : upper;
+        _leadUfController.value = TextEditingValue(
+          text: cut,
+          selection: TextSelection.collapsed(offset: cut.length),
+        );
+      }
+    }
+
+    final ufField = TextField(
+      controller: _leadUfController,
+      maxLength: 2,
+      textCapitalization: TextCapitalization.characters,
+      decoration: const InputDecoration(
+        hintText: 'Ex.: SP',
+        counterText: '',
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z]')),
+      ],
+      onChanged: syncUfUppercase,
+    );
+
+    final cidadeField = TextField(
+      controller: _leadCidadeController,
+      decoration: const InputDecoration(
+        hintText: 'Nome da cidade',
+        prefixIcon: Icon(Icons.location_city_outlined),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+
+    final cepField = TextField(
+      controller: _leadCepController,
+      keyboardType: TextInputType.number,
+      maxLength: 8,
+      decoration: const InputDecoration(
+        hintText: 'Somente numeros (8)',
+        counterText: '',
+        prefixIcon: Icon(Icons.markunread_mailbox_outlined),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+    );
+
+    final narrow = MediaQuery.sizeOf(context).width < _kLeadGeoBreakpoint;
+    if (narrow) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ExternalLabeledField(label: 'Estado (UF) *', child: ufField),
+          ExternalLabeledField(label: 'Cidade *', child: cidadeField),
+          ExternalLabeledField(label: 'CEP *', child: cepField),
+        ],
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 22,
+            child: ExternalLabeledField(
+              label: 'Estado (UF) *',
+              bottomSpacing: 0,
+              child: ufField,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 48,
+            child: ExternalLabeledField(
+              label: 'Cidade *',
+              bottomSpacing: 0,
+              child: cidadeField,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 30,
+            child: ExternalLabeledField(
+              label: 'CEP *',
+              bottomSpacing: 0,
+              child: cepField,
+            ),
+          ),
+        ],
       ),
     );
   }

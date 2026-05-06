@@ -133,6 +133,7 @@ class App extends StatelessWidget {
           final routed = child ?? const SizedBox.shrink();
           final content = kIsWeb ? SelectionArea(child: routed) : routed;
           return Stack(
+            fit: StackFit.expand,
             clipBehavior: Clip.none,
             children: [
               content,
