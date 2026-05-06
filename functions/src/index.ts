@@ -8374,6 +8374,7 @@ async function provisionLightweightOfficeAccess(params: {
   email: string;
   password?: string;
   source: string;
+  signupLeadOrigin?: Record<string, string>;
 }): Promise<{
   officeId: string;
   officeName: string;
@@ -8444,8 +8445,17 @@ async function provisionLightweightOfficeAccess(params: {
       phone: '',
       email,
       address: '',
-      city: '',
-      state: '',
+      city: params.signupLeadOrigin?.cidade
+        ? asTrimmedString(params.signupLeadOrigin.cidade).slice(0, 120)
+        : '',
+      state: params.signupLeadOrigin?.estado
+        ? asTrimmedString(params.signupLeadOrigin.estado).toUpperCase().slice(0, 2)
+        : '',
+      ...(params.signupLeadOrigin
+        ? {
+            signupLeadOrigin: params.signupLeadOrigin,
+          }
+        : {}),
       billingChoiceDefault: 'office',
       notes: '',
       source: params.source,
@@ -14248,12 +14258,15 @@ exports.publicCreateAccountantWorkspaceAccess = functions.https.onCall(async (da
       );
     }
 
+    const leadOrigin = compactSignupLeadOrigin(data?.leadOrigin);
+
     const result = await provisionLightweightOfficeAccess({
       officeName,
       responsibleName,
       email,
       password: password.length > 0 ? password : undefined,
       source: 'public_lightweight_signup',
+      ...(leadOrigin ? {signupLeadOrigin: leadOrigin} : {}),
     });
 
     await notificarNovoCadastroAdministrativo({

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pontocerto/core/constants/public_campaign_routes.dart';
 import 'package:pontocerto/core/app_update/app_update_launcher.dart';
 import 'package:pontocerto/core/auth/claims_sync.dart';
 import 'package:pontocerto/core/auth/session.dart';
@@ -66,7 +67,7 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                 TextField(
                   controller: _loginEmailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email'),
+                  decoration: const InputDecoration(labelText: 'E-mail'),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -124,7 +125,7 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                   child: OutlinedButton.icon(
                     onPressed: _carregando
                         ? null
-                        : () => context.go('/cadastro-escritorio-contabil'),
+                        : () => context.go(kPublicPreCadastroEscritorioPath),
                     icon: const Icon(Icons.apartment),
                     label: const Text('Ir para cadastro do escritorio'),
                   ),

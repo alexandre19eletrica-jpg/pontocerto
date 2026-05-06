@@ -41,7 +41,7 @@ void metaFbqTrackContactWhatsapp() => impl.metaFbqTrackContactWhatsapp();
 /// Início do teste grátis do escritório (CTA para cadastro / contratar).
 void metaFbqTrackStartTrialEscritorio() => impl.metaFbqTrackStartTrialEscritorio();
 
-/// Pré-cadastro / trial da empresa (`/cadastro-empresa` e páginas de entrada).
+/// Pré-cadastro / trial da empresa (`/pre-cadastro-empresa` e páginas de entrada).
 void metaFbqTrackStartTrialEmpresa() => impl.metaFbqTrackStartTrialEmpresa();
 
 /// Conclusão do pré-cadastro empresa leve (criação de tenant).

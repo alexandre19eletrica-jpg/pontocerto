@@ -18,10 +18,10 @@ Versao local atual de referencia:
 
 Na frente comercial publica atual existe **dois callables de entrada leve**:
 
-- **Empresa:** `/cadastro-empresa` envia nome, e-mail e dados iniciais; a **senha** e definida pelo **link** enviado por e-mail quando as Functions tiverem SMTP/SendGrid e `MAIL_FROM` configurados.
-- **Escritorio:** `/cadastro-escritorio-contabil` segue a mesma logica de **senha por e-mail** para o acesso do contador no fluxo simplificado.
+- **Empresa:** rota canonica **`/pre-cadastro-empresa`** (alias **`/cadastro-empresa`** redirecciona preservando query) envia nome, e-mail, **UF**, **cidade** e **CEP** obrigatorios no formulario leve; a **senha** e definida pelo **link** enviado por e-mail quando as Functions tiverem SMTP/SendGrid e `MAIL_FROM` configurados.
+- **Escritorio:** rota canonica **`/pre-cadastro-escritorio`** (alias **`/cadastro-escritorio-contabil`**) mesma logica de **senha por e-mail**; no leve exige UF, cidade e CEP antes do envio e envia `leadOrigin` ao servidor.
 
-**Campanhas (query no link):** no pré-cadastro empresa leve, parâmetros opcionais **`uf`** (ou **`estado`**), **`cidade`** e **`cep`** são persistidos no registo (`directSignup.leadOrigin`) para segmentar divulgação. Links de referência fixos para operação/campanhas: constante `kPublicWebAppOrigin` em `platform_admin_section.dart` e painel **Governanca > Links de campanha** (`?v=links`).
+**Campanhas (query no link):** parametros opcionais **`uf`** (ou **`estado`**), **`cidade`** e **`cep`** pré-preenchimento no browser; sempre validados antes do submit. Persistencia em `company_settings.directSignup.leadOrigin` / payload contador conforme fluxo. URLs de referencia: `lib/core/constants/public_campaign_routes.dart` (`kPublicWebAppOrigin`, `kPublicPreCadastroEmpresaPath`, `kPublicPreCadastroEscritorioPath`) e painel **Governanca > Links** (`?v=links`).
 
 Depois do cadastro publico completo com CNPJ liberado, o sistema encaminha o utilizador para **`/login-empresa`** com mensagem para abrir o e-mail (ou recuperar senha), em vez de iniciar sessao automaticamente no browser.
 
@@ -288,9 +288,9 @@ O **que** se pretende fazer em seguranca — certificadora (fluxo contador → e
 
 ## Fluxo publico de entrada e demo (03/05/2026)
 
-- A landing `/vendas` apresenta **dois** CTAs claros (empresa vs escritorio) no heroi e nas seccoes de oferta/fecho onde antes existia um unico "Comecar teste gratis"; o escritorio vai sempre para `/cadastro-escritorio-contabil` e o pre-cadastro da empresa para `/cadastro-empresa`.
-- `/inicio`: "Criar acesso da empresa" garante primeiro `context.go('/cadastro-empresa')` e depois o evento Meta `metaFbqTrackStartTrialEmpresa()` (trial empresa), separado do evento do escritorio.
-- `/login-empresa`: link "Criar acesso da empresa" para `/cadastro-empresa`.
+- A landing `/vendas` apresenta **dois** CTAs claros (empresa vs escritorio) no heroi e nas seccoes de oferta/fecho onde antes existia um unico "Comecar teste gratis"; navegacao interna usa as rotas canonicas `/pre-cadastro-empresa` e `/pre-cadastro-escritorio` (aliases antigos redireccionam).
+- `/inicio`: "Criar acesso da empresa" usa primeiro `context.go('/pre-cadastro-empresa')` e depois o evento Meta `metaFbqTrackStartTrialEmpresa()` (trial empresa), separado do evento do escritorio.
+- `/login-empresa`: link "Criar acesso da empresa" para `/pre-cadastro-empresa`.
 - Landing `/vendas-empresa`: foco apenas na empresa — sem atalho de cadastro de escritorio. A equivalencia juridico-comercial (MEI/quem faz cadastro sozinho sem contador nao e obrigado a contratar pelo produto + WhatsApp comercial quando quiser duvidar primeiro) ficou concentrada no paragrafo do bloco **Demonstracao gratuita**; o restante do fluxo de leitura nao repete essa fraseologia. Escritorio continua acessivel por `/vendas-contador`, `/cadastro-escritorio-contabil` e `/vendas`.
 - **Plataforma:** `platformListCompanies` devolve **uma linha por empresa** (dedupe por `companyId`, preferindo owner com `createdAt` mais antigo) para nao repetir a mesma empresa quando existem varios documentos `OWNER` obsoletos.
 - **Governanca** (`/platform-admin/governanca`): onboarding publico leve primeiro (lista standalone empresa e escritorio), depois **cadastro SaaS efectivo** com dados comerciais resumidos por empresa e operac administrativas: suspender ou retomar com snapshot gravado (`commercialSettings.governanceAdministrativeFreeze`), cancelar boletos/parcelas `pending`/`overdue` ligadas à mesma subscription no **Asaas** via **`platformGovernanceCompanyCancelPendingAsaasPayments`** e encerrar recorrencia Asaas (**`platformGovernanceCompanyCancelAsaasBilling`**, equivalente servidor ao fluxo proprietario sobre outra empresa). **Apagar teste** continua apenas quando owner e `company_settings` marcam modo leve; a lista servidor expoe **`standaloneDeletionAllowed`** + motivo antes de clicar (**`evaluateStandaloneLightweightTestDeletionGate`**).

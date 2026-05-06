@@ -68,11 +68,14 @@ class RotasApp {
             location == '/login-empresa' ||
             location == '/login-funcionario' ||
             location == '/login-contador';
-        final estaNoCadastro = location == '/cadastro-empresa';
+        final estaNoCadastro =
+            location == '/cadastro-empresa' ||
+            location == '/pre-cadastro-empresa';
         final estaNoCadastroEmpresaContador =
             location == '/cadastro-empresa-contador';
         final estaNoCadastroEscritorio =
-            location == '/cadastro-escritorio-contabil';
+            location == '/cadastro-escritorio-contabil' ||
+            location == '/pre-cadastro-escritorio';
         final estaNaAtivacao = location == '/ativacao-empresa';
         final estaNoInicio = location == '/inicio' || location == '/';
         final estaNaPaginaDeVendas = location == '/vendas';
@@ -237,9 +240,14 @@ class RotasApp {
         builder: (context, state) => const PaginaLoginContador(),
       ),
       GoRoute(
-        path: '/cadastro-empresa',
+        path: '/pre-cadastro-empresa',
         builder: (context, state) =>
             const PaginaCadastroEmpresa(lightweightMode: true),
+      ),
+      GoRoute(
+        path: '/cadastro-empresa',
+        redirect: (context, state) =>
+            '/pre-cadastro-empresa${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
       ),
       GoRoute(
         path: '/cadastro-empresa-contador',
@@ -247,7 +255,7 @@ class RotasApp {
             const PaginaCadastroEmpresa(lightweightMode: true),
       ),
       GoRoute(
-        path: '/cadastro-escritorio-contabil',
+        path: '/pre-cadastro-escritorio',
         builder: (context, state) {
           final q = state.uri.queryParameters;
           return AccountingOfficeSignupPage(
@@ -258,6 +266,11 @@ class RotasApp {
                 '',
           );
         },
+      ),
+      GoRoute(
+        path: '/cadastro-escritorio-contabil',
+        redirect: (context, state) =>
+            '/pre-cadastro-escritorio${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
       ),
       GoRoute(
         path: '/ativacao-empresa',
@@ -280,7 +293,7 @@ class RotasApp {
       GoRoute(
         path: '/contratar',
         redirect: (context, state) =>
-            '/cadastro-empresa${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
+            '/pre-cadastro-empresa${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
       ),
       GoRoute(
         path: '/boas-vindas-empresa',

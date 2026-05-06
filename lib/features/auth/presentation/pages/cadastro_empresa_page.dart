@@ -49,6 +49,9 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
   final _enderecoController = TextEditingController();
   final _accountantNameController = TextEditingController();
   final _accountantEmailController = TextEditingController();
+  final _leadUfController = TextEditingController();
+  final _leadCidadeController = TextEditingController();
+  final _leadCepController = TextEditingController();
 
   String _businessCategory = 'service';
   String _accountantBillingChoice = 'office';
@@ -65,6 +68,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
   bool _hasAccountant = false;
   bool _carregando = false;
   bool _lightMarketingPrimed = false;
+  bool _leadGeoHydrated = false;
   final SalesAnalyticsService _salesAnalytics = SalesAnalyticsService();
 
   final _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
@@ -83,6 +87,9 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
     _enderecoController.dispose();
     _accountantNameController.dispose();
     _accountantEmailController.dispose();
+    _leadUfController.dispose();
+    _leadCidadeController.dispose();
+    _leadCepController.dispose();
     super.dispose();
   }
 
@@ -115,16 +122,35 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (widget.lightweightMode && !_leadGeoHydrated) {
+      _leadGeoHydrated = true;
+      final q = GoRouterState.of(context).uri.queryParameters;
+      if (_leadUfController.text.isEmpty) {
+        _leadUfController.text = (q['uf'] ?? q['estado'] ?? '').trim();
+      }
+      if (_leadCidadeController.text.isEmpty) {
+        _leadCidadeController.text = (q['cidade'] ?? '').trim();
+      }
+      if (_leadCepController.text.isEmpty) {
+        _leadCepController.text = (q['cep'] ?? '').trim();
+      }
+    }
     if (!widget.lightweightMode || _lightMarketingPrimed) {
       return;
     }
     _lightMarketingPrimed = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || !widget.lightweightMode) return;
-      await _salesAnalytics.trackCompanyLightPreregistrationView();
+      final path = GoRouterState.of(context).matchedLocation;
+      await _salesAnalytics.trackCompanyLightPreregistrationView(
+        pagePath: path,
+      );
       metaFbqTrackPrecadastroEmpresaLeveView();
     });
   }
+
+  String _onlyDigits(String value) =>
+      value.replaceAll(RegExp(r'[^0-9]'), '');
 
   bool get _stateRegistrationRequired => _businessCategory != 'service';
 
@@ -154,30 +180,54 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
               ? 'Cadastrar empresa indicada'
               : completionMode
                   ? 'Completar cadastro da empresa'
-                  : 'Cadastrar empresa',
+                  : lightweightMode
+                      ? 'Seu acesso em minutos'
+                      : 'Cadastrar empresa',
         ),
       ),
       body: AppGradientBackground(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            HeroBanner(
-              tag: accountantMode ? 'CONTADOR CADASTRA EMPRESA' : 'CADASTRO EMPRESA',
-              title: accountantMode
-                  ? 'Cadastre a empresa da carteira com o escritorio no centro do fluxo.'
-                  : completionMode
-                      ? 'Complete agora os dados reais da empresa para liberar a operacao com base fiscal correta.'
-                      : lightweightMode
-                          ? 'Pré-cadastro da empresa'
-                          : 'Crie a conta da empresa e entre no painel principal.',
-              subtitle: accountantMode
-                  ? 'Use este modulo para abrir uma nova empresa vinculada ao escritorio contabil. A cobranca e o acesso da empresa sao definidos no mesmo fluxo.'
-                  : completionMode
-                      ? 'Depois de entrar no sistema, a empresa conclui aqui o cadastro real e pode opcionalmente indicar um contador.'
-                      : lightweightMode
-                          ? 'Abra o acesso com nome e e-mail. No aplicativo, emita NFS-e e documentos fiscais com o fluxo oficial integrado — autonomia operacional no dia a dia, sem depender do escritório em cada emissão imediata.'
-                          : 'Configure os dados principais da empresa e inicie o uso da plataforma administrativa.',
-            ),
+            if (!lightweightMode)
+              HeroBanner(
+                tag: accountantMode ? 'CONTADOR CADASTRA EMPRESA' : 'CADASTRO EMPRESA',
+                title: accountantMode
+                    ? 'Cadastre a empresa da carteira com o escritorio no centro do fluxo.'
+                    : completionMode
+                        ? 'Complete agora os dados reais da empresa para liberar a operacao com base fiscal correta.'
+                        : 'Crie a conta da empresa e entre no painel principal.',
+                subtitle: accountantMode
+                    ? 'Use este modulo para abrir uma nova empresa vinculada ao escritorio contabil. A cobranca e o acesso da empresa sao definidos no mesmo fluxo.'
+                    : completionMode
+                        ? 'Depois de entrar no sistema, a empresa conclui aqui o cadastro real e pode opcionalmente indicar um contador.'
+                        : 'Configure os dados principais da empresa e inicie o uso da plataforma administrativa.',
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Column(
+                  children: [
+                    Text(
+                      'Emita suas notas pelo celular quando precisar. Deixe os dados — enviamos o acesso já.',
+                      textAlign: TextAlign.center,
+                      style: tema.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppBrandColors.ink,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Um passo para entrar na plataforma.',
+                      textAlign: TextAlign.center,
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: AppBrandColors.softText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
             if (trialToken.isNotEmpty && !accountantMode) ...[
               AppWorkspaceCard(
@@ -190,7 +240,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
               ),
               const SizedBox(height: 16),
             ],
-            const Center(child: BrandLogo(size: 120, radius: 32)),
+            Center(child: BrandLogo(size: lightweightMode ? 84 : 120, radius: 28)),
             const SizedBox(height: 16),
             Center(
               child: ConstrainedBox(
@@ -205,21 +255,21 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                             : completionMode
                                 ? 'Conclusao do cadastro real'
                                 : lightweightMode
-                                    ? 'Acesso inicial'
+                                    ? 'Garanta sua vaga digital'
                                     : 'Criacao da empresa',
                         style: tema.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w900,
                           color: AppBrandColors.ink,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
                         accountantMode
                             ? 'Preencha os dados da empresa e do responsavel. O escritorio atual entra vinculado automaticamente no cadastro.'
                             : completionMode
                                 ? 'Preencha agora os dados reais da empresa. Se quiser, voce tambem pode indicar o contador neste passo.'
                                 : lightweightMode
-                                    ? 'Informe nome de fantasia, responsável e e-mail. Depois de confirmar pelo link, use o aplicativo para emitir documentos fiscais válidos com trilha integrada, reduzindo dependência pontual do contador em cada nota.'
+                                    ? 'Nome, e-mail e localização obrigatórios. Confirme pelo link na caixa de entrada.'
                                     : 'Preencha os dados da empresa para concluir o cadastro.',
                         style: tema.textTheme.bodyMedium?.copyWith(
                           color: AppBrandColors.softText,
@@ -353,6 +403,71 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                           controller: _nomeFantasiaController,
                           label: 'Nome da empresa *',
                           icon: Icons.business_center_rounded,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 84,
+                                child: TextField(
+                                  controller: _leadUfController,
+                                  maxLength: 2,
+                                  textCapitalization:
+                                      TextCapitalization.characters,
+                                  decoration: const InputDecoration(
+                                    labelText: 'UF *',
+                                    counterText: '',
+                                    prefixIcon: Icon(Icons.map_outlined),
+                                  ),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                      RegExp(r'[a-zA-Z]'),
+                                    ),
+                                  ],
+                                  onChanged: (v) {
+                                    final upper = v.toUpperCase().trim();
+                                    if (upper != v) {
+                                      final cut = upper.length > 2
+                                          ? upper.substring(0, 2)
+                                          : upper;
+                                      _leadUfController.text = cut;
+                                      _leadUfController.selection =
+                                          TextSelection.collapsed(
+                                              offset: cut.length);
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _campo(
+                                  controller: _leadCidadeController,
+                                  label: 'Cidade *',
+                                  icon: Icons.location_city_outlined,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              SizedBox(
+                                width: 128,
+                                child: TextField(
+                                  controller: _leadCepController,
+                                  keyboardType: TextInputType.number,
+                                  maxLength: 8,
+                                  decoration: const InputDecoration(
+                                    labelText: 'CEP *',
+                                    counterText: '',
+                                    prefixIcon:
+                                        Icon(Icons.markunread_mailbox_outlined),
+                                  ),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ] else ...[
                       _campo(
@@ -582,7 +697,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                                   : completionMode
                                       ? 'Concluir cadastro da empresa'
                                       : lightweightMode
-                                          ? 'Solicitar acesso por e-mail'
+                                          ? 'Receber link de acesso'
                                   : 'Cadastrar empresa',
                         ),
                       ),
@@ -637,44 +752,44 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
     final completionMode = widget.completionMode;
 
     if (lightweightMode) {
-      if (email.isEmpty || responsavel.isEmpty || nomeFantasia.isEmpty) {
-        _msg('Preencha nome da empresa, responsavel e e-mail.');
+      final ufLead = _leadUfController.text.trim().toUpperCase();
+      final cidadeLead = _leadCidadeController.text.trim();
+      final cepLead = _onlyDigits(_leadCepController.text);
+      if (email.isEmpty ||
+          responsavel.isEmpty ||
+          nomeFantasia.isEmpty ||
+          ufLead.length != 2 ||
+          cidadeLead.isEmpty ||
+          cepLead.length != 8) {
+        _msg(
+          'Preencha e-mail, responsavel, empresa, UF com 2 letras, cidade e CEP com 8 digitos.',
+        );
         return;
       }
       setState(() => _carregando = true);
       try {
-        final qp = GoRouterState.of(context).uri.queryParameters;
-        final leadOrigin = <String, dynamic>{};
-        final uf = (qp['uf'] ?? qp['estado'] ?? '').trim();
-        if (uf.isNotEmpty) {
-          leadOrigin['estado'] = uf;
-        }
-        final cidade = (qp['cidade'] ?? '').trim();
-        if (cidade.isNotEmpty) {
-          leadOrigin['cidade'] = cidade;
-        }
-        final cep = (qp['cep'] ?? '').trim();
-        if (cep.isNotEmpty) {
-          leadOrigin['cep'] = cep;
-        }
         final payload = <String, dynamic>{
           'ownerEmail': email,
           'ownerPassword': '',
           'confirmPassword': '',
           'ownerName': responsavel,
           'companyName': nomeFantasia,
+          'leadOrigin': <String, dynamic>{
+            'estado': ufLead,
+            'cidade': cidadeLead,
+            'cep': cepLead,
+          },
         };
-        if (leadOrigin.isNotEmpty) {
-          payload['leadOrigin'] = leadOrigin;
-        }
         final callable = _functions.httpsCallable(
           'publicCreateCompanyWorkspaceAccess',
         );
         final response = await callable.call(payload);
         final map = Map<String, dynamic>.from(response.data as Map);
         final companyId = map['companyId']?.toString() ?? '';
+        final matchedPath = GoRouterState.of(context).matchedLocation;
         await _salesAnalytics.trackCompanyLightPreregistrationSubmit(
           leadId: companyId,
+          pagePath: matchedPath,
         );
         metaFbqTrackLeadPrecadastroEmpresaLeve(companyId: companyId);
         final emailOk = map['emailDispatched'] == true;

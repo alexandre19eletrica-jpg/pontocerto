@@ -98,6 +98,7 @@ class AccountingOfficeLightweightPayload {
     required this.email,
     required this.password,
     required this.confirmPassword,
+    this.leadOrigin,
   });
 
   final String officeName;
@@ -105,6 +106,8 @@ class AccountingOfficeLightweightPayload {
   final String email;
   final String password;
   final String confirmPassword;
+  /// UF, cidade e CEP (mesmo formato do pré-cadastro empresa).
+  final Map<String, String>? leadOrigin;
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
@@ -113,6 +116,7 @@ class AccountingOfficeLightweightPayload {
       'email': email,
       'password': password,
       'confirmPassword': confirmPassword,
+      if (leadOrigin != null && leadOrigin!.isNotEmpty) 'leadOrigin': leadOrigin,
     };
   }
 }

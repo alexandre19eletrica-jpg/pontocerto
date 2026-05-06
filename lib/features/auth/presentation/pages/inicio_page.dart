@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pontocerto/core/app_update/app_update_launcher.dart';
 import 'package:pontocerto/core/company/empresa_cache.dart';
+import 'package:pontocerto/core/constants/public_campaign_routes.dart';
 import 'package:pontocerto/core/platform/platform_access.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
@@ -135,14 +136,14 @@ class PaginaInicio extends ConsumerWidget {
                       const SizedBox(height: 8),
                       TextButton(
                         onPressed: () {
-                          context.go('/cadastro-empresa');
+                          context.go(kPublicPreCadastroEmpresaPath);
                           metaFbqTrackStartTrialEmpresa();
                         },
                         child: const Text('Criar acesso da empresa'),
                       ),
                       TextButton(
                         onPressed: () =>
-                            context.go('/cadastro-escritorio-contabil'),
+                            context.go(kPublicPreCadastroEscritorioPath),
                         child: const Text(
                           'Cadastrar escritorio de contabilidade',
                         ),

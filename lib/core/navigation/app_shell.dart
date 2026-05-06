@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pontocerto/core/auth/session.dart';
+import 'package:pontocerto/core/constants/public_campaign_routes.dart';
 import 'package:pontocerto/core/platform/platform_access.dart';
 import 'package:pontocerto/features/platform_admin/presentation/platform_admin_section.dart';
 import 'package:pontocerto/core/navigation/shell_menu_scroll.dart';
@@ -153,8 +154,8 @@ class _AppShellScaffoldState extends State<AppShellScaffold> {
 
   Future<void> _openRealAccessRoute() async {
     final targetRoute = widget.session.isDemoCompany
-        ? '/cadastro-empresa'
-        : '/cadastro-escritorio-contabil';
+        ? kPublicPreCadastroEmpresaPath
+        : kPublicPreCadastroEscritorioPath;
     try {
       await FirebaseAuth.instance.signOut();
     } catch (_) {}

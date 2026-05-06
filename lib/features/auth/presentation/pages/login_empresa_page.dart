@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pontocerto/core/constants/public_campaign_routes.dart';
 import 'package:pontocerto/core/app_update/app_update_launcher.dart';
 import 'package:pontocerto/core/auth/claims_sync.dart';
 import 'package:pontocerto/core/auth/session.dart';
@@ -111,7 +112,7 @@ class _PaginaLoginEmpresaState extends ConsumerState<PaginaLoginEmpresa> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
-                          labelText: 'Email',
+                          labelText: 'E-mail',
                           prefixIcon: Icon(Icons.alternate_email_rounded),
                         ),
                       ),
@@ -146,7 +147,7 @@ class _PaginaLoginEmpresaState extends ConsumerState<PaginaLoginEmpresa> {
                       TextButton(
                         onPressed: _carregando
                             ? null
-                            : () => context.go('/cadastro-empresa'),
+                            : () => context.go(kPublicPreCadastroEmpresaPath),
                         child: const Text('Criar acesso da empresa'),
                       ),
                     ],
@@ -165,7 +166,7 @@ class _PaginaLoginEmpresaState extends ConsumerState<PaginaLoginEmpresa> {
     final senha = _senhaController.text;
     if (email.isEmpty || senha.isEmpty) {
       if (!mounted) return;
-      context.showUserMessage('Informe email e senha.');
+      context.showUserMessage('Informe e-mail e senha.');
       return;
     }
 

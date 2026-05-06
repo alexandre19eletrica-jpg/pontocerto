@@ -4,6 +4,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pontocerto/core/constants/public_campaign_routes.dart';
 import 'package:pontocerto/core/app_update/app_update_launcher.dart';
 import 'package:pontocerto/core/auth/accountant_company_context_service.dart';
 import 'package:pontocerto/core/auth/claims_sync.dart';
@@ -107,7 +108,7 @@ class _PaginaLoginContadorState extends ConsumerState<PaginaLoginContador> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
-                          labelText: 'Email',
+                          labelText: 'E-mail',
                           prefixIcon: Icon(Icons.alternate_email_rounded),
                         ),
                       ),
@@ -144,7 +145,7 @@ class _PaginaLoginContadorState extends ConsumerState<PaginaLoginContador> {
                             ? null
                             : () {
                                 metaFbqTrackStartTrialEscritorio();
-                                context.go('/cadastro-escritorio-contabil');
+                                context.go(kPublicPreCadastroEscritorioPath);
                               },
                         child: const Text(
                           'Cadastrar escritorio de contabilidade',
@@ -165,7 +166,7 @@ class _PaginaLoginContadorState extends ConsumerState<PaginaLoginContador> {
     final email = _emailController.text.trim();
     final senha = _senhaController.text;
     if (email.isEmpty || senha.isEmpty) {
-      _msg('Informe email e senha.');
+      _msg('Informe e-mail e senha.');
       return;
     }
 
@@ -248,19 +249,19 @@ class _PaginaLoginContadorState extends ConsumerState<PaginaLoginContador> {
   Future<void> _esqueciSenha() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      _msg('Informe o email para recuperar a senha.');
+      _msg('Informe o e-mail para recuperar a senha.');
       return;
     }
     try {
       await FirebaseFunctions.instance
           .httpsCallable('publicRequestPasswordResetEmail')
           .call(<String, dynamic>{'email': email});
-      _msg('Email de recuperacao enviado.');
+      _msg('E-mail de recuperacao enviado.');
     } catch (e) {
       _msg(
         AppErrorMapper.messageFrom(
           e,
-          fallback: 'Nao foi possivel enviar o email de recuperacao.',
+          fallback: 'Nao foi possivel enviar o e-mail de recuperacao.',
         ),
       );
     }

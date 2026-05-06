@@ -1,4 +1,4 @@
-# Arquitetura Tecnica Completa do Sistema
+﻿# Arquitetura Tecnica Completa do Sistema
 
 Data base: 02/05/2026
 Projeto: Ponto Certo
@@ -27,6 +27,9 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 - regras finas de autorizacao por papel e contexto
 
 ### Publico: demo, pre-cadastro e entrada leve (03/05/2026)
+
+**URLs canonicas (03/05/2026 — campanhas):** lib/core/constants/public_campaign_routes.dart define **/pre-cadastro-empresa** e **/pre-cadastro-escritorio**; aliases /cadastro-empresa, /cadastro-escritorio-contabil e **/contratar** (empresa) redireccionam com query/UTM. Formularios leves exigem **UF**, **cidade** e **CEP**. Governanca (Convidar/Funil) deixou de listar métricas de "planos clicados"/	opPlans na UX comercial atual.
+
 
 #### `publicOpenDemoAccess`
 

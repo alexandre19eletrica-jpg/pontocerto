@@ -24,6 +24,8 @@ class BotaoVoltarApp extends StatelessWidget {
         if (rotaAtual == '/login-empresa' ||
             rotaAtual == '/login-funcionario' ||
             rotaAtual == '/cadastro-empresa' ||
+            rotaAtual == '/pre-cadastro-empresa' ||
+            rotaAtual == '/cadastro-empresa-contador' ||
             rotaAtual == '/login') {
           context.go('/inicio');
           return;

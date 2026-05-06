@@ -4,6 +4,7 @@ Data base: 02/05/2026
 Projeto: Ponto Certo
 
 
+**Registo (03/05/2026 — URLs `pre-cadastro-*`, formularios e governanca comercial):** CTAs (`/inicio`, `/login-empresa`, `/login-contador`, `/vendas`, `/vendas-empresa`, `/vendas-contador`) passam a abrir **`/pre-cadastro-empresa`** e **`/pre-cadastro-escritorio`**; governanca (**Funil**, **Links**, secao **Convidar**) usa os mesmos paths nas legendas e remove destaque legado de "planos clicados" / `topPlans`. Pre-cadastro contador leve ganha linha **UF · cidade · CEP** na UI + copy mais curta. `platform_admin_page` import de `sessionProvider` para gate de acesso. Correcçao menor: `cadastro_empresa_page` BrandLogo ja nao e `const` com tamanho condicional.
 
 **Registo (03/05/2026 — governanca modular + funil + origem de lead):** `/platform-admin/governanca` passou a hub com cartões e sub-paineis por query `?v=` (`funil`, `precadastro_empresas`, `precadastro_escritorios`, `cadastro_completo`, `demo`, `links`). O painel **Funil** usa `platformGetMarketingDashboard` com eventos dedicados de page view e lead do pré-cadastro empresa leve. O pré-cadastro empresa (`/cadastro-empresa`) pode levar `uf`/`estado`, `cidade`, `cep` na query: o servidor grava em `company_settings.directSignup.leadOrigin` e a governança mostra a origem na lista leve. Meta Pixel na web: `ViewContent` + `Lead` no fluxo leve. Ver `OFICIAL_02` e `OFICIAL_03`.
 

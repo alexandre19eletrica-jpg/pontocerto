@@ -54,20 +54,23 @@ class SalesAnalyticsService {
     );
   }
 
-  /// Pré-cadastro empresa leve (`/cadastro-empresa`).
-  Future<void> trackCompanyLightPreregistrationView() async {
+  /// Pré-cadastro empresa leve (rota canónica `/pre-cadastro-empresa`).
+  Future<void> trackCompanyLightPreregistrationView({
+    String pagePath = '/pre-cadastro-empresa',
+  }) async {
     await _trackEvent(
       eventName: 'company_light_preregistration_view',
-      pagePath: '/cadastro-empresa',
+      pagePath: pagePath,
     );
   }
 
   Future<void> trackCompanyLightPreregistrationSubmit({
     String leadId = '',
+    String pagePath = '/pre-cadastro-empresa',
   }) async {
     await _trackEvent(
       eventName: 'company_light_preregistration_submit',
-      pagePath: '/cadastro-empresa',
+      pagePath: pagePath,
       leadId: leadId,
     );
   }

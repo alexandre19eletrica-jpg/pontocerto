@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pontocerto/core/constants/public_campaign_routes.dart';
 import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
 import 'package:pontocerto/features/marketing/presentation/widgets/vendas_landing_ui.dart';
 import 'package:pontocerto/features/marketing/presentation/widgets/vendas_screenshot_block.dart';
@@ -74,7 +75,7 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                       'Emissao no celular ou no computador',
                       'Trinta dias de avaliacao apos primeira adesao',
                     ],
-                    onPrimary: () => context.go('/cadastro-empresa'),
+                    onPrimary: () => context.go(kPublicPreCadastroEmpresaPath),
                     primaryLabel: 'COMEÇAR PRÉ-CADASTRO DA EMPRESA',
                     secondaryLabel: 'Falar com alguem',
                     onSecondary: () {
@@ -359,7 +360,7 @@ class _VendasEmpresaPageState extends State<VendasEmpresaPage> {
                                   const SizedBox(height: 20),
                                   FilledButton(
                                     onPressed: () =>
-                                        context.go('/cadastro-empresa'),
+                                        context.go(kPublicPreCadastroEmpresaPath),
                                     style: FilledButton.styleFrom(
                                       backgroundColor:
                                           VendasLandingTheme.primary,

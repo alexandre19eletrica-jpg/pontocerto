@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pontocerto/core/auth/accountant_company_context_service.dart';
 import 'package:pontocerto/core/auth/session.dart';
 import 'package:pontocerto/core/auth/session_hydrate_from_auth.dart';
+import 'package:pontocerto/core/constants/public_campaign_routes.dart';
 import 'package:pontocerto/core/errors/app_error_mapper.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
 import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
@@ -17,12 +18,12 @@ const _surface = Color(0xFFF4F7FB);
 const _line = Color(0xFFDCE5EF);
 
 void _irPreCadastroEmpresa(BuildContext context) {
-  context.go('/cadastro-empresa');
+  context.go(kPublicPreCadastroEmpresaPath);
   metaFbqTrackStartTrialEmpresa();
 }
 
 void _irCadastroEscritorio(BuildContext context) {
-  context.go('/cadastro-escritorio-contabil');
+  context.go(kPublicPreCadastroEscritorioPath);
   metaFbqTrackStartTrialEscritorio();
 }
 

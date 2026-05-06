@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pontocerto/core/auth/session.dart';
+import 'package:pontocerto/core/constants/public_campaign_routes.dart';
 import 'package:pontocerto/core/errors/app_error_mapper.dart';
 import 'package:pontocerto/core/navigation/app_shell.dart';
 import 'package:pontocerto/core/navigation/shell_page_chrome.dart';
@@ -1289,7 +1290,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
             );
         final m = dashboard.metrics;
         return AppWorkspaceCard(
-          title: 'Funil: page views e leads',
+          title: 'Funil: visualizacoes e contactos',
           subtitle:
               'Últimos ${dashboard.days} dias (coleção marketing). Use Atualizar no topo para recarregar.',
           child: Wrap(
@@ -1297,24 +1298,24 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
             runSpacing: 16,
             children: [
               AppMetricCard(
-                label: 'Page views landing',
+                label: 'Visualizacoes landing /vendas',
                 value: m.salesViews.toString(),
-                caption: 'Rota /vendas',
+                caption: 'Rotas comerciais publicas',
               ),
               AppMetricCard(
-                label: 'Page views (rotas genéricas)',
+                label: 'Visualizacoes (rotas genericas)',
                 value: m.preregViews.toString(),
-                caption: 'Histórico agregado',
+                caption: 'Historico agregado',
               ),
               AppMetricCard(
-                label: 'Page views pré-cadastro empresa',
+                label: 'Visualizações pré-cadastro empresa',
                 value: m.companyLightPreregistrationViews.toString(),
-                caption: '/cadastro-empresa leve',
+                caption: kPublicPreCadastroEmpresaPath,
               ),
               AppMetricCard(
-                label: 'Leads formulário plano',
+                label: 'Contactos agregados (redirect)',
                 value: m.preregSubmits.toString(),
-                caption: 'Envio fluxo /contratar',
+                caption: 'Historico inclui /contratar e fluxos antigos',
               ),
               AppMetricCard(
                 label: 'Leads empresa leve',
@@ -1349,12 +1350,12 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       ('Demo — perfil empresa', '$base/demo-empresa'),
       ('Demo — perfil contador', '$base/demo-contador'),
       (
-        'Pré-cadastro empresa (UF + cidade + CEP; ajuste o query)',
-        '$base/cadastro-empresa?uf=SP&cidade=SaoPaulo&cep=01310100',
+        'Pre-cadastro empresa (UF, cidade e CEP no query para pre-preencher)',
+        '$base$kPublicPreCadastroEmpresaPath?uf=SP&cidade=SaoPaulo&cep=01310100',
       ),
-      ('Pré-cadastro escritório contábil', '$base/cadastro-escritorio-contabil'),
+      ('Pre-cadastro escritorio contabil', '$base$kPublicPreCadastroEscritorioPath'),
       (
-        'Atalho /contratar (redireciona para empresa leve; preserve UTM)',
+        'Atalho /contratar (redirect para pre-cadastro empresa; conserve UTM)',
         '$base/contratar?utm_source=campanha&utm_medium=pago',
       ),
     ];
@@ -3813,7 +3814,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                       return AppWorkspaceCard(
                         title: 'Inteligencia comercial',
                         subtitle:
-                            'Monitoramento interno da landing: visitas, origem, plano escolhido e leads reais da pagina publica. Para remarketing e perfil demografico no Instagram, a proxima etapa e ligar Meta/Google.',
+                            'Convites e entradas publicas: demos, pre-cadastros empresa e contador e contactos vindos das rotas da pagina publica. Para remarketing e perfil no Instagram, a proxima etapa e ligar Meta/Google.',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -3830,14 +3831,6 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                                   label: 'Sessoes',
                                   value: dashboard.metrics.sessions.toString(),
                                   caption: 'Navegacoes registradas',
-                                ),
-                                AppMetricCard(
-                                  label: 'Planos clicados',
-                                  value: dashboard.metrics.planSelects
-                                      .toString(),
-                                  caption: _formatRatio(
-                                    dashboard.metrics.planSelectRate,
-                                  ),
                                 ),
                                 AppMetricCard(
                                   label: 'Leads enviados',
@@ -3886,12 +3879,12 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                                       'Acessos totais registrados no demo',
                                 ),
                                 AppMetricCard(
-                                  label: 'Page views pre-cadastro empresa',
+                                  label: 'Visualizacoes pre-cadastro empresa',
                                   value: dashboard
                                       .metrics
                                       .companyLightPreregistrationViews
                                       .toString(),
-                                  caption: '/cadastro-empresa leve',
+                                  caption: kPublicPreCadastroEmpresaPath,
                                 ),
                                 AppMetricCard(
                                   label: 'Leads empresa leve',
@@ -3933,22 +3926,6 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                                 _DetailLine(
                                   _formatMarketingKey(item.key),
                                   '${item.count} evento(s)',
-                                ),
-                              const SizedBox(height: 12),
-                            ],
-                            if (dashboard.topPlans.isNotEmpty) ...[
-                              const Text(
-                                'Planos com mais interesse',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color: AppBrandColors.ink,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              for (final item in dashboard.topPlans)
-                                _DetailLine(
-                                  _formatMarketingKey(item.key),
-                                  '${item.count} clique(s)',
                                 ),
                               const SizedBox(height: 12),
                             ],

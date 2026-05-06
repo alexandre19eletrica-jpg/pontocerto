@@ -33,6 +33,7 @@ class _AccountingOfficeSignupPageState
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
   final _notesController = TextEditingController();
+  final _cepSignupController = TextEditingController();
 
   bool _loadingPrefill = false;
   bool _loadingCnpj = false;
@@ -43,6 +44,27 @@ class _AccountingOfficeSignupPageState
       'Use o CNPJ para preencher automaticamente os dados disponiveis do escritorio.';
 
   bool get _lightweightMode => widget.token.trim().isEmpty;
+  bool _leadGeoHydrated = false;
+
+  String _onlyDigits(String value) =>
+      value.replaceAll(RegExp(r'[^0-9]'), '');
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_lightweightMode || _leadGeoHydrated) return;
+    _leadGeoHydrated = true;
+    final q = GoRouterState.of(context).uri.queryParameters;
+    if (_stateController.text.isEmpty) {
+      _stateController.text = (q['uf'] ?? q['estado'] ?? '').trim();
+    }
+    if (_cityController.text.isEmpty) {
+      _cityController.text = (q['cidade'] ?? '').trim();
+    }
+    if (_cepSignupController.text.isEmpty) {
+      _cepSignupController.text = (q['cep'] ?? '').trim();
+    }
+  }
 
   @override
   void initState() {
@@ -67,6 +89,7 @@ class _AccountingOfficeSignupPageState
     _cityController.dispose();
     _stateController.dispose();
     _notesController.dispose();
+    _cepSignupController.dispose();
     super.dispose();
   }
 
@@ -158,7 +181,16 @@ class _AccountingOfficeSignupPageState
           _responsibleNameController.text.trim().isEmpty ||
           _emailController.text.trim().isEmpty) {
         _showMessage(
-          'Preencha nome da razao social do escritorio, responsavel e e-mail.',
+          'Preencha nome do escritorio, responsavel e e-mail.',
+        );
+        return;
+      }
+      final ufs = _stateController.text.trim().toUpperCase();
+      final cidade = _cityController.text.trim();
+      final cep = _onlyDigits(_cepSignupController.text);
+      if (ufs.length != 2 || cidade.isEmpty || cep.length != 8) {
+        _showMessage(
+          'Informe UF com 2 letras, cidade e CEP com 8 digitos.',
         );
         return;
       }
@@ -172,6 +204,11 @@ class _AccountingOfficeSignupPageState
             email: _emailController.text.trim().toLowerCase(),
             password: '',
             confirmPassword: '',
+            leadOrigin: <String, String>{
+              'estado': ufs,
+              'cidade': cidade,
+              'cep': cep,
+            },
           ),
         );
         if (!mounted) return;
@@ -319,14 +356,25 @@ class _AccountingOfficeSignupPageState
           child: ListView(
             children: [
               AppWorkspaceCard(
-                title: 'Escritorio de contabilidade',
-                subtitle:
-                    lightweightMode
-                        ? 'Abra o acesso com nome e e-mail. A senha e definida pelo link automatico enviado na caixa de entrada.'
-                        : 'Cadastro dedicado para o contador indicado pela empresa. Primeiro o escritorio e cadastrado; depois a empresa indicada entra no fluxo oficial desse escritorio.',
+                title: lightweightMode
+                    ? 'Contador: abra seu acesso agora'
+                    : 'Escritorio de contabilidade',
+                subtitle: lightweightMode
+                    ? 'Poucos dados — link na caixa de entrada. Centralize clientes num so ambiente.'
+                    : 'Cadastro dedicado para o contador indicado pela empresa. Primeiro o escritorio e cadastrado; depois a empresa indicada entra no fluxo oficial desse escritorio.',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (lightweightMode)
+                      Text(
+                        'Preencha em seguida. A senha chega pelo e-mail.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppBrandColors.softText,
+                          height: 1.35,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    else ...[
                     const Text(
                       'Fluxo previsto',
                       style: TextStyle(
@@ -336,17 +384,13 @@ class _AccountingOfficeSignupPageState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      lightweightMode
-                          ? '1. Registre escritorio e responsavel com e-mail valido.\n'
-                              '2. Confirme a senha atraves do link recebido.\n'
-                              '3. Entre pelo login do contador e complete dados fiscais quando for o momento.\n'
-                              '4. Organize empresas e rotinas na carteira do escritorio.'
-                          : '1. A empresa ou a plataforma envia um convite quando aplicavel.\n'
-                              '2. O escritorio completa dados cadastrais e fiscais no formulario oficial.\n'
-                              '3. O sistema envia e-mail com acesso ao ambiente web e orientacao para o app quando couber.\n'
-                              '4. O escritorio fica disponivel na base da plataforma para vinculos e operacao.\n'
-                              '5. Em seguida, cadastre ou vincule as empresas da carteira no fluxo interno.',
+                          '1. A empresa ou a plataforma envia um convite quando aplicavel.\n'
+                          '2. O escritorio completa dados cadastrais e fiscais no formulario oficial.\n'
+                          '3. O sistema envia e-mail com acesso ao ambiente web e orientacao para o app quando couber.\n'
+                          '4. O escritorio fica disponivel na base da plataforma para vinculos e operacao.\n'
+                          '5. Em seguida, cadastre ou vincule as empresas da carteira no fluxo interno.',
                     ),
+                    ],
                     const SizedBox(height: 12),
                     if (!lightweightMode)
                       Container(
@@ -479,17 +523,84 @@ class _AccountingOfficeSignupPageState
                       icon: Icons.alternate_email_rounded,
                       keyboardType: TextInputType.emailAddress,
                     ),
-                    if (lightweightMode)
+                    if (lightweightMode) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 84,
+                              child: TextField(
+                                controller: _stateController,
+                                maxLength: 2,
+                                textCapitalization:
+                                    TextCapitalization.characters,
+                                decoration: const InputDecoration(
+                                  labelText: 'UF *',
+                                  counterText: '',
+                                  prefixIcon: Icon(Icons.map_outlined),
+                                ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'[a-zA-Z]'),
+                                  ),
+                                ],
+                                onChanged: (v) {
+                                  final u = v.toUpperCase().trim();
+                                  if (u != v) {
+                                    final c =
+                                        u.length > 2 ? u.substring(0, 2) : u;
+                                    _stateController.value = TextEditingValue(
+                                      text: c,
+                                      selection:
+                                          TextSelection.collapsed(offset: c.length),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _field(
+                                controller: _cityController,
+                                label: 'Cidade *',
+                                icon: Icons.location_city_outlined,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            SizedBox(
+                              width: 128,
+                              child: TextField(
+                                controller: _cepSignupController,
+                                keyboardType: TextInputType.number,
+                                maxLength: 8,
+                                decoration: const InputDecoration(
+                                  labelText: 'CEP *',
+                                  counterText: '',
+                                  prefixIcon: Icon(
+                                    Icons.markunread_mailbox_outlined,
+                                  ),
+                                ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Text(
-                          'A senha sera definida pelo link enviado para este e-mail.',
+                          'A senha e criada pelo link enviado a este e-mail.',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: AppBrandColors.softText,
                             height: 1.4,
                           ),
                         ),
                       ),
+                    ],
                     if (!lightweightMode) ...[
                       _field(
                         controller: _addressController,
