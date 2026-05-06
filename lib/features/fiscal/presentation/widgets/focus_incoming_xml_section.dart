@@ -5,10 +5,11 @@ import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
 import 'package:pontocerto/core/utils/bytes_download.dart';
+import 'package:pontocerto/core/fiscal/fiscal_integration_ui_copy.dart';
 import 'package:pontocerto/features/accountant_declarations/domain/focus_incoming_document.dart';
 import 'package:pontocerto/features/fiscal/presentation/services/focus_incoming_xml_service.dart';
 
-/// Documentos recebidos (NF-e / NFS-e nacional) importados via API Focus.
+/// Documentos recebidos (NF-e / NFS-e nacional) pelo canal integrador da plataforma.
 ///
 /// Usado na rota da **empresa** (`/fiscal`) e na página **Declarações** do contador.
 /// A Cloud Function grava em `empresas/{id}/documentos_fiscais`; regras permitem
@@ -32,7 +33,7 @@ class _FocusIncomingXmlSectionState extends State<FocusIncomingXmlSection> {
     if (widget.session.isDemo) {
       if (mounted) {
         context.showUserMessage(
-          'Sessao demo: sincronizacao com a Focus nao e executada neste ambiente.',
+          'Sessao demo: sincronizacao com o ${FiscalIntegrationUiCopy.vendor(widget.session)} nao e executada neste ambiente.',
         );
       }
       return;
@@ -56,7 +57,7 @@ class _FocusIncomingXmlSectionState extends State<FocusIncomingXmlSection> {
       if (!mounted) return;
       context.showUserError(
         'Nao foi possivel sincronizar ${documentType == 'nfe' ? 'NF-e' : 'NFS-e nacional'} '
-        'pela Focus: $error',
+        'pelo ${FiscalIntegrationUiCopy.vendor(widget.session)}: $error',
       );
     } finally {
       if (mounted) {
@@ -113,9 +114,11 @@ class _FocusIncomingXmlSectionState extends State<FocusIncomingXmlSection> {
   Widget build(BuildContext context) {
     if (widget.session.isDemo) {
       return AppWorkspaceCard(
-        title: 'Documentos fiscais recebidos (Focus)',
+        title: FiscalIntegrationUiCopy.inboundDocumentsTitle(widget.session),
         subtitle:
-            'Na demonstracao, a leitura pode aparecer, mas a sincronizacao com a Focus nao corre — use o botao do banner amarelo para abrir o acesso real.',
+            'Na demonstracao, a leitura pode aparecer, mas a sincronizacao com o '
+            '${FiscalIntegrationUiCopy.vendor(widget.session)} nao corre — use o '
+            'botao do banner amarelo para abrir o acesso real.',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -153,10 +156,9 @@ class _FocusIncomingXmlSectionState extends State<FocusIncomingXmlSection> {
         .snapshots();
 
     return AppWorkspaceCard(
-      title: 'Documentos fiscais via Focus',
+      title: FiscalIntegrationUiCopy.inboundDocumentsTitle(widget.session),
       subtitle:
-          'NF-e e NFS-e nacional recebidas: busca na Focus, gravacao em Firestore '
-          'e XML no Storage quando a API envia corpo. Mesma integracao para empresa e contador.',
+          FiscalIntegrationUiCopy.inboundDocumentsSubtitle(widget.session),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -304,6 +306,9 @@ class _FocusIncomingXmlSectionState extends State<FocusIncomingXmlSection> {
                   for (final doc in docs) ...[
                     _IncomingXmlTile(
                       doc: doc,
+                      xmlPendingExplanation:
+                          FiscalIntegrationUiCopy.xmlAwaitingVendorMessage(
+                              widget.session),
                       onDownloadXml: doc.canDownloadXml
                           ? () => _downloadXml(doc)
                           : null,
@@ -321,9 +326,14 @@ class _FocusIncomingXmlSectionState extends State<FocusIncomingXmlSection> {
 }
 
 class _IncomingXmlTile extends StatelessWidget {
-  const _IncomingXmlTile({required this.doc, required this.onDownloadXml});
+  const _IncomingXmlTile({
+    required this.doc,
+    required this.xmlPendingExplanation,
+    required this.onDownloadXml,
+  });
 
   final FocusIncomingDocument doc;
+  final String xmlPendingExplanation;
   final VoidCallback? onDownloadXml;
 
   @override
@@ -384,9 +394,9 @@ class _IncomingXmlTile extends StatelessWidget {
                   label: const Text('Baixar XML'),
                 ),
                 if (!doc.canDownloadXml)
-                  const Text(
-                    'Quando a Focus devolver o XML completo e ele for salvo no Storage, o download aparece aqui.',
-                    style: TextStyle(
+                  Text(
+                    xmlPendingExplanation,
+                    style: const TextStyle(
                       color: AppBrandColors.softText,
                       fontWeight: FontWeight.w600,
                     ),

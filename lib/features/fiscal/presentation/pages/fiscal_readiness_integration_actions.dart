@@ -44,7 +44,7 @@ extension _FiscalReadinessIntegrationActions on _FiscalReadinessPageState {
                     const Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Ambiente, provedor, modalidade de API Focus para emissao e URL base '
+                        'Ambiente, provedor, modalidade de API do integrador fiscal para emissao e URL base '
                         'sao configuracao global da plataforma (empresa suprema). Abaixo aparecem '
                         'preenchidos para conferencia; edite apenas codigo fiscal, certificado '
                         'e observacoes desta empresa.',
@@ -95,20 +95,20 @@ extension _FiscalReadinessIntegrationActions on _FiscalReadinessPageState {
                           ? 'Global da plataforma (suprema); travado nesta empresa.'
                           : null,
                     ),
-                    items: const [
+                    items: [
                       DropdownMenuItem(
-                        value: 'Focus NFe',
-                        child: Text('Focus NFe'),
+                        value: FiscalIntegrationUiCopy.providerFocusNfeValue,
+                        child: Text(FiscalIntegrationUiCopy.providerDropdownLabel(sessao)),
                       ),
-                      DropdownMenuItem(
+                      const DropdownMenuItem(
                         value: 'Tecnospeed',
                         child: Text('Tecnospeed'),
                       ),
-                      DropdownMenuItem(
+                      const DropdownMenuItem(
                         value: 'Prefeitura direta',
                         child: Text('Prefeitura direta'),
                       ),
-                      DropdownMenuItem(
+                      const DropdownMenuItem(
                         value: 'Outro integrador',
                         child: Text('Outro integrador'),
                       ),
@@ -134,17 +134,17 @@ extension _FiscalReadinessIntegrationActions on _FiscalReadinessPageState {
                     DropdownButtonFormField<String>(
                       initialValue: selectedFocusApi,
                       decoration: InputDecoration(
-                        labelText: 'API Focus para emissao',
+                        labelText: FiscalIntegrationUiCopy.integratorApiModalLabel(sessao),
                         helperText: usesGlobalIntegrationDefaults
                             ? 'Global da plataforma (suprema); travado nesta empresa.'
                             : null,
                       ),
-                      items: const [
+                      items: [
                         DropdownMenuItem(
                           value: 'municipal',
-                          child: Text('NFSe municipal Focus'),
+                          child: Text(FiscalIntegrationUiCopy.nfseMunicipalDropdownChild(sessao)),
                         ),
-                        DropdownMenuItem(
+                        const DropdownMenuItem(
                           value: 'national',
                           child: Text('NFSe Nacional'),
                         ),
@@ -186,11 +186,10 @@ extension _FiscalReadinessIntegrationActions on _FiscalReadinessPageState {
                   ),
                   const SizedBox(height: 10),
                   if (selectedProvider.toLowerCase().contains('focus')) ...[
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Token API Focus: a plataforma ja provisiona a credencial de forma segura. '
-                        'Ninguem ve o valor nesta tela; ela fica apenas na infraestrutura (Functions / ambiente).',
+                        FiscalIntegrationUiCopy.platformTokenExplanation(sessao),
                         style: TextStyle(height: 1.38),
                       ),
                     ),
@@ -202,7 +201,7 @@ extension _FiscalReadinessIntegrationActions on _FiscalReadinessPageState {
                         labelText: 'Token API / chave',
                         helperText: usesGlobalIntegrationDefaults
                             ? 'Credencial global ou da suprema; travado nesta empresa.'
-                            : 'Apenas para integradores fora do fluxo Focus global.',
+                            : FiscalIntegrationUiCopy.nonGlobalTokenHelper(sessao),
                       ),
                     ),
                   const SizedBox(height: 10),

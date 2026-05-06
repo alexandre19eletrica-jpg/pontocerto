@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import 'package:pontocerto/core/navigation/app_shell.dart';
 import 'package:pontocerto/core/navigation/shell_page_chrome.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
+import 'package:pontocerto/core/utils/callable_response_map.dart';
 import 'package:pontocerto/core/utils/formatadores_input.dart';
 import 'package:pontocerto/features/assistant/presentation/services/assistant_admin_service.dart';
 import 'package:pontocerto/features/company/presentation/services/company_billing_service.dart';
@@ -1211,202 +1213,505 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
     final dados = Map<String, dynamic>.from(_dados ?? {});
     if (sessao == null) return;
 
-    final nomeFantasiaController = TextEditingController(
-      text: dados['nomeFantasia']?.toString() ?? '',
+    var carregandoCnpj = false;
+    Map<String, dynamic>? registrySnapshot;
+    var businessCategory =
+        dados['businessCategory']?.toString().trim().isNotEmpty == true
+            ? dados['businessCategory'].toString()
+            : 'service';
+    var ieDispensada = dados['inscricaoEstadualDispensada'] == true;
+
+    final cnpjController =
+        TextEditingController(text: dados['cnpj']?.toString() ?? '');
+    final razaoSocialController =
+        TextEditingController(text: dados['razaoSocial']?.toString() ?? '');
+    final nomeFantasiaController =
+        TextEditingController(text: dados['nomeFantasia']?.toString() ?? '');
+    final ieController = TextEditingController(
+      text: dados['inscricaoEstadual']?.toString() ?? '',
     );
-    final telefoneController = TextEditingController(
-      text: dados['telefone']?.toString() ?? '',
+    final imController = TextEditingController(
+      text: dados['inscricaoMunicipal']?.toString() ?? '',
     );
-    final emailController = TextEditingController(
-      text: dados['email']?.toString() ?? '',
+    final mainCnaeController =
+        TextEditingController(text: dados['mainCnae']?.toString() ?? '');
+    final mainCnaeDescController = TextEditingController(
+      text: dados['mainCnaeDescription']?.toString() ?? '',
     );
-    final enderecoController = TextEditingController(
-      text: dados['endereco']?.toString() ?? '',
-    );
-    final cepController = TextEditingController(
-      text: dados['cep']?.toString() ?? '',
-    );
-    final ruaController = TextEditingController(
-      text: dados['rua']?.toString() ?? '',
-    );
-    final numeroController = TextEditingController(
-      text: dados['numero']?.toString() ?? '',
-    );
-    final complementoController = TextEditingController(
-      text: dados['complemento']?.toString() ?? '',
-    );
-    final bairroController = TextEditingController(
-      text: dados['bairro']?.toString() ?? '',
-    );
-    final quadraController = TextEditingController(
-      text: dados['quadra']?.toString() ?? '',
-    );
-    final loteController = TextEditingController(
-      text: dados['lote']?.toString() ?? '',
-    );
+    final telefoneController =
+        TextEditingController(text: dados['telefone']?.toString() ?? '');
+    final emailController =
+        TextEditingController(text: dados['email']?.toString() ?? '');
+    final enderecoController =
+        TextEditingController(text: dados['endereco']?.toString() ?? '');
+    final cepController =
+        TextEditingController(text: dados['cep']?.toString() ?? '');
+    final ruaController =
+        TextEditingController(text: dados['rua']?.toString() ?? '');
+    final numeroController =
+        TextEditingController(text: dados['numero']?.toString() ?? '');
+    final complementoController =
+        TextEditingController(text: dados['complemento']?.toString() ?? '');
+    final bairroController =
+        TextEditingController(text: dados['bairro']?.toString() ?? '');
+    final cidadeController =
+        TextEditingController(text: dados['cidade']?.toString() ?? '');
+    final estadoController =
+        TextEditingController(text: dados['estado']?.toString() ?? '');
+    final quadraController =
+        TextEditingController(text: dados['quadra']?.toString() ?? '');
+    final loteController =
+        TextEditingController(text: dados['lote']?.toString() ?? '');
+    final functions =
+        FirebaseFunctions.instanceFor(region: 'us-central1');
+
+    Future<void> buscarCnpjDialog(
+      void Function(void Function()) setDialogState,
+    ) async {
+      final cnpj = cnpjController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      if (cnpj.length != 14) {
+        _msg('Informe um CNPJ valido com 14 digitos.');
+        return;
+      }
+      setDialogState(() => carregandoCnpj = true);
+      try {
+        final callable = functions.httpsCallable('lookupBrazilCnpjForSignup');
+        final response = await callable.call(<String, dynamic>{'cnpj': cnpj});
+        final map = mapFromCallableData(response.data);
+        registrySnapshot = map;
+
+        final legal = map['legalName']?.toString().trim();
+        if (legal != null && legal.isNotEmpty) {
+          razaoSocialController.text = legal;
+        }
+        final trade = map['tradeName']?.toString().trim();
+        if (trade != null && trade.isNotEmpty) {
+          nomeFantasiaController.text = trade;
+        }
+        final emailLookup = map['email']?.toString().trim();
+        if (emailLookup != null && emailLookup.isNotEmpty) {
+          emailController.text = emailLookup;
+        }
+        final phoneLookup = map['phone']?.toString().trim();
+        if (phoneLookup != null && phoneLookup.isNotEmpty) {
+          telefoneController.text = phoneLookup;
+        }
+        final sr = map['stateRegistration']?.toString().trim() ?? '';
+        if (sr.isNotEmpty) {
+          ieController.text = sr;
+        }
+        imController.text = sanitizeMunicipalRegistrationFromCnpjLookup(
+          map,
+          imController.text,
+        );
+        final zip = map['zipCode']?.toString().trim() ?? '';
+        if (zip.isNotEmpty) {
+          cepController.text = zip;
+        }
+        final st = map['street']?.toString().trim() ?? '';
+        if (st.isNotEmpty) {
+          ruaController.text = st;
+        }
+        final numRaw = map['number']?.toString().trim() ?? '';
+        if (numRaw.isNotEmpty) {
+          numeroController.text = numRaw;
+        }
+        final comp = map['complement']?.toString().trim() ?? '';
+        if (comp.isNotEmpty) {
+          complementoController.text = comp;
+        }
+        final nei = map['neighborhood']?.toString().trim() ?? '';
+        if (nei.isNotEmpty) {
+          bairroController.text = nei;
+        }
+        final city = map['city']?.toString().trim() ?? '';
+        if (city.isNotEmpty) {
+          cidadeController.text = city;
+        }
+        final uf = map['state']?.toString().trim() ?? '';
+        if (uf.isNotEmpty) {
+          estadoController.text = uf.toUpperCase();
+        }
+        final mc = map['mainCnae']?.toString().trim() ?? '';
+        if (mc.isNotEmpty) {
+          mainCnaeController.text = mc;
+        }
+        final mcDesc = map['mainCnaeDescription']?.toString().trim() ?? '';
+        if (mcDesc.isNotEmpty) {
+          mainCnaeDescController.text = mcDesc;
+        }
+        final enderecoPartes = [st, numRaw, nei, city, uf]
+            .where((item) => item.isNotEmpty)
+            .join(', ');
+        if (enderecoPartes.isNotEmpty) {
+          enderecoController.text = enderecoPartes;
+        }
+
+        final legalNature =
+            map['legalNature']?.toString().toLowerCase() ?? '';
+        final companySize =
+            map['companySize']?.toString().toLowerCase() ?? '';
+        final isMei = legalNature.contains('microempreendedor individual') ||
+            legalNature.contains('mei') ||
+            companySize.contains('microempreendedor individual');
+
+        if (isMei) {
+          businessCategory = 'service';
+        }
+
+        setDialogState(() {});
+        _msg('Dados do CNPJ carregados.');
+      } catch (e) {
+        _msg(
+          AppErrorMapper.messageFrom(
+            e,
+            fallback: 'Nao foi possivel buscar os dados do CNPJ.',
+          ),
+        );
+      } finally {
+        setDialogState(() => carregandoCnpj = false);
+      }
+    }
 
     await showDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, _) => AlertDialog(
-          title: const Text('Editar dados da empresa'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Aqui a empresa pode editar apenas dados seguros de contato e endereco operacional. Dados fiscais, CNPJ, inscricoes, CNAE e emitente ficam restritos a empresa suprema ou ao contador vinculado.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppBrandColors.softText,
-                    fontWeight: FontWeight.w600,
-                  ),
+        builder: (context, setDialogState) {
+          Widget cnpjRow() => Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: cnpjController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [CnpjInputFormatter()],
+                  decoration: const InputDecoration(labelText: 'CNPJ'),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nomeFantasiaController,
-                  decoration: const InputDecoration(labelText: 'Nome fantasia'),
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: ElevatedButton(
+                  onPressed: carregandoCnpj
+                      ? null
+                      : () => buscarCnpjDialog(setDialogState),
+                  child: Text(carregandoCnpj ? 'Buscando...' : 'Buscar CNPJ'),
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: telefoneController,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [TelefoneInputFormatter()],
-                  maxLength: 15,
-                  decoration: const InputDecoration(labelText: 'Telefone'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: enderecoController,
-                  decoration: const InputDecoration(labelText: 'Endereco'),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: cepController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'CEP'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'O CNPJ ja deve preencher endereco e dados fiscais do emitente. Use o CEP apenas para ajuste manual, se necessario.',
-                    style: const TextStyle(
+              ),
+            ],
+          );
+
+          return AlertDialog(
+            title: const Text('Editar dados da empresa'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Informe o CNPJ e use Buscar para trazer dados oficiais. '
+                    'Complete manualmente apenas o que a consulta nao trouxer. '
+                    'A integracao fiscal global da plataforma continua apenas na empresa suprema.',
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppBrandColors.softText,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: ruaController,
-                  decoration: const InputDecoration(labelText: 'Rua'),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: numeroController,
-                        decoration: const InputDecoration(labelText: 'Numero'),
-                      ),
+                  const SizedBox(height: 12),
+                  cnpjRow(),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: razaoSocialController,
+                    decoration: const InputDecoration(
+                      labelText: 'Razao social',
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: complementoController,
-                        decoration: const InputDecoration(
-                          labelText: 'Complemento',
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nomeFantasiaController,
+                    decoration:
+                        const InputDecoration(labelText: 'Nome fantasia'),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey<String>(businessCategory),
+                    initialValue: businessCategory,
+                    decoration: const InputDecoration(
+                      labelText: 'Ramo principal',
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'service',
+                        child: Text('Prestacao de servicos'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'commerce',
+                        child: Text('Comercio'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'industry',
+                        child: Text('Industria'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'mixed',
+                        child: Text('Misto'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setDialogState(() => businessCategory = value);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    value: ieDispensada,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setDialogState(() => ieDispensada = value);
+                    },
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('IE dispensada'),
+                    subtitle: const Text(
+                      'Marque quando a inscricao estadual nao se aplica a prestacao de servicos.',
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: ieController,
+                    decoration: const InputDecoration(
+                      labelText: 'Inscricao estadual',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: imController,
+                    decoration: const InputDecoration(
+                      labelText: 'Inscricao municipal',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: mainCnaeController,
+                    decoration: const InputDecoration(
+                      labelText: 'CNAE principal',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: mainCnaeDescController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Descricao do CNAE principal',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: telefoneController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [TelefoneInputFormatter()],
+                    maxLength: 15,
+                    decoration: const InputDecoration(labelText: 'Telefone'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(labelText: 'Email'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: enderecoController,
+                    decoration:
+                        const InputDecoration(labelText: 'Endereco'),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: cepController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: 'CEP'),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Ruas e CEP tambem podem ser ajustadas manualmente abaixo.',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppBrandColors.softText,
+                      ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: bairroController,
-                  decoration: const InputDecoration(labelText: 'Bairro'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: quadraController,
-                  decoration: const InputDecoration(labelText: 'Quadra'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: loteController,
-                  decoration: const InputDecoration(labelText: 'Lote'),
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: ruaController,
+                    decoration: const InputDecoration(labelText: 'Rua'),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: numeroController,
+                          decoration: const InputDecoration(labelText: 'Numero'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: complementoController,
+                          decoration: const InputDecoration(
+                            labelText: 'Complemento',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: bairroController,
+                    decoration: const InputDecoration(labelText: 'Bairro'),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: cidadeController,
+                          decoration: const InputDecoration(labelText: 'Cidade'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: estadoController,
+                          decoration: const InputDecoration(labelText: 'UF'),
+                          textCapitalization: TextCapitalization.characters,
+                          maxLength: 2,
+                          buildCounter:
+                              (_,
+                                      {required currentLength,
+                                      required isFocused,
+                                      maxLength}) =>
+                                  null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: quadraController,
+                    decoration: const InputDecoration(labelText: 'Quadra'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: loteController,
+                    decoration: const InputDecoration(labelText: 'Lote'),
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final nomeFantasia = nomeFantasiaController.text.trim();
-                if (nomeFantasia.isEmpty) {
-                  _msg('Informe o nome fantasia.');
-                  return;
-                }
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final cnpjDigits =
+                      cnpjController.text.replaceAll(RegExp(r'[^0-9]'), '');
+                  final razao = razaoSocialController.text.trim();
+                  final nomeFantasia = nomeFantasiaController.text.trim();
+                  if (cnpjDigits.length != 14) {
+                    _msg('Informe um CNPJ valido com 14 digitos.');
+                    return;
+                  }
+                  if (razao.isEmpty) {
+                    _msg('Informe a razao social.');
+                    return;
+                  }
+                  if (nomeFantasia.isEmpty) {
+                    _msg('Informe o nome fantasia.');
+                    return;
+                  }
 
-                final novosDados = <String, dynamic>{
-                  ...dados,
-                  'nomeFantasia': _normalizarTexto(nomeFantasia, upper: true),
-                  'telefone': _normalizarTelefoneBR(telefoneController.text),
-                  'email': _normalizarEmail(emailController.text),
-                  'cep': _normalizarTexto(cepController.text, upper: true),
-                  'endereco': _normalizarTexto(
-                    enderecoController.text,
-                    upper: true,
-                  ),
-                  'rua': _normalizarTexto(ruaController.text, upper: true),
-                  'numero': _normalizarTexto(
-                    numeroController.text,
-                    upper: true,
-                  ),
-                  'complemento': _normalizarTexto(
-                    complementoController.text,
-                    upper: true,
-                  ),
-                  'bairro': _normalizarTexto(
-                    bairroController.text,
-                    upper: true,
-                  ),
-                  'quadra': _normalizarTexto(
-                    quadraController.text,
-                    upper: true,
-                  ),
-                  'lote': _normalizarTexto(loteController.text, upper: true),
-                };
+                  final novosDados = <String, dynamic>{
+                    ...dados,
+                    'cnpj': cnpjDigits,
+                    'razaoSocial': _normalizarTexto(razao, upper: true),
+                    'nomeFantasia':
+                        _normalizarTexto(nomeFantasia, upper: true),
+                    'businessCategory': businessCategory,
+                    'inscricaoEstadualDispensada': ieDispensada,
+                    'inscricaoEstadual': ieDispensada
+                        ? ''
+                        : _normalizarTexto(ieController.text, upper: true),
+                    'inscricaoMunicipal':
+                        _normalizarTexto(imController.text, upper: true),
+                    'mainCnae':
+                        _normalizarTexto(mainCnaeController.text, upper: false),
+                    'mainCnaeDescription': _normalizarTexto(
+                      mainCnaeDescController.text,
+                      upper: false,
+                    ),
+                    'telefone': _normalizarTelefoneBR(telefoneController.text),
+                    'email': _normalizarEmail(emailController.text),
+                    'cep': _normalizarTexto(cepController.text, upper: true),
+                    'endereco': _normalizarTexto(
+                      enderecoController.text,
+                      upper: true,
+                    ),
+                    'rua': _normalizarTexto(ruaController.text, upper: true),
+                    'numero': _normalizarTexto(
+                      numeroController.text,
+                      upper: true,
+                    ),
+                    'complemento': _normalizarTexto(
+                      complementoController.text,
+                      upper: true,
+                    ),
+                    'bairro': _normalizarTexto(
+                      bairroController.text,
+                      upper: true,
+                    ),
+                    'cidade':
+                        _normalizarTexto(cidadeController.text, upper: true),
+                    'estado':
+                        _normalizarTexto(estadoController.text, upper: true),
+                    'quadra': _normalizarTexto(
+                      quadraController.text,
+                      upper: true,
+                    ),
+                    'lote':
+                        _normalizarTexto(loteController.text, upper: true),
+                    'registrySnapshot':
+                        registrySnapshot ?? dados['registrySnapshot'],
+                  };
 
-                Navigator.of(context).pop();
-                await _salvarEdicao(sessao.userId, novosDados);
-              },
-              child: const Text('Salvar'),
-            ),
-          ],
-        ),
+                  Navigator.of(context).pop();
+                  await _salvarEdicao(sessao.userId, novosDados);
+                },
+                child: const Text('Salvar'),
+              ),
+            ],
+          );
+        },
       ),
     );
 
+    cnpjController.dispose();
+    razaoSocialController.dispose();
     nomeFantasiaController.dispose();
+    ieController.dispose();
+    imController.dispose();
+    mainCnaeController.dispose();
+    mainCnaeDescController.dispose();
     telefoneController.dispose();
     emailController.dispose();
     cepController.dispose();
@@ -1415,6 +1720,8 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
     numeroController.dispose();
     complementoController.dispose();
     bairroController.dispose();
+    cidadeController.dispose();
+    estadoController.dispose();
     quadraController.dispose();
     loteController.dispose();
   }

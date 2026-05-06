@@ -269,11 +269,18 @@ Frentes tecnicas de publicacao:
 
 Certificadora (orquestracao AC + estados + ponte para `fiscalCertificate` / Focus) e preparacao **IBS/CBS** (campos opcionais, flags desligadas, sem alteracao de payload real ate decisao) estao descritas **somente** em [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md). Qualquer implementacao deve obedecer a ordem `OFICIAL_01` → `02` → `03` → codigo → `OFICIAL_04` e continuidade.
 
+## Camada de copy do integrador fiscal (05/05/2026)
+
+- `lib/core/fiscal/fiscal_integration_ui_copy.dart`: mensagens de integracao NFS-e/NF-e nas rotas empresa, fiscal, contador e declaracoes — **sem nome comercial do fornecedor tecnico** para quem nao e dono na empresa suprema (`hasSupremePlatformAccess` / `showFiscalVendorName`).
+- `lib/features/company/presentation/pages/company_page.dart`: cadastro da empresa no painel com **Buscar CNPJ** (`lookupBrazilCnpjForSignup`) gravando em `users.companyData`.
+- `functions/src/index.ts` (`buildAssistantInstructions`, `buildAssistantFeatureInventory`, guia `/fiscal`): referencias explicitas aos quatro `docs/OFICIAL_*.md` e linguagem **integrador fiscal** em lugar de marca de terceiro no inventario textual do modelo.
+
 ## Referencias tecnicas centrais
 
 - [firestore.rules](/C:/Users/hp/pontocerto/firestore.rules)
 - [app_router.dart](/C:/Users/hp/pontocerto/lib/core/router/app_router.dart)
 - [session.dart](/C:/Users/hp/pontocerto/lib/core/auth/session.dart)
+- [fiscal_integration_ui_copy.dart](/C:/Users/hp/pontocerto/lib/core/fiscal/fiscal_integration_ui_copy.dart)
 - [index.ts](/C:/Users/hp/pontocerto/functions/src/index.ts)
 - [FISCAL_READINESS.md](/C:/Users/hp/pontocerto/docs/FISCAL_READINESS.md)
 - [OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md)

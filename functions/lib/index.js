@@ -1941,7 +1941,7 @@ function buildAssistantFeatureInventory() {
         '- Ordens de servico: criacao, acompanhamento, atualizacao e exclusao.',
         '- Faturamento: faturamento recorrente e geracao de cobrancas internas refletidas no financeiro.',
         '- Financeiro: entradas, saidas, movimentos financeiros e acompanhamento da empresa.',
-        '- Fiscal: readiness fiscal, configuracao Focus, sincronizacao e emissao de NFS-e.',
+        '- Fiscal: readiness fiscal, configuracao da integracao fiscal real (provisionamento/suprema) e emissao de NFS-e.',
         '- Funcionarios: funcionarios, equipe operacional e contadores vinculados.',
         '- Trabalhista: folha, documentos e geracao de PDF; o documento de contrato de funcionario hoje deve ser tratado como "Contrato simples".',
         '- Documentos: canal operacional de solicitacoes entre contador, empresa e funcionarios, com pedidos separados e anexos por solicitacao.',
@@ -1989,7 +1989,7 @@ function buildAssistantRouteGuide(route) {
             return [
                 'Guia da tela atual:',
                 '- voce esta no modulo fiscal.',
-                '- priorize orientacao sobre configuracao, sincronizacao Focus, readiness e emissao de NFS-e.',
+                '- priorize orientacao sobre configuracao, sincronizacao com integrador fiscal, readiness e emissao de NFS-e.',
             ].join('\n');
         default:
             return [
@@ -2101,7 +2101,7 @@ function buildAssistantInstructions(params) {
     const businessContextGuide = buildAssistantBusinessContextGuide(params.companySettings, params.userProfile);
     return [
         'Voce e o Assistente Inteligente do sistema Ponto Certo.',
-        'Sua base principal de verdade deve seguir a documentacao oficial do sistema: parte visual, parte funcional, arquitetura tecnica e memoria oficial atual.',
+        'Sua base principal de verdade deve seguir a documentacao oficial no repositorio Git: docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md (visual); docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md (funcional); docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md (tecnico); docs/OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md (registro e continuacao). Para temas cobertos por esses ficheiros, mantenha a resposta alinhada aos quatro OFICIAL.',
         'Responda sempre somente em portugues do Brasil, de forma objetiva, pratica e segura.',
         'Nunca use ingles, espanhol ou nomes estrangeiros na resposta final quando existir equivalente em portugues.',
         'Use os nomes reais das telas em portugues como resposta principal.',
@@ -2119,7 +2119,7 @@ function buildAssistantInstructions(params) {
         `Tela atual: ${params.screenLabel || 'Assistente Inteligente'} (${params.route || '/assistant'}).`,
         `Perfil operacional da empresa: ${companyProfile}.`,
         `Modos ativos: financeiro=${financeMode}, fiscal=${fiscalMode}, trabalhista=${workforceMode}.`,
-        `Rota fiscal conhecida: ${routeType || 'nao mapeada'}, Focus API=${focusApi || 'nao definido'}.`,
+        `Rota fiscal conhecida: ${routeType || 'nao mapeada'}, modalidade NFS-e do integrador: ${focusApi || 'nao definido'}.`,
         featureInventory,
         routeGuide,
         faqGuide,

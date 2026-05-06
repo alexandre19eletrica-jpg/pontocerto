@@ -314,7 +314,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                           ),
                         ),
                       ],
-                      if (!lightweightMode && !completionMode)
+                      if (!lightweightMode)
                         Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -1084,11 +1084,11 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
     }
     setState(() => _carregandoCnpj = true);
     try {
-      final callable = FirebaseFunctions.instance.httpsCallable(
+      final callable = _functions.httpsCallable(
         'lookupBrazilCnpjForSignup',
       );
       final response = await callable.call(<String, dynamic>{'cnpj': cnpj});
-      final map = Map<String, dynamic>.from(response.data as Map);
+      final map = mapFromCallableData(response.data);
       _razaoSocialController.text =
           map['legalName']?.toString().trim().isNotEmpty == true
           ? map['legalName'].toString()

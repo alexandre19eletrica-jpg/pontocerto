@@ -6,6 +6,7 @@ import 'package:pontocerto/core/navigation/shell_page_chrome.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/urls/receita_official_urls.dart';
+import 'package:pontocerto/core/fiscal/fiscal_integration_ui_copy.dart';
 import 'package:pontocerto/features/accountant_links/presentation/accountant_company_links_provider.dart';
 import 'package:pontocerto/features/fiscal/presentation/widgets/focus_incoming_xml_section.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -90,7 +91,7 @@ class AccountantDeclarationsPage extends ConsumerWidget {
       header: AppWorkspaceHeader(
         title: 'Declaracoes e obrigacoes',
         subtitle:
-            'Acessos oficiais com acao, isolamento por empresa ativa e captura de XML via Focus (painel igual ao modulo Fiscal da empresa).',
+            FiscalIntegrationUiCopy.accountantDeclarationsHeaderSubtitle(session),
         chips: [AppHeaderChip('Empresa ativa: ${session.companyId}')],
       ),
     );
@@ -151,11 +152,12 @@ class AccountantDeclarationsPage extends ConsumerWidget {
             const SizedBox(height: 16),
             FocusIncomingXmlSection(session: session),
             const SizedBox(height: 16),
-            const AppWorkspaceCard(
+            AppWorkspaceCard(
               title: 'Responsabilidade',
-              subtitle:
-                  'Links levam a sistemas oficiais e a captura Focus respeita o CNPJ da empresa ativa. Manifestacao do destinatario e automacoes fiscais adicionais ficam para outra rodada.',
-              child: SizedBox.shrink(),
+              subtitle: FiscalIntegrationUiCopy.accountantDeclarationsResponsibility(
+                session,
+              ),
+              child: const SizedBox.shrink(),
             ),
           ],
         ),

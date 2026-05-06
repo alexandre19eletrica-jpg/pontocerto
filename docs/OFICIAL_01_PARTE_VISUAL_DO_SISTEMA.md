@@ -241,6 +241,7 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 
 - **Web/desktop + FAB WhatsApp:** o `builder` do `MaterialApp` usa `Stack` com **`StackFit.expand`** para o conteudo das rotas ocupar toda a viewport (evita erro de layout/branco em browser quando o filho nao recebia restricoes maximas).
 - **Pre-cadastro leve empresa e escritorio** (`/pre-cadastro-empresa`, modo leve em `cadastro_empresa_page`; `/pre-cadastro-escritorio` / `AccountingOfficeSignupPage`): **UF, Cidade e CEP** passam a usar **rotulo fixo acima** do campo (`ExternalLabeledField`) e **hints** dentro da caixa (sem label flutuante competindo com o texto); em largura \< **560px** os tres campos **empilham** em coluna para leitura confortavel no telemovel.
+- **Empresa (`company_page`):** dialogo **Editar dados da empresa** com campo **CNPJ**, botao **Buscar CNPJ** (callable `lookupBrazilCnpjForSignup`) e formulario alargado para dados cadastrais/fiscais basicos; marca do fornecedor tecnico de NFS-e permanece **omitida** nas contas normais (copy via `fiscal_integration_ui_copy.dart`).
 
 ## Atualizacao visual (05/05/2026)
 

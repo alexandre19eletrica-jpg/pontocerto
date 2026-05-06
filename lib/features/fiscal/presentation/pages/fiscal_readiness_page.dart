@@ -13,6 +13,7 @@ import 'package:pontocerto/core/company/company_runtime_summary_provider.dart';
 import 'package:pontocerto/core/navigation/app_shell.dart';
 import 'package:pontocerto/core/navigation/shell_page_chrome.dart';
 import 'package:pontocerto/core/pdf/pdf_output.dart';
+import 'package:pontocerto/core/fiscal/fiscal_integration_ui_copy.dart';
 import 'package:pontocerto/core/platform/platform_access.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
@@ -1728,6 +1729,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                                       issRetained: issRetained,
                                       inssRetained: inssRetained,
                                       fiscalCostBearer: fiscalCostBearer,
+                                      fiscalSession: sessao,
                                     ),
                               ),
                               fiscalCostBearer: fiscalCostBearer,
@@ -1740,6 +1742,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                                   });
                                 }
                               },
+                              fiscalSession: sessao,
                             ),
                             if (useNationalEmission) ...[
                               const SizedBox(height: 12),
@@ -2036,8 +2039,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Emissao oficial (pre-check alinhado a Focus)',
+                          Text(
+                            FiscalIntegrationUiCopy.preCheckOfficialTitle(sessao),
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               color: AppBrandColors.ink,
@@ -2048,8 +2051,9 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                             builder: (context) {
                               final d = buildCurrentInvoiceDocument();
                               if (d == null) {
-                                return const Text(
-                                  'Informe o valor do serviço para listar o que ainda falta para a Focus/Sefin.',
+                                return Text(
+                                  FiscalIntegrationUiCopy
+                                      .informServiceValueForReadiness(sessao),
                                   style: TextStyle(
                                     color: AppBrandColors.softText,
                                     fontSize: 13,
@@ -2849,6 +2853,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     required bool issRetained,
     required bool inssRetained,
     required String fiscalCostBearer,
+    Session? fiscalSession,
   }) {
     final gross = _parseCurrencyToCents(amountText) ?? 0;
     final deductions = _parseCurrencyToCents(deductionsText) ?? 0;
@@ -2866,8 +2871,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Totais (mesma regra do salvamento e da Focus: valor_iss, valor_cp, valor_liquido).',
+        Text(
+          FiscalIntegrationUiCopy.totalsIssRuleFootnote(fiscalSession),
           style: TextStyle(
             color: AppBrandColors.softText,
             fontSize: 12,
@@ -3408,7 +3413,9 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                             ),
                             if (summaryFiscal.isNotEmpty) ...[
                               AppMetricCard(
-                                label: 'Aprovadas (Sefin / Focus)',
+                                label: FiscalIntegrationUiCopy.approvedInvoicesMetric(
+                                    sessao,
+                                  ),
                                 value: summaryCount(
                                   'approvedInvoicesCount',
                                 ).toString(),
@@ -3558,9 +3565,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
         canConfigureModule && canEditGlobalFiscalIntegration;
     return AppWorkspaceCard(
       title: 'Modo fiscal',
-      subtitle: canEditGlobalFiscalIntegration
-          ? 'Nivel de operacao fiscal e integracao com a plataforma.'
-          : 'A integracao com a Focus fica na empresa suprema. Aqui a empresa liga a preparacao de NFS-e e segue o provisionamento, sincronizacao e emissao.',
+      subtitle: FiscalIntegrationUiCopy.modoFiscalSubtitle(
+        sessao,
+        canEditGlobalFiscalIntegration,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3602,7 +3610,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                     : null,
               ),
               _featureToggle(
-                label: 'Integracao real (Focus)',
+                label:
+                    FiscalIntegrationUiCopy.integrationRealToggleLabel(sessao),
                 value: settings.enableRealInvoiceIntegration,
                 onChanged: canEditFocusIntegration
                     ? (value) => _saveFiscalSettings(
@@ -3615,9 +3624,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           ),
           if (canConfigureModule && !canEditGlobalFiscalIntegration) ...[
             const SizedBox(height: 8),
-            const Text(
-              'A «Integracao real (Focus)» so a empresa suprema liga. Ative a preparacao de NFS-e acima, '
-              'conclua o provisionamento, sincronize e emita.',
+            Text(
+              FiscalIntegrationUiCopy.integrationRealLockedFootnote(sessao),
               style: TextStyle(
                 color: AppBrandColors.softText,
                 fontSize: 13,
@@ -5239,7 +5247,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
       title: 'Recebimento na NFS-e',
       subtitle:
           'Instrucoes de pagamento e dados bancarios vao para o fim do texto da discriminacao do servico '
-          '(corpo da nota na Focus). Podem ser editados tambem ao abrir Nova NFS-e.',
+          '${FiscalIntegrationUiCopy.invoiceBodyFocusFootnote(sessao)}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -5318,7 +5326,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
       subtitle: canEditGlobalFiscalIntegration
           ? 'Integracao global (ambiente, provedor, API, tokens) pela sua empresa suprema. Inscricao municipal, '
               'codigo municipal, CNAE, matriz e preparacao pelo CNPJ sao individuais por empresa cadastrada.'
-          : 'Integracao global (ambiente, provedor, API Focus, URL, tokens): apenas a suprema altera — nao confundir '
+          : 'Integracao global (ambiente, provedor, APIs do integrador fiscal, URL, tokens): apenas a suprema altera — nao confundir '
               'com dados cadastrais desta empresa (inscricao municipal, CNAE, codigos, matriz). '
               'Matriz fiscal, preparar pelo CNPJ, checklist e automacao desta empresa estao liberados com permissao.',
       child: Column(
@@ -5332,15 +5340,14 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                 borderRadius: BorderRadius.circular(16),
                 side: const BorderSide(color: Color(0xFFC5CAE9)),
               ),
-              child: const ListTile(
+              child: ListTile(
                 leading: Icon(Icons.lock_outline, color: Color(0xFF303F9F)),
                 title: Text(
                   'Integracao global travada',
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
                 subtitle: Text(
-                  'So a suprema altera ambiente, provedor, API Focus, URL e tokens (uma base para todas as empresas). '
-                  'Nesta empresa continuam livres: inscricao municipal, CNAE, matriz fiscal, preparacao pelo CNPJ e checklist. '
+                  '${FiscalIntegrationUiCopy.globalIntegrationReadonlyFootnote(sessao)}'
                   'Em «Configurar emissao real» aparecem os globais (leitura) e o que for local: codigo da emissao, certificado e observacoes.',
                   style: TextStyle(height: 1.35),
                 ),
@@ -5370,7 +5377,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           if (setup.provider.trim().toLowerCase().contains('focus') ||
               focusProvisioning.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _buildFocusProvisioningCard(focusProvisioning),
+            _buildFocusProvisioningCard(focusProvisioning, sessao),
           ],
           const SizedBox(height: 12),
           _buildHomologationChecklistCard(
@@ -5535,7 +5542,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     );
   }
 
-  Widget _buildFocusProvisioningCard(Map<String, dynamic> provisioning) {
+  Widget _buildFocusProvisioningCard(
+    Map<String, dynamic> provisioning,
+    Session sessao,
+  ) {
     final status = provisioning['status']?.toString().trim() ?? 'PENDING';
     final focusCompanyId =
         provisioning['focusCompanyId']?.toString().trim() ?? '';
@@ -5560,7 +5570,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Provisionamento automatico Focus',
+            FiscalIntegrationUiCopy.provisioningAutoTitle(sessao),
             style: TextStyle(
               fontWeight: FontWeight.w800,
               color: tone.foreground,
@@ -5568,7 +5578,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            _focusProvisioningStatusLabel(status),
+            _focusProvisioningStatusLabel(status, sessao),
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: tone.foreground,
@@ -5576,7 +5586,9 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           ),
           if (focusCompanyId.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text('Empresa Focus ID: $focusCompanyId'),
+            Text(
+              '${FiscalIntegrationUiCopy.provisioningExternalIdLabel(sessao)} $focusCompanyId',
+            ),
           ],
           if (missing.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -5626,12 +5638,12 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     }
   }
 
-  String _focusProvisioningStatusLabel(String status) {
+  String _focusProvisioningStatusLabel(String status, Session sessao) {
     switch (status) {
       case 'SYNCED':
-        return 'Empresa provisionada automaticamente na Focus.';
+        return FiscalIntegrationUiCopy.provisioningSyncedBody(sessao);
       case 'ERROR':
-        return 'A automacao tentou sincronizar a empresa, mas a Focus retornou erro.';
+        return FiscalIntegrationUiCopy.provisioningErrorBody(sessao);
       case 'SKIPPED':
         return 'Provisionamento automatico ignorado para esta configuracao.';
       case 'PENDING':
@@ -5692,9 +5704,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
         value: checklist.providerConnectionValidated,
         title: 'Conexao com provedor validada',
         subtitle: setup.provider.trim().toLowerCase().contains('focus')
-            ? hasFocusSync
-                  ? 'Empresa sincronizada com a Focus. Validar retorno e credenciais.'
-                  : 'Sincronize a empresa com a Focus e valide as credenciais.'
+            ? FiscalIntegrationUiCopy.checklistFocusProviderConnection(
+                sessao,
+                hasFocusSync,
+              )
             : 'Valide token, endpoint e retorno basico do integrador.',
         onChanged: (value) => _saveFiscalHomologationChecklist(
           sessao: sessao,
@@ -5865,7 +5878,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     final String? emissionConfigTooltip = !canConfigureModule
         ? 'Sem permissao para editar a configuracao fiscal com este acesso.'
         : (!canEditGlobalFiscalIntegration
-              ? 'Ambiente, provedor, API Focus e URL base vêm da empresa suprema (somente leitura). '
+              ? '${FiscalIntegrationUiCopy.globalEnvProviderReadonlyLine(sessao)}'
                   'Aqui voce complementa codigo fiscal, certificado e observacoes desta empresa.'
               : null);
     return Align(
@@ -5894,7 +5907,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
             ),
           ),
           Tooltip(
-            message: 'Certificado e documentos para o provisionamento na Focus.',
+            message: FiscalIntegrationUiCopy.provisioningDocumentsHint(sessao),
             child: OutlinedButton.icon(
               onPressed: canCompanyFiscalActions
                   ? () => _uploadDigitalCertificate(sessao)
@@ -5922,7 +5935,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           ),
           Tooltip(
             message: canEditCompanyFiscalPrep
-                ? 'Reprocessar automacao de provisionamento Focus apenas para esta empresa.'
+                ? FiscalIntegrationUiCopy.reprocessProvisioningHint(sessao)
                 : fiscalPrepLockedHint,
             child: OutlinedButton.icon(
               onPressed: canEditCompanyFiscalPrep
@@ -5938,13 +5951,13 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           if (setup.provider.trim().toLowerCase().contains('focus'))
             Tooltip(
               message:
-                  'Sincronize esta empresa com a Focus apos o cadastro e a documentacao.',
+                  FiscalIntegrationUiCopy.syncAfterSignupHint(sessao),
               child: OutlinedButton.icon(
                 onPressed: canCompanyFiscalActions
                     ? () => _syncFocusCompany(sessao: sessao)
                     : null,
                 icon: const Icon(Icons.sync_outlined),
-                label: const Text('Sincronizar Focus'),
+                label: Text(FiscalIntegrationUiCopy.syncCompanyButton(sessao)),
               ),
             ),
         ],
@@ -6306,13 +6319,17 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
       final validUntil = map['certificadoValidoAte']?.toString().trim() ?? '';
       _msg(
         focusCompanyId.isEmpty
-            ? 'Empresa sincronizada com a Focus NFe.'
-            : 'Focus sincronizada. Empresa ID $focusCompanyId${validUntil.isEmpty ? '' : ' | certificado ate $validUntil'}',
+            ? FiscalIntegrationUiCopy.syncCompanySuccessGeneric(sessao)
+            : FiscalIntegrationUiCopy.syncCompanySuccessDetail(
+                sessao,
+                focusCompanyId,
+                validUntil.isEmpty ? '' : ' | certificado ate $validUntil',
+              ),
       );
     } on FirebaseFunctionsException catch (e) {
-      _msg(e.message ?? 'Nao foi possivel sincronizar com a Focus NFe.');
+      _msg(e.message ?? FiscalIntegrationUiCopy.syncCompanyCallableError(sessao));
     } catch (_) {
-      _msg('Nao foi possivel sincronizar com a Focus NFe.');
+      _msg(FiscalIntegrationUiCopy.syncCompanyCallableError(sessao));
     }
   }
 
@@ -6320,6 +6337,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     String? successMessage,
     String? fallbackErrorMessage,
   }) async {
+    final uiSessao = ref.read(sessionProvider);
     try {
       final callable = _fiscalFunctions.httpsCallable(
         'fiscalRefreshCompanyProvisioning',
@@ -6342,9 +6360,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
       if (status == 'SYNCED') {
         _msg(
           successMessage ??
-              (focusCompanyId.isEmpty
-                  ? 'Provisionamento automatico da Focus concluido.'
-                  : 'Provisionamento automatico concluido. Empresa Focus ID $focusCompanyId.'),
+              FiscalIntegrationUiCopy.provisioningAutoDoneMessage(
+                uiSessao,
+                focusCompanyId,
+              ),
         );
         return;
       }
@@ -6361,8 +6380,13 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
         _msg(
           error.isEmpty
               ? (fallbackErrorMessage ??
-                    'A automacao fiscal foi reprocessada, mas a Focus rejeitou a sincronizacao.')
-              : 'A automacao fiscal foi reprocessada, mas a Focus retornou: $error',
+                    FiscalIntegrationUiCopy.provisioningRefreshFocusRejected(
+                      uiSessao,
+                    ))
+              : FiscalIntegrationUiCopy.provisioningRefreshFocusDetail(
+                  uiSessao,
+                  error,
+                ),
         );
         return;
       }
@@ -7129,6 +7153,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     required Map<String, dynamic> companySettings,
   }) {
     final blockers = <String>[];
+    final session = ref.read(sessionProvider);
     final certificateFile = certificate['fileName']?.toString().trim() ?? '';
     final certificateValidUntil =
         certificate['validUntil']?.toString().trim() ?? '';
@@ -7154,7 +7179,7 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     if (setup.provider.trim().toLowerCase().contains('focus') &&
         focusCompanyId.isEmpty) {
       blockers.add(
-        'Sincronizar a empresa com a Focus NFe antes da operacao oficial.',
+        FiscalIntegrationUiCopy.blockerSyncBeforeOfficial(session),
       );
     }
     if (certificateFile.isEmpty) {
@@ -7464,7 +7489,7 @@ class _FiscalRealIntegrationSetup {
     if (isPrepared) {
       return 'Base estrutural pronta para iniciar integracoes reais de NFS-e com homologacao, certificados e endpoint definidos.';
     }
-    return 'Preencha ambiente, provedor, modalidade Focus, codigo fiscal, certificado e observacoes de homologacao para iniciar a emissao oficial com seguranca.';
+    return 'Preencha ambiente, provedor, modalidade de API do integrador, codigo fiscal, certificado e observacoes de homologacao para iniciar a emissao oficial com seguranca.';
   }
 
   Map<String, dynamic> toMap() {
@@ -8732,7 +8757,7 @@ _FiscalServiceNormalizationResult _normalizeFiscalServiceItemForRoute({
   if (routeType == 'manual_review') {
     return const _FiscalServiceNormalizationResult(
       errorMessage:
-          'A rota fiscal desta empresa ainda esta em revisao manual. Defina a rota da Focus antes de ativar servicos para emissao.',
+          'A rota fiscal desta empresa ainda esta em revisao manual. Defina a rota do integrador fiscal antes de ativar servicos para emissao.',
     );
   }
 
@@ -8749,7 +8774,7 @@ _FiscalServiceNormalizationResult _normalizeFiscalServiceItemForRoute({
     if (nationalCode.isEmpty) {
       return const _FiscalServiceNormalizationResult(
         errorMessage:
-            'No fluxo Focus NFSe Nacional, o servico fiscal precisa ter codigo de tributacao nacional com 6 digitos no padrao XX.XX.XX.',
+            'No fluxo nacional de NFS-e, o servico fiscal precisa ter codigo de tributacao nacional com 6 digitos no padrao XX.XX.XX.',
       );
     }
     final municipalCodeDigits = item.municipalServiceCode.replaceAll(
@@ -8786,13 +8811,13 @@ _FiscalServiceNormalizationResult _normalizeFiscalServiceItemForRoute({
   if (municipalListCode.isEmpty) {
     return const _FiscalServiceNormalizationResult(
       errorMessage:
-          'No fluxo Focus municipal, o codigo do servico deve seguir a lista da LC 116 no padrao XX.XX.',
+          'No fluxo municipal (integrador padrao da plataforma), o codigo do servico deve seguir a lista da LC 116 no padrao XX.XX.',
     );
   }
   if (item.municipalServiceCode.trim().isEmpty) {
     return const _FiscalServiceNormalizationResult(
       errorMessage:
-          'No fluxo Focus municipal, informe o codigo tributario do municipio para o servico fiscal.',
+          'No fluxo municipal do integrador fiscal, informe o codigo tributario do municipio para o servico fiscal.',
     );
   }
   return _FiscalServiceNormalizationResult(

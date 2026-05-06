@@ -294,6 +294,12 @@ Foi **registado** (sem implementar) o plano em [PLANEJAMENTO_SEGURO_CERTIFICADOR
 
 **Correcao subsequente — WhatsApp nas landings (Web):** o **`Link`** do `url_launcher` no Flutter Web pode falhar com botoes so no canvas quando os dois sinais (`followLink` + evento DOM no `<a>` da platform-view) nao batem (**`preventDefault`** -> navegacao abortada sem erro visivel). Meta Pixel/`fbq`/microtasks a seguir ao clique podem agravar. **Implementacao atual:** **`AnchorElement`** + **`click()`** no mesmo stack do **`onPressed`** (`vendas_whatsapp_web_anchor_web.dart`), com abertura **na mesma aba** (`target: _self`) para evitar bloqueio silencioso de nova aba; Pixel e `sales_whatsapp_comercial` apenas apos **`Timer`(400 ms)** (`scheduleWhatsappComercialSignals` em `vendas_whatsapp_button.dart`).
 
+## Memoria rodada: cadastro empresa + marca integrador + assistente (05/05/2026)
+
+- Liberada edicao alargada na rota **Empresa** com **Buscar CNPJ** para preencher dados oficiais quando disponiveis.
+- Textos fiscais orientados ao utilizador normal e ao contador **omitiram** a marca comercial do integrador tecnico nas telas afectadas; empresa suprema mantem leitura tecnica completa onde aplicavel.
+- Cloud Function do assistente (`buildAssistantInstructions`): instrucao de sistema com **caminhos explicitos** dos quatro `OFICIAL_*.md` no repositorio e inventario/guia `/fiscal` neutralizados relativamente a marca do integrador.
+
 ## Documentos relacionados
 
 - [PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md](PLANEJAMENTO_SEGURO_CERTIFICADORA_E_REFORMA_FISCAL_IBS_CBS.md) — planeamento **nao implementado**

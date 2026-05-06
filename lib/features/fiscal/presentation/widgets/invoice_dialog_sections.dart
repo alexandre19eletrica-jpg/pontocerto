@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pontocerto/core/auth/session.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
+import 'package:pontocerto/core/fiscal/fiscal_integration_ui_copy.dart';
 import 'package:pontocerto/core/utils/formatadores_input.dart';
 
 class InvoiceServiceSection extends StatelessWidget {
@@ -430,6 +432,7 @@ class InvoiceTaxSection extends StatelessWidget {
     required this.totalsPreview,
     required this.fiscalCostBearer,
     required this.onFiscalCostBearerChanged,
+    this.fiscalSession,
   });
 
   final TextEditingController deductionsController;
@@ -445,6 +448,7 @@ class InvoiceTaxSection extends StatelessWidget {
   final Widget totalsPreview;
   final String fiscalCostBearer;
   final ValueChanged<String?> onFiscalCostBearerChanged;
+  final Session? fiscalSession;
 
   @override
   Widget build(BuildContext context) {
@@ -542,8 +546,8 @@ class InvoiceTaxSection extends StatelessWidget {
             onChanged: onInssRetainedChanged,
             contentPadding: EdgeInsets.zero,
             title: const Text('INSS (CP) retido pelo tomador'),
-            subtitle: const Text(
-              'Marque quando a retencao de INSS/CP for devida. O valor e calculado com a aliquota acima; na emissao real a Focus recebe o valor (valor_cp) quando for maior que zero.',
+            subtitle: Text(
+              FiscalIntegrationUiCopy.invoiceRetentionInss(fiscalSession),
             ),
           ),
           const SizedBox(height: 4),

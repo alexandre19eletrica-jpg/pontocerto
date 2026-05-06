@@ -9,6 +9,7 @@ import 'package:pontocerto/core/navigation/app_shell.dart';
 import 'package:pontocerto/core/navigation/shell_page_chrome.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
+import 'package:pontocerto/core/fiscal/fiscal_integration_ui_copy.dart';
 import 'package:pontocerto/features/accountant_links/domain/accountant_link.dart';
 import 'package:pontocerto/features/accountant_links/presentation/accountant_fiscal_profile_provider.dart';
 import 'package:pontocerto/features/accountant_links/presentation/accountant_company_links_provider.dart';
@@ -495,7 +496,10 @@ class _AccountantCompanyTile extends ConsumerWidget {
                 .snapshots(),
             builder: (context, snapshot) {
               final data = snapshot.data?.data() ?? const <String, dynamic>{};
-              return _AccountantFiscalStatusPanel(companySettings: data);
+              return _AccountantFiscalStatusPanel(
+                session: session!,
+                companySettings: data,
+              );
             },
           ),
           const SizedBox(height: 12),
@@ -522,8 +526,12 @@ class _AccountantCompanyTile extends ConsumerWidget {
 }
 
 class _AccountantFiscalStatusPanel extends StatelessWidget {
-  const _AccountantFiscalStatusPanel({required this.companySettings});
+  const _AccountantFiscalStatusPanel({
+    required this.session,
+    required this.companySettings,
+  });
 
+  final Session session;
   final Map<String, dynamic> companySettings;
 
   @override
@@ -564,24 +572,24 @@ class _AccountantFiscalStatusPanel extends StatelessWidget {
     final usesMunicipalFocus =
         usesFocus && !usesNationalFocus && routeType != 'manual_review';
     final routeLabel = routeType == 'focus_national'
-        ? 'Focus NFSe Nacional'
+        ? FiscalIntegrationUiCopy.nationalRoute(session)
         : routeType == 'focus_municipal'
-        ? 'Focus municipal'
+        ? FiscalIntegrationUiCopy.municipalRoute(session)
         : routeType == 'manual_review'
         ? 'Revisao manual'
         : usesNationalFocus
-        ? 'Focus NFSe Nacional'
+        ? FiscalIntegrationUiCopy.nationalRoute(session)
         : usesMunicipalFocus
-        ? 'Focus municipal'
+        ? FiscalIntegrationUiCopy.municipalRoute(session)
         : 'Rota em definicao';
 
     final automaticChecks = <String>[
       if (usesFocus)
-        'Provedor Focus configurado',
+        FiscalIntegrationUiCopy.accountantProviderConfigured(session),
       if (usesNationalFocus)
-        'Sistema definiu emissao pela NFSe Nacional da Focus',
+        FiscalIntegrationUiCopy.accountantNationalEmissionDefined(session),
       if (usesMunicipalFocus)
-        'Sistema definiu emissao pela integracao municipal da Focus',
+        FiscalIntegrationUiCopy.accountantMunicipalEmissionDefined(session),
       if (integration['usesPlatformFocusToken'] == true ||
           (integration['apiToken']?.toString().trim() ?? '').isNotEmpty)
         'Token da integracao ativo (global ou preenchido)',
@@ -594,7 +602,7 @@ class _AccountantFiscalStatusPanel extends StatelessWidget {
       if ((certificate['validUntil']?.toString().trim() ?? '').isNotEmpty)
         'Validade do certificado retornada',
       if ((companySettings['focusCompanyId']?.toString().trim() ?? '').isNotEmpty)
-        'Empresa sincronizada na Focus',
+        FiscalIntegrationUiCopy.accountantCompanySynced(session),
       if (checklist['providerConnectionValidated'] == true)
         'Conexao com provedor validada',
       if (checklist['pilotInvoiceValidated'] == true)
@@ -623,11 +631,16 @@ class _AccountantFiscalStatusPanel extends StatelessWidget {
       ...((provisioning['missing'] as List?) ?? const [])
           .map((item) => item.toString().trim())
           .where((item) => item.isNotEmpty)
-          .map((item) => 'Focus ainda aponta pendencia: $item'),
+          .map(
+            (item) => FiscalIntegrationUiCopy.accountantPendingFromVendor(
+              session,
+              item,
+            ),
+          ),
     ];
 
     final focusAlreadySolves = <String>[
-      'Cadastro/sincronizacao da empresa emitente na Focus',
+      FiscalIntegrationUiCopy.accountantEmitterRegistration(session),
       'Leitura do certificado enviado e retorno de validade',
       'Emissao, consulta de status e cancelamento de NFS-e quando a empresa estiver pronta',
     ];
@@ -660,7 +673,10 @@ class _AccountantFiscalStatusPanel extends StatelessWidget {
             children: [
               AppHeaderChip(routeLabel),
               AppHeaderChip(
-                'Focus ${provisioning['status']?.toString().trim().isEmpty == true ? 'PENDING' : provisioning['status']}',
+                FiscalIntegrationUiCopy.accountantChipProvisioning(
+                  session,
+                  provisioning['status']?.toString() ?? '',
+                ),
               ),
               AppHeaderChip(
                 automaticChecks.isEmpty
@@ -685,10 +701,14 @@ class _AccountantFiscalStatusPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             usesNationalFocus
-                ? 'Esta empresa esta no fluxo NFSe Nacional da Focus. O sistema ja distingue isso do fluxo municipal para evitar processo duplicado de prefeitura.'
+                ? FiscalIntegrationUiCopy.accountantNationalFlowSummary(session)
                 : usesMunicipalFocus
-                ? 'Esta empresa esta no fluxo municipal da Focus. O contador continua vendo apenas o que falta na rota municipal, sem duplicar processo nacional.'
-                : 'A leitura abaixo respeita a rota fiscal detectada para a empresa e evita duplicar processo entre Focus municipal, Focus nacional e revisao manual.',
+                ? FiscalIntegrationUiCopy.accountantMunicipalFlowSummary(
+                    session,
+                  )
+                : FiscalIntegrationUiCopy.accountantRouteGenericSummary(
+                    session,
+                  ),
             style: const TextStyle(
               color: AppBrandColors.softText,
               height: 1.4,
@@ -696,7 +716,9 @@ class _AccountantFiscalStatusPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _section(
-            title: 'O que a Focus ja valida ou resolve',
+            title: FiscalIntegrationUiCopy.accountantWhatIntegratorResolvesTitle(
+              session,
+            ),
             items: [
               ...automaticChecks,
               ...focusAlreadySolves.where((item) => !automaticChecks.contains(item)),

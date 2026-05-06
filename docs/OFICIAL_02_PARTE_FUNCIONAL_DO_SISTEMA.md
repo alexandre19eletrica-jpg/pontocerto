@@ -25,7 +25,7 @@ Na frente comercial publica atual existe **dois callables de entrada leve**:
 
 Depois do cadastro publico completo com CNPJ liberado, o sistema encaminha o utilizador para **`/login-empresa`** com mensagem para abrir o e-mail (ou recuperar senha), em vez de iniciar sessao automaticamente no browser.
 
-**NF-e / NFS-e nacional recebidas (Focus):** na rota **Fiscal** (`/fiscal`) e na pagina **Declarações do contador** existe o mesmo bloco para sincronizar documentos recebidos via callable `fiscalSyncFocusIncomingDocuments`, listar em `empresas/{companyId}/documentos_fiscais`, persistir estado em campos `xml_*` na empresa e fazer download com `fiscalDownloadImportedXml`. **Sessao demo** ou utilizador `demoReadOnly`: botoes bloqueados na UI e os dois callables recusam com `permission-denied`.
+**NF-e / NFS-e nacional recebidas:** na rota **Fiscal** (`/fiscal`) e na pagina **Declarações do contador** existe o mesmo bloco para sincronizar documentos recebidos via callable `fiscalSyncFocusIncomingDocuments`, listar em `empresas/{companyId}/documentos_fiscais`, persistir estado em campos `xml_*` na empresa e fazer download com `fiscalDownloadImportedXml`. **Sessao demo** ou utilizador `demoReadOnly`: botoes bloqueados na UI e os dois callables recusam com `permission-denied`.
 
 ## Modulos principais da empresa
 
@@ -257,8 +257,8 @@ Regra:
 
 ### O que o assistente “ve” em tempo real (tecnico)
 
-- **Nao** ha hoje leitura automatica dos ficheiros `OFICIAL_01`–`04` (Markdown) pela Cloud Function. O backend monta a mensagem de sistema a partir de **instrucoes fixas** em `functions/src/index.ts` (`buildAssistantInstructions`, `buildAssistantFeatureInventory`, guias de rota/modulo) e de **dados reais** no Firestore na chamada: perfil, `company_settings`, resumos de `system_issues` e `runtime_incidents` da empresa, rota/titulo de tela enviados pelo cliente.
-- A API **OpenAI** recebe esse texto de sistema + a pergunta do utilizador. Para o assistente “seguir” fielmente os `OFICIAL_*.md`, e preciso manter **este** documento e, quando a verdade de produto mudar, alinhar o codigo (strings no `index.ts`) ou o processo de publicacao; os MD sao a **fonte de verdade documental** para humanos e para copy do `PROMPT_ASSISTENTE_PONTO_CERTO.md`, nao ficheiros embebidos em cada request.
+- **Nao** ha hoje ingestao automatica do conteudo completo dos ficheiros `OFICIAL_01`–`04` (Markdown) em cada pedido da Cloud Function. O backend monta a mensagem de sistema a partir de **instrucoes fixas** em `functions/src/index.ts` (`buildAssistantInstructions`, `buildAssistantFeatureInventory`, guias de rota/modulo), **explicitando nos prompts os quatro caminhos** `docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md` ate `OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md`, mais **dados reais** no Firestore na chamada: perfil, `company_settings`, resumos de `system_issues` e `runtime_incidents` da empresa, rota/titulo de tela enviados pelo cliente.
+- A API **OpenAI** recebe esse texto + a pergunta do utilizador. Os MD sao a **fonte de verdade documental** para humanos e continuidade; quando a verdade de produto mudar, atualizar tambem estas strings em `functions/src/index.ts` e os proprios OFICIAL.
 
 ## Navegacao do painel (estado actual)
 
@@ -305,7 +305,11 @@ O **que** se pretende fazer em seguranca — certificadora (fluxo contador → e
 - **Leads publicos (`publicCreateSalesPreRegistration`):** usa um unico filtro Firestore por e-mail do cliente e compara `planCode` na aplicacao para nao depender de indice composto para o primeiro `get`.
 - **E-mails transaccionais:** sem `MAIL_FROM`/SMTP ou SendGrid validos nos parametros das Functions, o servidor pode responder `ok` com `emailDispatched` ou `precadastroEmpresaEmailOk`/`conviteParceiroEmailOk` falsos; o utilizador usa recuperacao de senha ou configuracao do provedor nas Functions.
 
-## Documentos relacionados
+## Empresa: edicao de cadastro pelo proprio utilizador (05/05/2026)
+
+- Na rota **Empresa**, o dialogo **Editar dados da empresa** inclui **CNPJ** e botao **Buscar CNPJ** (`lookupBrazilCnpjForSignup`), preenchendo o que a consulta oficial devolver; o restante permanece manual.
+- Owner/manager da empresa tratam dados cadastrais e fiscais base neste fluxo sem depender do contador exclusivamente para edicao textual. Integracao fiscal **global da plataforma** (provisionamento/suprema) mantem-se separada nesta verdade oficial.
+- **Marca do fornecedor tecnico NFS-e/NF-e:** texto na UI usa **provedor integrador** / **integrador fiscal** em contas normais e contador; o nome tecnico aparece apenas para dono na **empresa suprema**. Central de copy: `lib/core/fiscal/fiscal_integration_ui_copy.dart`.
 
 - [OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md)
 - [OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md)

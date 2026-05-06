@@ -355,7 +355,7 @@ class _SalesOnboardingPageState extends State<SalesOnboardingPage> {
                 title: accountantMode ? 'Modo escritorio' : 'Modo cliente',
                 subtitle: accountantMode
                     ? 'Como escritorio contabil, voce pode subir tudo direto aqui no sistema e concluir o cadastro completo da empresa.'
-                    : 'Como o cadastro precisa passar pelo contador, envie tudo o que a equipe precisa para cadastrar a empresa e preparar a Focus.',
+                    : 'Como o cadastro precisa passar pelo contador, envie tudo o que a equipe precisa para cadastrar a empresa e preparar a integracao fiscal automatica.',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -453,9 +453,9 @@ class _SalesOnboardingPageState extends State<SalesOnboardingPage> {
               ),
               const SizedBox(height: 12),
               AppWorkspaceCard(
-                title: 'Dados fiscais e automacao Focus',
+                title: 'Dados fiscais e automacao fiscal',
                 subtitle:
-                    'Esse bloco precisa estar correto para provisionamento fiscal automatico quando a empresa usar Focus.',
+                    'Esse bloco precisa estar correto para o provisionamento fiscal automatico configurado pela plataforma.',
                 child: Column(
                   children: [
                     _field(_taxRegime, 'Regime tributario *'),
