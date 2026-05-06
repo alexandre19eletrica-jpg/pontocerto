@@ -4,6 +4,8 @@ Data base: 02/05/2026
 Projeto: Ponto Certo
 
 
+**Registo (05/05/2026 — build Android Play / AAB 1.0.88+1059):** geração de bundle de release (**`versionName` 1.0.88**, **`versionCode` 1059**), anterior **`pontocerto-1.0.87+1058.aab`**. Inclui todas as alterações já em `master` até esta rodada incluindo FAB WhatsApp suporte global (`GlobalWhatsappSupportFab`, `kWhatsappSupportNumberE164`), documentação oficial alinhada e incremento de versão (`pubspec.yaml`) para evitar conflito com upload anterior na Play Console. Artefacto Gradle: `build/app/outputs/bundle/release/app-release.aab`; cópia recomendada na área de trabalho como **`pontocerto-1.0.88-1059.aab`**.
+
 **Registo (05/05/2026 — FAB WhatsApp suporte global):** `MaterialApp.router` (`lib/app/app.dart`) passou a usar `Stack` no `builder` com `GlobalWhatsappSupportFab` (`lib/core/widgets/global_whatsapp_support_fab.dart`); numero E.164 unico em `lib/core/constants/whatsapp_support.dart` (`kWhatsappSupportNumberE164`), reaproveitado por `buildVendasWhatsappUri`; abertura igual ao comercial (`abrirWhatsappVendas` + mensagem inicial de duvida/informacao). Ver `OFICIAL_01`, `OFICIAL_02`, `OFICIAL_03`.
 
 **Registo (03/05/2026 — auditoria Focus XML contador/empresa):** painel de importacao NF-e/NFS-e nacional extraido para `FocusIncomingXmlSection` (servico `FocusIncomingXmlService`); aparece em `/fiscal` e em `/accountant-declarations`; ambiente registado pelo backend em `xml_sync_state.*.environment`. Callables `fiscalSyncFocusIncomingDocuments` e `fiscalDownloadImportedXml` passam por `assertNotDemoReadOnly`. Ver `OFICIAL_02`.
