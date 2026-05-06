@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:pontocerto/core/utils/callable_response_map.dart';
 
 class AccountingOfficeSignupService {
   AccountingOfficeSignupService({FirebaseFunctions? functions})
@@ -14,7 +15,7 @@ class AccountingOfficeSignupService {
       'publicGetAccountingOfficeSignupPrefill',
     );
     final result = await callable.call(<String, dynamic>{'token': token});
-    final data = Map<String, dynamic>.from(result.data as Map);
+    final data = mapFromCallableData(result.data);
     return AccountingOfficeSignupPrefill.fromMap(data);
   }
 
@@ -25,7 +26,7 @@ class AccountingOfficeSignupService {
       'publicSubmitAccountingOfficeSignup',
     );
     final result = await callable.call(payload.toMap());
-    final data = Map<String, dynamic>.from(result.data as Map);
+    final data = mapFromCallableData(result.data);
     return AccountingOfficeSignupResult.fromMap(data);
   }
 
@@ -36,7 +37,7 @@ class AccountingOfficeSignupService {
       'publicCreateAccountantWorkspaceAccess',
     );
     final result = await callable.call(payload.toMap());
-    final data = Map<String, dynamic>.from(result.data as Map);
+    final data = mapFromCallableData(result.data);
     return AccountingOfficeSignupResult.fromMap(data);
   }
 }

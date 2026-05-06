@@ -14271,13 +14271,20 @@ exports.publicCreateAccountantWorkspaceAccess = functions.https.onCall(async (da
       ...(leadOrigin ? {signupLeadOrigin: leadOrigin} : {}),
     });
 
-    await notificarNovoCadastroAdministrativo({
-      signupType: 'office',
-      officeId: result.officeId,
-      officeName,
-      responsibleName,
-      responsibleEmail: email,
-    });
+    try {
+      await notificarNovoCadastroAdministrativo({
+        signupType: 'office',
+        officeId: result.officeId,
+        officeName,
+        responsibleName,
+        responsibleEmail: email,
+      });
+    } catch (notifyErr: unknown) {
+      functions.logger.error(
+        'notificarNovoCadastroAdministrativo office (publicCreateAccountantWorkspaceAccess)',
+        notifyErr,
+      );
+    }
 
     return {
       ok: true,
@@ -15163,13 +15170,17 @@ exports.publicCreateCompanyWorkspaceAccess = functions.https.onCall(async (data)
     ...(leadOrigin ? {leadOrigin} : {}),
   });
 
-  await notificarNovoCadastroAdministrativo({
-    signupType: 'company_direct',
-    companyId: result.companyId,
-    companyName,
-    responsibleName: ownerName,
-    responsibleEmail: ownerEmail,
-  });
+  try {
+    await notificarNovoCadastroAdministrativo({
+      signupType: 'company_direct',
+      companyId: result.companyId,
+      companyName,
+      responsibleName: ownerName,
+      responsibleEmail: ownerEmail,
+    });
+  } catch (notifyErr: unknown) {
+    functions.logger.error('notificarNovoCadastroAdministrativo company_direct', notifyErr);
+  }
 
   return {
     ok: true,

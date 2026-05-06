@@ -214,25 +214,36 @@ class _AccountingOfficeSignupPageState
           ),
         );
         if (!mounted) return;
-        await showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Acesso criado'),
-            content: Text(result.message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Fechar'),
-              ),
-              FilledButton(
-                onPressed: () => context.go(
-                  '/login-contador?email=${Uri.encodeComponent(result.email)}',
+        try {
+          await showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Acesso criado'),
+              content: Text(result.message),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Fechar'),
                 ),
-                child: const Text('Ir para login'),
-              ),
-            ],
-          ),
-        );
+                FilledButton(
+                  onPressed: () => context.go(
+                    '/login-contador?email=${Uri.encodeComponent(result.email)}',
+                  ),
+                  child: const Text('Ir para login'),
+                ),
+              ],
+            ),
+          );
+        } catch (e, st) {
+          debugPrint('Dialogo pos cadastro escritorio leve: $e');
+          debugPrintStack(stackTrace: st);
+          if (!mounted) return;
+          _showMessage(
+            result.message.trim().isNotEmpty
+                ? result.message
+                : 'Acesso criado. Verifique o e-mail ou abra o login do contador.',
+          );
+        }
       } catch (error) {
         if (!mounted) return;
         _showMessage(AppErrorMapper.messageFrom(error));

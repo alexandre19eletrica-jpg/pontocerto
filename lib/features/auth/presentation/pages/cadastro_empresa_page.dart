@@ -9,6 +9,7 @@ import 'package:pontocerto/core/company/empresa_cache.dart';
 import 'package:pontocerto/core/errors/app_error_mapper.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
+import 'package:pontocerto/core/utils/callable_response_map.dart';
 import 'package:pontocerto/core/utils/formatadores_input.dart';
 import 'package:pontocerto/core/widgets/botao_voltar_app.dart';
 import 'package:pontocerto/core/widgets/external_labeled_field.dart';
@@ -818,6 +819,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
       }
       setState(() => _carregando = true);
       try {
+        final pagePathForAnalytics = GoRouterState.of(context).matchedLocation;
         final payload = <String, dynamic>{
           'ownerEmail': email,
           'ownerPassword': '',
@@ -834,14 +836,25 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
           'publicCreateCompanyWorkspaceAccess',
         );
         final response = await callable.call(payload);
-        final map = Map<String, dynamic>.from(response.data as Map);
-        final companyId = map['companyId']?.toString() ?? '';
-        final matchedPath = GoRouterState.of(context).matchedLocation;
-        await _salesAnalytics.trackCompanyLightPreregistrationSubmit(
-          leadId: companyId,
-          pagePath: matchedPath,
-        );
-        metaFbqTrackLeadPrecadastroEmpresaLeve(companyId: companyId);
+        final map = mapFromCallableData(response.data);
+        final companyId = map['companyId']?.toString().trim() ?? '';
+
+        try {
+          await _salesAnalytics.trackCompanyLightPreregistrationSubmit(
+            leadId: companyId,
+            pagePath: pagePathForAnalytics,
+          );
+        } catch (e, st) {
+          debugPrint('trackCompanyLightPreregistrationSubmit pos-sucesso: $e');
+          debugPrintStack(stackTrace: st);
+        }
+        try {
+          metaFbqTrackLeadPrecadastroEmpresaLeve(companyId: companyId);
+        } catch (e, st) {
+          debugPrint('metaFbqTrackLeadPrecadastroEmpresaLeve pos-sucesso: $e');
+          debugPrintStack(stackTrace: st);
+        }
+
         final emailOk = map['emailDispatched'] == true;
         if (!mounted) return;
         if (emailOk) {

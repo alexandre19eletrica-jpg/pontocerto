@@ -146,7 +146,7 @@ O vinculo empresa-escritorio continua nas maos do contador, via fluxo de cadastr
 | `lib/app/app.dart` | `MaterialApp.router`; `builder` com `Stack` (**`StackFit.expand`**) + conteudo + FAB WhatsApp global |
 | `lib/core/widgets/global_whatsapp_support_fab.dart` | Botao fixo inferior-direito: `wa.me` suporte (`abrirWhatsappVendas`) em todas as rotas |
 | `lib/core/constants/whatsapp_support.dart` | `kWhatsappSupportNumberE164` (DDI 55) — numero unico de suporte/leads WhatsApp |
-| `lib/core/widgets/external_labeled_field.dart` | Rotulo fixo acima de campo (pre-cadastro UF/cidade/CEP) |
+| `lib/core/utils/callable_response_map.dart` | `mapFromCallableData` — parse seguro do retorno de Callables (web/interop) |
 | `functions/src/index.ts` | Assistente: `buildAssistantInstructions`, OpenAI, Firestore auxiliar |
 
 As paginas do painel deixam de envolver `AppShellScaffold`: definem `shellPageChromeProvider` e devolvem so o `body` (lista alargada de ecras em `lib/features/**`).
