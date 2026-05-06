@@ -78,11 +78,11 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 - Firebase Hosting
 - Google Play para distribuicao do app
 - OpenAI no assistente, quando configurado
-- o assistente **nao** le os ficheiros `docs/OFICIAL_*.md` em cada pedido: o sistema e construido em `buildAssistantInstructions` + dados Firestore (ver `OFICIAL_02`); actualizar o produto exige alinhar codigo e documentacao
+- o assistente **nao** ingere o texto completo dos ficheiros `docs/OFICIAL_*.md` em cada pedido; **`buildAssistantInstructions`** inclui **referencia explicita** aos quatro caminhos dos `OFICIAL_01`…`04` no repositorio e combina **inventarios e guias fixos** (`buildAssistantFeatureInventory`, rota, FAQ) com **dados reais** no Firestore na chamada (ver `OFICIAL_02`). Manter codigo e Markdown alinhados quando o produto mudar.
 
 Versao local atual de referencia:
 
-- `1.0.87+1058`
+- `1.0.88+1059` (`pubspec.yaml`; builds podem sobrescrever com `--build-name` / `--build-number`)
 
 ## Estrutura tecnica de acesso
 

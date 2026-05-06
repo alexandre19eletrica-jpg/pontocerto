@@ -2403,7 +2403,7 @@ function buildAssistantFeatureInventory(): string {
   return [
     'Inventario real do sistema nesta versao:',
     '- Assistente: chat para orientacao operacional sobre o proprio Ponto Certo.',
-    '- Empresa: cadastro da empresa, configuracao fiscal, configuracao da OpenAI, contador e controles do assistente.',
+    '- Empresa: cadastro e edicao da empresa (inclui busca por CNPJ para preencher dados oficiais quando disponivel), configuracao fiscal, configuracao da OpenAI, contador e controles do assistente.',
     '- Clientes: cadastro, consulta e revisao de clientes e tomadores.',
     '- Tarefas: tarefas operacionais ligadas ao dia a dia da empresa.',
     '- Ordens de servico: criacao, acompanhamento, atualizacao e exclusao.',
