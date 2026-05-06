@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:pontocerto/core/auth/session_bootstrap.dart';
 import 'package:pontocerto/core/router/app_router.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
+import 'package:pontocerto/core/widgets/global_whatsapp_support_fab.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -129,8 +130,15 @@ class App extends StatelessWidget {
         routerConfig: RotasApp.roteador,
         scrollBehavior: const _AppScrollBehavior(),
         builder: (context, child) {
-          final content = child ?? const SizedBox.shrink();
-          return kIsWeb ? SelectionArea(child: content) : content;
+          final routed = child ?? const SizedBox.shrink();
+          final content = kIsWeb ? SelectionArea(child: routed) : routed;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              content,
+              const GlobalWhatsappSupportFab(),
+            ],
+          );
         },
       ),
     );

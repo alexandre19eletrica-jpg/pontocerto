@@ -4,6 +4,8 @@ Data base: 02/05/2026
 Projeto: Ponto Certo
 
 
+**Registo (05/05/2026 — FAB WhatsApp suporte global):** `MaterialApp.router` (`lib/app/app.dart`) passou a usar `Stack` no `builder` com `GlobalWhatsappSupportFab` (`lib/core/widgets/global_whatsapp_support_fab.dart`); numero E.164 unico em `lib/core/constants/whatsapp_support.dart` (`kWhatsappSupportNumberE164`), reaproveitado por `buildVendasWhatsappUri`; abertura igual ao comercial (`abrirWhatsappVendas` + mensagem inicial de duvida/informacao). Ver `OFICIAL_01`, `OFICIAL_02`, `OFICIAL_03`.
+
 **Registo (03/05/2026 — auditoria Focus XML contador/empresa):** painel de importacao NF-e/NFS-e nacional extraido para `FocusIncomingXmlSection` (servico `FocusIncomingXmlService`); aparece em `/fiscal` e em `/accountant-declarations`; ambiente registado pelo backend em `xml_sync_state.*.environment`. Callables `fiscalSyncFocusIncomingDocuments` e `fiscalDownloadImportedXml` passam por `assertNotDemoReadOnly`. Ver `OFICIAL_02`.
 
 **Registo (03/05/2026 — URLs `pre-cadastro-*`, formularios e governanca comercial):** CTAs (`/inicio`, `/login-empresa`, `/login-contador`, `/vendas`, `/vendas-empresa`, `/vendas-contador`) passam a abrir **`/pre-cadastro-empresa`** e **`/pre-cadastro-escritorio`**; governanca (**Funil**, **Links**, secao **Convidar**) usa os mesmos paths nas legendas e remove destaque legado de "planos clicados" / `topPlans`. Pre-cadastro contador leve ganha linha **UF · cidade · CEP** na UI + copy mais curta. `platform_admin_page` import de `sessionProvider` para gate de acesso. Correcçao menor: `cadastro_empresa_page` BrandLogo ja nao e `const` com tamanho condicional.

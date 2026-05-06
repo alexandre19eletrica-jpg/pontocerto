@@ -185,6 +185,7 @@ Se voltar erro:
 - os emails enviados para escritorio contabil e contador parceiro devem apresentar o sistema como iniciativa real de `Bonfim Alexandre Sousa Santos`, desenvolvedor do sistema e empresario dos ramos de obras, construcao civil e servicos eletricos
 - essa comunicacao deve explicar que o produto nasceu da dificuldade de emissao de notas, da desorganizacao operacional e do caos recorrente na gestao da propria empresa
 - o **WhatsApp comercial** (`wa.me`) nas landings empresa/contador deve abrir sempre que o visitante tocar nos botoes previstos; no **Web**, usar **`AnchorElement`** + **`click()`** no mesmo ciclo sintetico do `onPressed` (ver `vendas_whatsapp_web_anchor_web.dart`) e navegar **na mesma aba** (`target: _self`), evitando falhas silenciosas do **`Link`**/platform-view e bloqueios de nova aba; Meta Pixel (`Contact`) e `sales_whatsapp_comercial` apenas após **atraso** (ex.: 400 ms) em `scheduleWhatsappComercialSignals`
+- desde **05/05/2026**, um **icone flutuante WhatsApp** (`GlobalWhatsappSupportFab` no `builder` do `MaterialApp`) cobre **todas** as rotas (painel empresa/contador, vendas, pre-cadastro, formularios publicos): abre conversa com suporte usando o mesmo fluxo **`abrirWhatsappVendas`** (numero oficial em `kWhatsappSupportNumberE164`; mensagem curta pré-preenchida para duvidas/informacao)
 
 ## Funcionalidade de equipe oficial
 

@@ -3,15 +3,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:pontocerto/core/constants/whatsapp_support.dart';
 import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
 import 'package:pontocerto/features/marketing/presentation/services/sales_analytics_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'vendas_whatsapp_web_anchor_stub.dart'
     if (dart.library.html) 'vendas_whatsapp_web_anchor_web.dart' as wa_anchor;
-
-/// Suporte comercial Ponto Certo (WhatsApp).
-const _whatsappNumeroCompleto = '5562999283493'; // 55 + 62 99928-3493
 
 /// Verde oficial da marca WhatsApp (ícones, bordas e destaques).
 const Color kWhatsappBrandGreen = Color(0xFF25D366);
@@ -23,8 +21,8 @@ Uri buildVendasWhatsappUri({String? mensagemInicial}) {
   final texto = mensagemInicial?.trim();
   return Uri.parse(
     texto == null || texto.isEmpty
-        ? 'https://wa.me/$_whatsappNumeroCompleto'
-        : 'https://wa.me/$_whatsappNumeroCompleto?text=${Uri.encodeComponent(texto)}',
+        ? 'https://wa.me/$kWhatsappSupportNumberE164'
+        : 'https://wa.me/$kWhatsappSupportNumberE164?text=${Uri.encodeComponent(texto)}',
   );
 }
 
