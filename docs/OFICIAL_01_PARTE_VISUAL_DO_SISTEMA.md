@@ -235,6 +235,7 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 - `/vendas-empresa` e `/vendas-contador`: marcadores (**badges**) e subhead alinhados a mesma linha institucional (demonstracao gratuita antes de primeira adesao; ate trinta dias de uso avaliativo inicial apos adesao formal); sob **Demonstracao gratuita do sistema**, a versao empresa e onde o texto explica opcional escritorio/WhatsApp como canal comercial paralelo aos botoes.
 - `/cadastro-empresa` (leve) e pre-cadastro comercial (`SalesPreRegistrationPage`): texto de confirmacao quando o envio por e-mail nao foi concluido.
 - `/fiscal`: cartao **Documentos fiscais via Focus** (sinc NF-e / NFS-e nacional recebidas, chips de status sync, lista com download XML) igual ao utilizado na pagina **Declaracoes** do contador; em demo aparece apenas aviso sem botoes de sync.
+- Pre-cadastro leve empresa e escritorio (`/pre-cadastro-empresa`, `/pre-cadastro-escritorio`): layout alinhado heroi + logo + cartao de vidro nos dois; linha localizacao com **Estado (UF) ** em largura proporcional (flex) e fundo branco nos campos para leitura uniforme; escritorio com mesma linguagem de CTAs; botao Voltar do escritorio leve retorna ao login do contador via `BotaoVoltarApp`.
 
 ## Regra de manutencao
 

@@ -209,7 +209,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                 child: Column(
                   children: [
                     Text(
-                      'Emita suas notas pelo celular quando precisar. Deixe os dados — enviamos o acesso já.',
+                      'Sua empresa no controle antes do mês virar contra você.',
                       textAlign: TextAlign.center,
                       style: tema.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
@@ -219,10 +219,11 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Um passo para entrar na plataforma.',
+                      'Abra o acesso em minutos. Você só confirma o e-mail — o resto já segue dentro do sistema, com menos improviso.',
                       textAlign: TextAlign.center,
-                      style: tema.textTheme.bodySmall?.copyWith(
+                      style: tema.textTheme.bodyMedium?.copyWith(
                         color: AppBrandColors.softText,
+                        height: 1.42,
                       ),
                     ),
                   ],
@@ -255,7 +256,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                             : completionMode
                                 ? 'Conclusao do cadastro real'
                                 : lightweightMode
-                                    ? 'Garanta sua vaga digital'
+                                    ? 'Reserve seu espaço no Ponto Certo'
                                     : 'Criacao da empresa',
                         style: tema.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w900,
@@ -269,7 +270,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                             : completionMode
                                 ? 'Preencha agora os dados reais da empresa. Se quiser, voce tambem pode indicar o contador neste passo.'
                                 : lightweightMode
-                                    ? 'Nome, e-mail e localização obrigatórios. Confirme pelo link na caixa de entrada.'
+                                    ? 'Nome, e-mail e UF + cidade + CEP (lead certo desde o primeiro contato). A senha chega só no link oficial — rápido e seguro.'
                                     : 'Preencha os dados da empresa para concluir o cadastro.',
                         style: tema.textTheme.bodyMedium?.copyWith(
                           color: AppBrandColors.softText,
@@ -392,34 +393,39 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                             : 'Email de acesso *',
                         keyboardType: TextInputType.emailAddress,
                         icon: Icons.alternate_email_rounded,
+                        unifiedFillSurface: lightweightMode,
                       ),
                       if (lightweightMode) ...[
                         _campo(
                           controller: _responsavelController,
                           label: 'Nome do responsavel *',
                           icon: Icons.person_rounded,
+                          unifiedFillSurface: true,
                         ),
                         _campo(
                           controller: _nomeFantasiaController,
                           label: 'Nome da empresa *',
                           icon: Icons.business_center_rounded,
+                          unifiedFillSurface: true,
                         ),
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(
-                                width: 84,
+                              Expanded(
+                                flex: 22,
                                 child: TextField(
                                   controller: _leadUfController,
                                   maxLength: 2,
                                   textCapitalization:
                                       TextCapitalization.characters,
                                   decoration: const InputDecoration(
-                                    labelText: 'UF *',
+                                    labelText: 'Estado (UF) *',
+                                    hintText: 'Ex.: SP',
                                     counterText: '',
-                                    prefixIcon: Icon(Icons.map_outlined),
+                                    filled: true,
+                                    fillColor: Colors.white,
                                   ),
                                   inputFormatters: [
                                     FilteringTextInputFormatter.allow(
@@ -442,24 +448,30 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
                               ),
                               const SizedBox(width: 12),
                               Expanded(
+                                flex: 48,
                                 child: _campo(
                                   controller: _leadCidadeController,
                                   label: 'Cidade *',
                                   icon: Icons.location_city_outlined,
+                                  unifiedFillSurface: true,
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              SizedBox(
-                                width: 128,
+                              Expanded(
+                                flex: 30,
                                 child: TextField(
                                   controller: _leadCepController,
                                   keyboardType: TextInputType.number,
                                   maxLength: 8,
                                   decoration: const InputDecoration(
                                     labelText: 'CEP *',
+                                    hintText: '00000000',
                                     counterText: '',
-                                    prefixIcon:
-                                        Icon(Icons.markunread_mailbox_outlined),
+                                    prefixIcon: Icon(
+                                      Icons.markunread_mailbox_outlined,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
                                   ),
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
@@ -720,6 +732,7 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
     List<TextInputFormatter>? inputFormatters,
     int? maxLength,
     bool obscureText = false,
+    bool unifiedFillSurface = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -729,7 +742,12 @@ class _PaginaCadastroEmpresaState extends ConsumerState<PaginaCadastroEmpresa> {
         inputFormatters: inputFormatters,
         maxLength: maxLength,
         obscureText: obscureText,
-        decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          filled: unifiedFillSurface,
+          fillColor: unifiedFillSurface ? Colors.white : null,
+        ),
       ),
     );
   }

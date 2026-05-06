@@ -5,6 +5,7 @@ import 'package:pontocerto/core/errors/app_error_mapper.dart';
 import 'package:pontocerto/core/theme/app_branding.dart';
 import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/utils/formatadores_input.dart';
+import 'package:pontocerto/core/widgets/botao_voltar_app.dart';
 import 'package:pontocerto/features/fiscal/presentation/services/fiscal_registry_lookup_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/accounting_office_signup_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/meta_fbq_events.dart';
@@ -345,357 +346,462 @@ class _AccountingOfficeSignupPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cadastro do escritorio de contabilidade'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/login-contador'),
+        leading: lightweightMode
+            ? const BotaoVoltarApp()
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.go('/login-contador'),
+              ),
+        title: Text(
+          lightweightMode
+              ? 'Seu acesso em minutos'
+              : 'Cadastro do escritorio de contabilidade',
         ),
       ),
       body: AppGradientBackground(
-        child: AppPageLayout(
-          child: ListView(
-            children: [
-              AppWorkspaceCard(
-                title: lightweightMode
-                    ? 'Contador: abra seu acesso agora'
-                    : 'Escritorio de contabilidade',
-                subtitle: lightweightMode
-                    ? 'Poucos dados — link na caixa de entrada. Centralize clientes num so ambiente.'
-                    : 'Cadastro dedicado para o contador indicado pela empresa. Primeiro o escritorio e cadastrado; depois a empresa indicada entra no fluxo oficial desse escritorio.',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (lightweightMode)
-                      Text(
-                        'Preencha em seguida. A senha chega pelo e-mail.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppBrandColors.softText,
-                          height: 1.35,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      )
-                    else ...[
-                    const Text(
-                      'Fluxo previsto',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: AppBrandColors.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                          '1. A empresa ou a plataforma envia um convite quando aplicavel.\n'
-                          '2. O escritorio completa dados cadastrais e fiscais no formulario oficial.\n'
-                          '3. O sistema envia e-mail com acesso ao ambiente web e orientacao para o app quando couber.\n'
-                          '4. O escritorio fica disponivel na base da plataforma para vinculos e operacao.\n'
-                          '5. Em seguida, cadastre ou vincule as empresas da carteira no fluxo interno.',
-                    ),
-                    ],
-                    const SizedBox(height: 12),
-                    if (!lightweightMode)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: AppBrandColors.border),
-                        ),
-                        child: const Text(
-                          'Modelo atual: entrada com teste gratuito quando previsto na proposta comercial. Depois da abertura do escritorio, a carteira centraliza cadastro das empresas e acompanha o consumo pelo periodo combinado.',
-                          style: TextStyle(
-                            color: AppBrandColors.softText,
-                            fontWeight: FontWeight.w600,
+        child: lightweightMode
+            ? ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Um painel só para carteira fiscal e empresa — menos troca de planilhas, mais cobrança justa pelo que você faz.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: AppBrandColors.ink,
+                            height: 1.25,
                           ),
                         ),
-                      ),
-                    if (_loadingPrefill) ...[
-                      const SizedBox(height: 12),
-                      const LinearProgressIndicator(),
-                    ],
-                    if (prefill != null) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: AppBrandColors.border),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Em poucos minutos você recebe o link no e-mail e entra antes do próximo ciclo cobrar caro pela desorganização.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppBrandColors.softText,
+                            height: 1.42,
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Center(
+                    child: BrandLogo(size: 84, radius: 28),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: GlassCard(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text(
-                              'Convite identificado',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
+                            Text(
+                              'Carteira fiscal no Ponto Certo',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
                                 color: AppBrandColors.ink,
                               ),
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              prefill.inviterName.trim().isNotEmpty ||
-                                      prefill.inviterEmail.trim().isNotEmpty
-                                  ? 'Origem: ${prefill.inviterName.isNotEmpty ? prefill.inviterName : prefill.inviterEmail}'
-                                  : 'Origem do convite nao informada',
-                            ),
-                            if (prefill.accepted)
-                              const Text('Este convite ja foi aceito.')
-                            else if (prefill.expired)
-                              const Text('Este convite esta expirado.'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              AppWorkspaceCard(
-                title: 'Dados do escritorio',
-                subtitle:
-                    lightweightMode
-                        ? 'Entrada simplificada para liberar o acesso do contador agora.'
-                        : 'Base cadastral necessaria para criar o acesso do escritorio e preparar o monitoramento na plataforma.',
-                child: Column(
-                  children: [
-                    _field(
-                      controller: _officeNameController,
-                      label: 'Nome do escritorio *',
-                      icon: Icons.apartment_rounded,
-                    ),
-                    if (!lightweightMode) ...[
-                      _field(
-                        controller: _cnpjController,
-                        label: 'CNPJ *',
-                        icon: Icons.badge_rounded,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [CnpjInputFormatter()],
-                      ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: _loadingCnpj ? null : _lookupCnpj,
-                              icon: const Icon(Icons.travel_explore_outlined),
-                              label: Text(
-                                _loadingCnpj
-                                    ? 'Buscando CNPJ...'
-                                    : 'Buscar dados do CNPJ',
+                              'Escritório, responsável, e-mail e sua localização. '
+                              'A senha é criada só pelo link — você confirma e já opera.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: AppBrandColors.softText,
+                                height: 1.45,
                               ),
                             ),
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 420),
+                            const SizedBox(height: 18),
+                            _field(
+                              controller: _officeNameController,
+                              label: 'Nome do escritorio *',
+                              icon: Icons.apartment_rounded,
+                              lightSurface: true,
+                            ),
+                            _field(
+                              controller: _responsibleNameController,
+                              label: 'Responsavel principal *',
+                              icon: Icons.person_rounded,
+                              lightSurface: true,
+                            ),
+                            _field(
+                              controller: _emailController,
+                              label: 'E-mail de acesso *',
+                              icon: Icons.alternate_email_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              lightSurface: true,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 22,
+                                    child: TextField(
+                                      controller: _stateController,
+                                      maxLength: 2,
+                                      textCapitalization:
+                                          TextCapitalization.characters,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Estado (UF) *',
+                                        hintText: 'Ex.: SP',
+                                        counterText: '',
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                      ),
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.allow(
+                                          RegExp(r'[a-zA-Z]'),
+                                        ),
+                                      ],
+                                      onChanged: (v) {
+                                        final u = v.toUpperCase().trim();
+                                        if (u != v) {
+                                          final c = u.length > 2
+                                              ? u.substring(0, 2)
+                                              : u;
+                                          _stateController.value =
+                                              TextEditingValue(
+                                            text: c,
+                                            selection:
+                                                TextSelection.collapsed(
+                                              offset: c.length,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 48,
+                                    child: _field(
+                                      controller: _cityController,
+                                      label: 'Cidade *',
+                                      icon: Icons.location_city_outlined,
+                                      lightSurface: true,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 30,
+                                    child: TextField(
+                                      controller: _cepSignupController,
+                                      keyboardType: TextInputType.number,
+                                      maxLength: 8,
+                                      decoration: const InputDecoration(
+                                        labelText: 'CEP *',
+                                        hintText: '00000000',
+                                        counterText: '',
+                                        prefixIcon: Icon(
+                                          Icons.markunread_mailbox_outlined,
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                      ),
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
                               child: Text(
-                                _cnpjLookupMessage,
+                                'Cheque também o spam — o convite oficial chega rápido.',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: AppBrandColors.softText,
                                   height: 1.4,
+                                  fontWeight: FontWeight.w600,
                                 ),
+                              ),
+                            ),
+                            FilledButton.icon(
+                              onPressed: _submitting ? null : _submit,
+                              icon: _submitting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.how_to_reg_rounded),
+                              label: Text(
+                                _submitting
+                                    ? 'Criando acesso...'
+                                    : 'Receber link e abrir carteira',
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 12),
-                    ],
-                    _field(
-                      controller: _responsibleNameController,
-                      label: 'Responsavel principal *',
-                      icon: Icons.person_rounded,
                     ),
-                    if (!lightweightMode)
-                      _field(
-                        controller: _phoneController,
-                        label: 'Telefone *',
-                        icon: Icons.phone_rounded,
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [TelefoneInputFormatter()],
-                      ),
-                    _field(
-                      controller: _emailController,
-                      label: 'Login por e-mail *',
-                      icon: Icons.alternate_email_rounded,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    if (lightweightMode) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: 84,
-                              child: TextField(
-                                controller: _stateController,
-                                maxLength: 2,
-                                textCapitalization:
-                                    TextCapitalization.characters,
-                                decoration: const InputDecoration(
-                                  labelText: 'UF *',
-                                  counterText: '',
-                                  prefixIcon: Icon(Icons.map_outlined),
-                                ),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.allow(
-                                    RegExp(r'[a-zA-Z]'),
-                                  ),
-                                ],
-                                onChanged: (v) {
-                                  final u = v.toUpperCase().trim();
-                                  if (u != v) {
-                                    final c =
-                                        u.length > 2 ? u.substring(0, 2) : u;
-                                    _stateController.value = TextEditingValue(
-                                      text: c,
-                                      selection:
-                                          TextSelection.collapsed(offset: c.length),
-                                    );
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _field(
-                                controller: _cityController,
-                                label: 'Cidade *',
-                                icon: Icons.location_city_outlined,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            SizedBox(
-                              width: 128,
-                              child: TextField(
-                                controller: _cepSignupController,
-                                keyboardType: TextInputType.number,
-                                maxLength: 8,
-                                decoration: const InputDecoration(
-                                  labelText: 'CEP *',
-                                  counterText: '',
-                                  prefixIcon: Icon(
-                                    Icons.markunread_mailbox_outlined,
-                                  ),
-                                ),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Text(
-                          'A senha e criada pelo link enviado a este e-mail.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppBrandColors.softText,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (!lightweightMode) ...[
-                      _field(
-                        controller: _addressController,
-                        label: 'Endereco completo *',
-                        icon: Icons.location_on_outlined,
-                      ),
-                      Row(
+                  ),
+                ],
+              )
+            : AppPageLayout(
+                child: ListView(
+                  children: [
+                    AppWorkspaceCard(
+                      title: 'Escritorio de contabilidade',
+                      subtitle:
+                          'Cadastro dedicado para o contador indicado pela empresa. Primeiro o escritorio e cadastrado; depois a empresa indicada entra no fluxo oficial desse escritorio.',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: _field(
-                              controller: _cityController,
-                              label: 'Cidade *',
-                              icon: Icons.location_city_outlined,
+                          const Text(
+                            'Fluxo previsto',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: AppBrandColors.ink,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _field(
-                              controller: _stateController,
-                              label: 'UF *',
-                              icon: Icons.map_outlined,
+                          const SizedBox(height: 8),
+                          const Text(
+                            '1. A empresa ou a plataforma envia um convite quando aplicavel.\n'
+                            '2. O escritorio completa dados cadastrais e fiscais no formulario oficial.\n'
+                            '3. O sistema envia e-mail com acesso ao ambiente web e orientacao para o app quando couber.\n'
+                            '4. O escritorio fica disponivel na base da plataforma para vinculos e operacao.\n'
+                            '5. Em seguida, cadastre ou vincule as empresas da carteira no fluxo interno.',
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: AppBrandColors.border),
+                            ),
+                            child: const Text(
+                              'Modelo atual: entrada com teste gratuito quando previsto na proposta comercial. Depois da abertura do escritorio, a carteira centraliza cadastro das empresas e acompanha o consumo pelo periodo combinado.',
+                              style: TextStyle(
+                                color: AppBrandColors.softText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          if (_loadingPrefill) ...[
+                            const SizedBox(height: 12),
+                            const LinearProgressIndicator(),
+                          ],
+                          if (prefill != null) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: AppBrandColors.border),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Convite identificado',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: AppBrandColors.ink,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    prefill.inviterName.trim().isNotEmpty ||
+                                            prefill.inviterEmail
+                                                .trim()
+                                                .isNotEmpty
+                                        ? 'Origem: ${prefill.inviterName.isNotEmpty ? prefill.inviterName : prefill.inviterEmail}'
+                                        : 'Origem do convite nao informada',
+                                  ),
+                                  if (prefill.accepted)
+                                    const Text(
+                                      'Este convite ja foi aceito.',
+                                    )
+                                  else if (prefill.expired)
+                                    const Text(
+                                      'Este convite esta expirado.',
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    AppWorkspaceCard(
+                      title: 'Dados do escritorio',
+                      subtitle:
+                          'Base cadastral necessaria para criar o acesso do escritorio e preparar o monitoramento na plataforma.',
+                      child: Column(
+                        children: [
+                          _field(
+                            controller: _officeNameController,
+                            label: 'Nome do escritorio *',
+                            icon: Icons.apartment_rounded,
+                          ),
+                          _field(
+                            controller: _cnpjController,
+                            label: 'CNPJ *',
+                            icon: Icons.badge_rounded,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [CnpjInputFormatter()],
+                          ),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: _loadingCnpj ? null : _lookupCnpj,
+                                  icon: const Icon(
+                                    Icons.travel_explore_outlined,
+                                  ),
+                                  label: Text(
+                                    _loadingCnpj
+                                        ? 'Buscando CNPJ...'
+                                        : 'Buscar dados do CNPJ',
+                                  ),
+                                ),
+                                ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 420),
+                                  child: Text(
+                                    _cnpjLookupMessage,
+                                    style:
+                                        theme.textTheme.bodySmall?.copyWith(
+                                      color: AppBrandColors.softText,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _field(
+                            controller: _responsibleNameController,
+                            label: 'Responsavel principal *',
+                            icon: Icons.person_rounded,
+                          ),
+                          _field(
+                            controller: _phoneController,
+                            label: 'Telefone *',
+                            icon: Icons.phone_rounded,
+                            keyboardType: TextInputType.phone,
+                            inputFormatters: [TelefoneInputFormatter()],
+                          ),
+                          _field(
+                            controller: _emailController,
+                            label: 'Login por e-mail *',
+                            icon: Icons.alternate_email_rounded,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          _field(
+                            controller: _addressController,
+                            label: 'Endereco completo *',
+                            icon: Icons.location_on_outlined,
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _field(
+                                  controller: _cityController,
+                                  label: 'Cidade *',
+                                  icon: Icons.location_city_outlined,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _field(
+                                  controller: _stateController,
+                                  label: 'UF *',
+                                  icon: Icons.map_outlined,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _billingChoice,
+                              decoration: const InputDecoration(
+                                labelText:
+                                    'Regra padrao de cobranca das empresas indicadas *',
+                                prefixIcon: Icon(
+                                  Icons.account_balance_wallet_outlined,
+                                ),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'office',
+                                  child:
+                                      Text('Cobrar do escritorio por padrao'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'company',
+                                  child:
+                                      Text('Cobrar da empresa por padrao'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) return;
+                                setState(() => _billingChoice = value);
+                              },
+                            ),
+                          ),
+                          _field(
+                            controller: _notesController,
+                            label: 'Observacoes operacionais',
+                            icon: Icons.notes_rounded,
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Este mesmo fluxo sera reutilizado depois na pagina dedicada para escritorios de contabilidade.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppBrandColors.softText,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton.icon(
+                            onPressed: _submitting ? null : _submit,
+                            icon: _submitting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.how_to_reg_rounded),
+                            label: Text(
+                              _submitting
+                                  ? 'Finalizando cadastro...'
+                                  : 'Cadastrar escritorio',
                             ),
                           ),
                         ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _billingChoice,
-                          decoration: const InputDecoration(
-                            labelText:
-                                'Regra padrao de cobranca das empresas indicadas *',
-                            prefixIcon: Icon(
-                              Icons.account_balance_wallet_outlined,
-                            ),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'office',
-                              child: Text('Cobrar do escritorio por padrao'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'company',
-                              child: Text('Cobrar da empresa por padrao'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _billingChoice = value);
-                          },
-                        ),
-                      ),
-                      _field(
-                        controller: _notesController,
-                        label: 'Observacoes operacionais',
-                        icon: Icons.notes_rounded,
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Este mesmo fluxo sera reutilizado depois na pagina dedicada para escritorios de contabilidade.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppBrandColors.softText,
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: _submitting ? null : _submit,
-                      icon: _submitting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.how_to_reg_rounded),
-                      label: Text(
-                        _submitting
-                            ? (lightweightMode
-                                ? 'Criando acesso...'
-                                : 'Finalizando cadastro...')
-                            : (lightweightMode
-                                ? 'Criar acesso do contador'
-                                : 'Cadastrar escritorio'),
-                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -708,6 +814,7 @@ class _AccountingOfficeSignupPageState
     List<TextInputFormatter>? inputFormatters,
     bool obscureText = false,
     int maxLines = 1,
+    bool lightSurface = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -717,7 +824,12 @@ class _AccountingOfficeSignupPageState
         inputFormatters: inputFormatters,
         obscureText: obscureText,
         maxLines: maxLines,
-        decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          filled: lightSurface,
+          fillColor: lightSurface ? Colors.white : null,
+        ),
       ),
     );
   }

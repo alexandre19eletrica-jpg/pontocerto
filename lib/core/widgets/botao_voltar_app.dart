@@ -31,6 +31,12 @@ class BotaoVoltarApp extends StatelessWidget {
           return;
         }
 
+        if (rotaAtual == '/pre-cadastro-escritorio' ||
+            rotaAtual == '/cadastro-escritorio-contabil') {
+          context.go('/login-contador');
+          return;
+        }
+
         context.go('/home');
       },
     );
