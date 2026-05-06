@@ -316,7 +316,7 @@ Para inspeccionar apenas esse ponto: `git show 8f8e8cd --stat`
 
 Para **desfazer só essa alteracao** numa branch limpa: `git revert 8f8e8cd` *(gera um commit reverso; resolver conflitos se aparecerem).*
 
-O commit **posterior** na `master` que acrescenta **esta** secao do `OFICIAL_04` e o registo do comando one-shot; usar `git log -1 --oneline` após o push seguinte para gravar o SHA documental no teu caderno interno se precisares de rastreio fino.
+**Registo desta subsecao no GitHub:** commit `15a6bcf` na branch `master` (texto do checkpoint e comando one-shot em `OFICIAL_04`).
 
 ### Comando unico de publicacao (PowerShell)
 
