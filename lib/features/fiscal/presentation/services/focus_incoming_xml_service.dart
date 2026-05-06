@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:cloud_functions/cloud_functions.dart';
 
-class AccountantFocusXmlSyncResult {
-  const AccountantFocusXmlSyncResult({
+class FocusIncomingXmlSyncResult {
+  const FocusIncomingXmlSyncResult({
     required this.documentType,
     required this.documentsFetched,
     required this.xmlCaptured,
@@ -22,14 +22,14 @@ class AccountantFocusXmlSyncResult {
       documentType == 'nfse_nacional' ? 'NFS-e nacional' : 'NF-e';
 }
 
-class AccountantFocusXmlService {
-  AccountantFocusXmlService({FirebaseFunctions? functions})
+class FocusIncomingXmlService {
+  FocusIncomingXmlService({FirebaseFunctions? functions})
     : _functions =
           functions ?? FirebaseFunctions.instanceFor(region: 'us-central1');
 
   final FirebaseFunctions _functions;
 
-  Future<AccountantFocusXmlSyncResult> sync({
+  Future<FocusIncomingXmlSyncResult> sync({
     required String documentType,
   }) async {
     final callable = _functions.httpsCallable(
@@ -39,7 +39,7 @@ class AccountantFocusXmlService {
       'documentType': documentType,
     });
     final data = Map<String, dynamic>.from(response.data as Map);
-    return AccountantFocusXmlSyncResult(
+    return FocusIncomingXmlSyncResult(
       documentType: data['documentType']?.toString() ?? documentType,
       documentsFetched: (data['documentsFetched'] as num?)?.toInt() ?? 0,
       xmlCaptured: (data['xmlCaptured'] as num?)?.toInt() ?? 0,

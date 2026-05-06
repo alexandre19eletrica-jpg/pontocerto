@@ -6852,6 +6852,7 @@ async function writeFiscalIncomingXmlIfAvailable(params: {
 
 exports.fiscalSyncFocusIncomingDocuments = HEAVY_RUNTIME.https.onCall(async (data, context) => {
   const claims = assertClaims(context);
+  await assertNotDemoReadOnly(claims);
   assertRole(claims, ['OWNER', 'MANAGER', 'ACCOUNTANT']);
 
   const kind = normalizeFocusIncomingDocumentKind(data?.documentType);
@@ -7093,6 +7094,7 @@ exports.fiscalSyncFocusIncomingDocuments = HEAVY_RUNTIME.https.onCall(async (dat
 
 exports.fiscalDownloadImportedXml = HEAVY_RUNTIME.https.onCall(async (data, context) => {
   const claims = assertClaims(context);
+  await assertNotDemoReadOnly(claims);
   assertRole(claims, ['OWNER', 'MANAGER', 'ACCOUNTANT']);
 
   const documentId = asTrimmedString(data?.documentId);

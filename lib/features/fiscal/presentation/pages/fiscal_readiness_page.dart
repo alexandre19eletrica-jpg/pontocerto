@@ -23,6 +23,7 @@ import 'package:pontocerto/features/fiscal/domain/focus_official_issue_readiness
 import 'package:pontocerto/features/fiscal/domain/fiscal_service_item.dart';
 import 'package:pontocerto/features/fiscal/presentation/providers/fiscal_service_catalog_provider.dart';
 import 'package:pontocerto/features/fiscal/presentation/services/fiscal_registry_lookup_service.dart';
+import 'package:pontocerto/features/fiscal/presentation/widgets/focus_incoming_xml_section.dart';
 import 'package:pontocerto/features/fiscal/presentation/widgets/invoice_dialog_sections.dart';
 import 'package:pontocerto/features/fiscal/presentation/widgets/invoice_workspace_cards.dart';
 import 'package:pontocerto/features/employees/domain/employee.dart';
@@ -3425,6 +3426,8 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      FocusIncomingXmlSection(session: sessao),
                       const SizedBox(height: 16),
                       AppDesktopSplit(
                         sidebar: Column(

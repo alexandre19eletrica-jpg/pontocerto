@@ -234,6 +234,7 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 - `/vendas-empresa`: removido o atalho "Sou contador — cadastro do escritorio"; contadores prosseguem pela rota comercial `/vendas-contador` ou `/cadastro-escritorio-contabil`. A mensagem de que MEI ou quem opera sem contador nao esta obrigado a contratar escritorio pelo produto ficou apenas no texto do cartao sob **Demonstracao gratuita do sistema** (orientacao ao demo/WhatsApp); o restante da landing (heroi sem badge MEI especifico, modelo atual, passo 3, bloco **COMECE O PRE-CADASTRO**, bullets da oferta) usa linguagem neutra sobre integrar contador depois quando fizer sentido, sem repetir o mesmo argumento.
 - `/vendas-empresa` e `/vendas-contador`: marcadores (**badges**) e subhead alinhados a mesma linha institucional (demonstracao gratuita antes de primeira adesao; ate trinta dias de uso avaliativo inicial apos adesao formal); sob **Demonstracao gratuita do sistema**, a versao empresa e onde o texto explica opcional escritorio/WhatsApp como canal comercial paralelo aos botoes.
 - `/cadastro-empresa` (leve) e pre-cadastro comercial (`SalesPreRegistrationPage`): texto de confirmacao quando o envio por e-mail nao foi concluido.
+- `/fiscal`: cartao **Documentos fiscais via Focus** (sinc NF-e / NFS-e nacional recebidas, chips de status sync, lista com download XML) igual ao utilizado na pagina **Declaracoes** do contador; em demo aparece apenas aviso sem botoes de sync.
 
 ## Regra de manutencao
 

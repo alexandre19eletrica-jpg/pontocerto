@@ -25,6 +25,8 @@ Na frente comercial publica atual existe **dois callables de entrada leve**:
 
 Depois do cadastro publico completo com CNPJ liberado, o sistema encaminha o utilizador para **`/login-empresa`** com mensagem para abrir o e-mail (ou recuperar senha), em vez de iniciar sessao automaticamente no browser.
 
+**NF-e / NFS-e nacional recebidas (Focus):** na rota **Fiscal** (`/fiscal`) e na pagina **Declarações do contador** existe o mesmo bloco para sincronizar documentos recebidos via callable `fiscalSyncFocusIncomingDocuments`, listar em `empresas/{companyId}/documentos_fiscais`, persistir estado em campos `xml_*` na empresa e fazer download com `fiscalDownloadImportedXml`. **Sessao demo** ou utilizador `demoReadOnly`: botoes bloqueados na UI e os dois callables recusam com `permission-denied`.
+
 ## Modulos principais da empresa
 
 - Painel
