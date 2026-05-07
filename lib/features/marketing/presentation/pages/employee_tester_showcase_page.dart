@@ -13,8 +13,7 @@ class EmployeeTesterShowcasePage extends StatelessWidget {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return Scaffold(
       appBar: AppBar(title: const Text('Conhecer o sistema real')),
-      body: SelectionArea(
-        child: Container(
+      body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFFF7FAFF), Color(0xFFE8F1FF)],
@@ -102,7 +101,6 @@ class EmployeeTesterShowcasePage extends StatelessWidget {
             },
           ),
         ),
-      ),
     );
   }
 

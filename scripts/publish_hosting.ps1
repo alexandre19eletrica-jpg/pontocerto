@@ -1,6 +1,11 @@
 # Build web com fonte Material Icons completa (evita ícones em branco no hosting)
 # e publica só o Hosting (sem functions/appcheck).
+param(
+  [switch]$SkipFirebaseLoginConfirm
+)
+
 $ErrorActionPreference = 'Stop'
+$firebaseProject = 'pontocerto-e1dab'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $flutterBat = 'C:\Users\hp\flutter\flutter\bin\flutter.bat'
 if (!(Test-Path $flutterBat)) {
@@ -24,8 +29,10 @@ try {
     }
   }
 
-  Write-Host '=== firebase deploy --only hosting ===' -ForegroundColor Cyan
-  firebase deploy --only hosting
+  & (Join-Path $PSScriptRoot 'firebase_confirm_login_before_deploy.ps1') -SkipFirebaseLoginConfirm:$SkipFirebaseLoginConfirm -ProjectId $firebaseProject
+
+  Write-Host "=== firebase deploy --only hosting projeto $firebaseProject ===" -ForegroundColor Cyan
+  firebase deploy --only hosting --project $firebaseProject
   if ($LASTEXITCODE -ne 0) {
     throw "firebase deploy falhou ($LASTEXITCODE)"
   }

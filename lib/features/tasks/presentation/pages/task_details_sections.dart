@@ -22,6 +22,7 @@ extension _TaskDetailsSections on TaskDetailsPage {
     required bool canManage,
     required VoidCallback onAdd,
     required VoidCallback onOpenCatalog,
+    VoidCallback? onCopiarDosPrevistos,
     required void Function(int idx) onEdit,
     required void Function(int idx) onDelete,
   }) {
@@ -36,6 +37,12 @@ extension _TaskDetailsSections on TaskDetailsPage {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
+            if (canManage && onCopiarDosPrevistos != null)
+              TextButton.icon(
+                onPressed: onCopiarDosPrevistos,
+                icon: const Icon(Icons.playlist_add_outlined),
+                label: const Text('Do previsto'),
+              ),
             if (canManage)
               TextButton.icon(
                 onPressed: onAdd,
@@ -59,8 +66,9 @@ extension _TaskDetailsSections on TaskDetailsPage {
             child: ListTile(
               title: Text(entry.value.nome),
               subtitle: Text(
-                '${entry.value.quantidadeNormalizada} ${entry.value.unidadeNormalizada}'
-                '${entry.value.observacao.trim().isEmpty ? '' : ' | ${entry.value.observacao.trim()}'}',
+                _subtituloMaterialLista(entry.value),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               trailing: Wrap(
                 spacing: 4,
@@ -127,5 +135,21 @@ extension _TaskDetailsSections on TaskDetailsPage {
 
   Widget _buildSimpleTaskInfoTile(String message) {
     return ListTile(title: Text(message));
+  }
+
+  String _subtituloMaterialLista(MaterialTarefa material) {
+    final parts = <String>[
+      '${material.quantidadeNormalizada} ${material.unidadeNormalizada}',
+    ];
+    final obs = material.observacao.trim();
+    if (obs.isNotEmpty) parts.add(obs);
+    if (material.valorCents != null && material.valorCents != 0) {
+      parts.add('Unit. ${_formatarMoeda(material.valorCents!)}');
+    }
+    final tot = material.totalMaterialCents;
+    if (tot != null && tot != 0) {
+      parts.add('Total ${_formatarMoeda(tot)}');
+    }
+    return parts.join(' · ');
   }
 }

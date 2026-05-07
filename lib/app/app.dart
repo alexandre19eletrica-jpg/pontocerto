@@ -131,12 +131,13 @@ class App extends StatelessWidget {
         scrollBehavior: const _AppScrollBehavior(),
         builder: (context, child) {
           final routed = child ?? const SizedBox.shrink();
-          final content = kIsWeb ? SelectionArea(child: routed) : routed;
+          // Nao envolver a arvore inteira em SelectionArea no Web: interfere com toques na barra
+          // e com clipboard nos campos. Texto copiavel em telas especificas: SelectableText .
           return Stack(
             fit: StackFit.expand,
             clipBehavior: Clip.none,
             children: [
-              content,
+              routed,
               const GlobalWhatsappSupportFab(),
             ],
           );

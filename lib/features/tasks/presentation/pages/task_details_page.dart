@@ -128,11 +128,11 @@ class TaskDetailsPage extends ConsumerWidget {
               child: CheckboxListTile(
                 value: item.concluido,
                 title: Text(item.nome),
-                subtitle: Text(
-                  '${item.concluido ? 'Concluido' : 'Pendente'}'
-                  ' - Qtd. ${item.quantidadeNormalizada}'
-                  '${item.valorCents == null ? '' : ' - Unit. ${_formatarMoeda(item.valorCents!)} - Total ${_formatarMoeda(item.totalCents ?? item.valorCents!)}'}',
-                ),
+              subtitle: Text(
+                _taskItemServicoSubtitle(item),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
                 secondary: Wrap(
                   spacing: 4,
                   children: [
@@ -180,7 +180,7 @@ class TaskDetailsPage extends ConsumerWidget {
           const SizedBox(height: 10),
           _secaoMateriais(
             context: context,
-            titulo: 'Materiais necessarios',
+            titulo: 'Materiais previstos',
             lista: tarefa.materiaisNecessarios,
             canManage: !readOnlyAccountant,
             onAdd: () => _adicionarMaterial(
@@ -217,6 +217,9 @@ class TaskDetailsPage extends ConsumerWidget {
               utilizado: true,
             ),
             onOpenCatalog: () => _abrirBancoMateriais(context, ref, tarefa),
+            onCopiarDosPrevistos: tarefa.materiaisNecessarios.isEmpty
+                ? null
+                : () => _copiarPrevistosParaUtilizados(context, ref, tarefa),
             onEdit: (idx) => _editarMaterial(
               context,
               ref,

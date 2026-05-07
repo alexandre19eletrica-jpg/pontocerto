@@ -13,10 +13,12 @@ alwaysApply: true
 
 # Blocos canónicos (Ponto Certo)
 
-**Publicar web (Firebase — inclui actualização de links e UI Web):**
+**Publicar (analyse + web + build Functions + deploy hosting + functions — oficial do repositório):**
 ```powershell
-cd C:\Users\hp\pontocerto; flutter pub get; flutter build web --release --no-wasm-dry-run; firebase deploy --only hosting --project pontocerto-e1dab
+cd C:\Users\hp\pontocerto; .\publish.ps1
 ```
+- `publish.ps1` na raiz **só delega** para `scripts\publish_all.ps1` — **não** duplicar nem substituir por outra cadeia (`npm ci`, `flutter build web --release` sem `--no-tree-shake-icons`, outro `firebase deploy`, etc.) salvo o utilizador pedir **explicitamente** alteração ao script oficial.
+- O `publish_all.ps1` já usa a sequência acordada no repo (`flutter pub get`, `flutter analyze --no-pub ...`, `flutter build web --release --no-tree-shake-icons`, `npm run build` em `functions`, `firebase deploy --only "functions,hosting" --project pontocerto-e1dab`). **Não** propor variantes na mesma resposta.
 
 **Build Android (AAB) e cópia para a área de trabalho:**
 ```powershell

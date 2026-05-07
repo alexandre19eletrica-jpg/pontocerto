@@ -467,7 +467,7 @@ class _AppShellScaffoldState extends State<AppShellScaffold> {
                     ),
                   Expanded(
                     child: Listener(
-                      behavior: HitTestBehavior.translucent,
+                      behavior: HitTestBehavior.deferToChild,
                       onPointerDown: (_) => _bodyFocusNode.requestFocus(),
                       onPointerSignal: (event) {
                         if (event is PointerScrollEvent) {
@@ -510,7 +510,7 @@ class _AppShellScaffoldState extends State<AppShellScaffold> {
                                 key: _bodyContentKey,
                                 child: KeyedSubtree(
                                   key: ValueKey(_refreshEpoch),
-                                  child: SelectionArea(child: widget.body),
+                                  child: widget.body,
                                 ),
                               ),
                             ),
@@ -704,7 +704,7 @@ class _ShellMenuState extends State<_ShellMenu> {
         .toList();
 
     return Listener(
-      behavior: HitTestBehavior.translucent,
+      behavior: HitTestBehavior.deferToChild,
       onPointerDown: (_) => _focusNode.requestFocus(),
       child: Focus(
         autofocus: true,

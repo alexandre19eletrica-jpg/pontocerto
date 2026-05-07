@@ -4,6 +4,8 @@ Data base: 02/05/2026
 Projeto: Ponto Certo
 
 
+**Registo (06/05/2026 — governanca e-mail em massa + PDF tarefas para cliente + shell colar):** governanca ganhou painel **E-mail em massa** (`platformGovernanceCollectAudienceEmails`, `platformGovernanceSendAudienceEmail`, UI `GovernanceBulkEmailPanel`). PDF de tarefa reorganizado para cliente: bloco cliente/servico/descricao, tabelas de servicos e produtos/materiais com subtotais e resumo global (orcamento usa materiais previstos; finalizado usa utilizados). `app_shell` usa `HitTestBehavior.deferToChild` nos listeners que focavam o corpo/menu para nao impedir colar em campos. Materiais de tarefa com valores unitario/total de linha (`MaterialTarefa`). Ver `REGISTRO_ATUALIZACOES.md` (**2026-05-06**).
+
 **Registo (06/05/2026 — pre-cadastro leve empresa/escritorio: falso erro apos sucesso):** o cliente fazia parse com `response.data as Map`, o que pode falhar em web/interop mesmo com Callable OK; falhas subsequentes em analytics/Meta faziam cair no `catch` genérico "Erro ao criar acesso" após o servidor já ter criado conta e disparado e-mail (`mapFromCallableData`, analytics em try/catch, `GoRouterState` capturado antes do await). Backend: `notificarNovoCadastroAdministrativo` em `publicCreateCompanyWorkspaceAccess` e `publicCreateAccountantWorkspaceAccess` envolvido em try/log para não derrubar a resposta mesmo se algo escapasse. Serviço `AccountingOfficeSignupService` usa o mesmo parser em todas as callables públicas relacionadas.
 
 **Registo (06/05/2026 — layout web + formularios leves UF/cidade/CEP):** `MaterialApp` `Stack` com **`fit: StackFit.expand`** para corrigir viewport em desktop/web com FAB WhatsApp. Pre-cadastro empresa leve (`PaginaCadastroEmpresa` lightweight) e escritorio leve (`AccountingOfficeSignupPage`): bloco geografico com **`ExternalLabeledField`**, hints sem label interno e **coluna** em ecrans \< ~560 px. Ver `OFICIAL_01` e `OFICIAL_03`.
@@ -181,20 +183,22 @@ Ele nao deve responder com base em promessa antiga, vitrine antiga ou modulo ain
 
 Fica registrado como regra oficial desta documentacao:
 
+- **nao reinventar** fluxos operacionais que **ja funcionam**: para publicacao web/backend seguir o comando unico historico em `README_OFICIAL_DOCUMENTACAO.md`; mudar o comando oficial **somente** apos problema real do fluxo atual **e** atualizacao conjunta da documentacao com o novo padrao testado
 - quando houver pedido de `build`, `deploy`, `AAB`, limpeza de cache ou publicacao
+- antes de `firebase deploy`, sessao Firebase CLI valida (`firebase login` quando necessario)
 - a resposta operacional final deve vir em um unico comando completo
 - esse comando deve ser entregue em sequencia corrida
 - nao deve haver varias opcoes para o usuario escolher
 - o comando deve incluir todas as etapas necessarias do fluxo pedido
 
-Sequencia padrao quando aplicavel:
+Sequencia padrao quando aplicavel (equivale ao comando unico em `README_OFICIAL_DOCUMENTACAO.md`):
 
-1. `flutter clean`
-2. `flutter pub get`
-3. `flutter build web --release`
-4. `firebase deploy --only "functions,hosting" --project pontocerto-e1dab`
-5. `flutter build appbundle --release` com versao maior que a ultima
-6. copia final do `.aab` para a area de trabalho
+1. `flutter pub get`
+2. `flutter build web --release`
+3. `npm run build` na pasta `functions`
+4. `firebase deploy --only functions,hosting` (projeto default `pontocerto-e1dab` via `.firebaserc`)
+
+Quando aplicavel noutras rodadas: `flutter clean`; `flutter build appbundle --release`; copia final do `.aab`.
 
 Motivo do registro:
 

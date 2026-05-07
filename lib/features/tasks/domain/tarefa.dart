@@ -4,6 +4,7 @@ class ItemServico {
     this.concluido = false,
     this.valorCents,
     this.quantidade = 1,
+    this.valorTotalLinhaCents,
   });
 
   final String nome;
@@ -11,24 +12,35 @@ class ItemServico {
   final int? valorCents;
   final int quantidade;
 
+  /// Total da linha quando informado diretamente; se null, usa [valorCents] x quantidade.
+  final int? valorTotalLinhaCents;
+
   ItemServico copyWith({
     bool? concluido,
     int? valorCents,
     bool limparValor = false,
     int? quantidade,
+    int? valorTotalLinhaCents,
+    bool limparValorTotalLinha = false,
   }) {
     return ItemServico(
       nome: nome,
       concluido: concluido ?? this.concluido,
       valorCents: limparValor ? null : valorCents ?? this.valorCents,
       quantidade: quantidade ?? this.quantidade,
+      valorTotalLinhaCents: limparValorTotalLinha
+          ? null
+          : valorTotalLinhaCents ?? this.valorTotalLinhaCents,
     );
   }
 
   int get quantidadeNormalizada => quantidade < 1 ? 1 : quantidade;
 
-  int? get totalCents =>
-      valorCents == null ? null : valorCents! * quantidadeNormalizada;
+  int? get totalCents {
+    if (valorTotalLinhaCents != null) return valorTotalLinhaCents;
+    if (valorCents == null) return null;
+    return valorCents! * quantidadeNormalizada;
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -36,6 +48,7 @@ class ItemServico {
       'concluido': concluido,
       'valorCents': valorCents,
       'quantidade': quantidadeNormalizada,
+      'valorTotalLinhaCents': valorTotalLinhaCents,
     };
   }
 
@@ -45,6 +58,7 @@ class ItemServico {
       concluido: map['concluido'] == true,
       valorCents: (map['valorCents'] as num?)?.toInt(),
       quantidade: ((map['quantidade'] as num?)?.toInt() ?? 1).clamp(1, 999999),
+      valorTotalLinhaCents: (map['valorTotalLinhaCents'] as num?)?.toInt(),
     );
   }
 }
@@ -55,6 +69,8 @@ class MaterialTarefa {
     this.quantidade = 1,
     this.unidade = 'un',
     this.observacao = '',
+    this.valorCents,
+    this.valorTotalLinhaCents,
   });
 
   final String nome;
@@ -62,23 +78,44 @@ class MaterialTarefa {
   final String unidade;
   final String observacao;
 
+  /// Preco unitario opcional (mesma ideia dos itens do servico).
+  final int? valorCents;
+
+  /// Total da linha quando informado diretamente; se null, usa [valorCents] x quantidade.
+  final int? valorTotalLinhaCents;
+
   MaterialTarefa copyWith({
     String? nome,
     int? quantidade,
     String? unidade,
     String? observacao,
+    int? valorCents,
+    int? valorTotalLinhaCents,
+    bool limparValorCents = false,
+    bool limparValorTotalLinha = false,
   }) {
     return MaterialTarefa(
       nome: nome ?? this.nome,
       quantidade: quantidade ?? this.quantidade,
       unidade: unidade ?? this.unidade,
       observacao: observacao ?? this.observacao,
+      valorCents: limparValorCents ? null : valorCents ?? this.valorCents,
+      valorTotalLinhaCents: limparValorTotalLinha
+          ? null
+          : valorTotalLinhaCents ?? this.valorTotalLinhaCents,
     );
   }
 
   int get quantidadeNormalizada => quantidade < 1 ? 1 : quantidade;
 
   String get unidadeNormalizada => unidade.trim().isEmpty ? 'un' : unidade.trim();
+
+  /// Total em centavos para exibicao (manual ou calculado).
+  int? get totalMaterialCents {
+    if (valorTotalLinhaCents != null) return valorTotalLinhaCents;
+    if (valorCents != null) return valorCents! * quantidadeNormalizada;
+    return null;
+  }
 
   String get descricaoCurta {
     final base = '$nome - $quantidadeNormalizada $unidadeNormalizada';
@@ -93,6 +130,8 @@ class MaterialTarefa {
       'quantidade': quantidadeNormalizada,
       'unidade': unidadeNormalizada,
       'observacao': observacao.trim(),
+      'valorCents': valorCents,
+      'valorTotalLinhaCents': valorTotalLinhaCents,
     };
   }
 
@@ -100,29 +139,24 @@ class MaterialTarefa {
     if (raw is String) {
       return MaterialTarefa(nome: raw.trim());
     }
-    if (raw is Map<String, dynamic>) {
-      return MaterialTarefa(
-        nome: raw['nome']?.toString() ?? '',
-        quantidade: ((raw['quantidade'] as num?)?.toInt() ?? 1).clamp(
-          1,
-          999999,
-        ),
-        unidade: raw['unidade']?.toString() ?? 'un',
-        observacao: raw['observacao']?.toString() ?? '',
-      );
-    }
     if (raw is Map) {
-      return MaterialTarefa(
-        nome: raw['nome']?.toString() ?? '',
-        quantidade: ((raw['quantidade'] as num?)?.toInt() ?? 1).clamp(
-          1,
-          999999,
-        ),
-        unidade: raw['unidade']?.toString() ?? 'un',
-        observacao: raw['observacao']?.toString() ?? '',
-      );
+      return _materialFromMap(Map<String, dynamic>.from(raw));
     }
     return const MaterialTarefa(nome: '');
+  }
+
+  static MaterialTarefa _materialFromMap(Map<String, dynamic> raw) {
+    return MaterialTarefa(
+      nome: raw['nome']?.toString() ?? '',
+      quantidade: ((raw['quantidade'] as num?)?.toInt() ?? 1).clamp(
+        1,
+        999999,
+      ),
+      unidade: raw['unidade']?.toString() ?? 'un',
+      observacao: raw['observacao']?.toString() ?? '',
+      valorCents: (raw['valorCents'] as num?)?.toInt(),
+      valorTotalLinhaCents: (raw['valorTotalLinhaCents'] as num?)?.toInt(),
+    );
   }
 }
 

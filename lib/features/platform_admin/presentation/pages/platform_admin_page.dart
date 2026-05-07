@@ -19,9 +19,11 @@ import 'package:pontocerto/features/finance/presentation/utils/money.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_demo_config_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_sales_config_service.dart';
 import 'package:pontocerto/features/platform_admin/presentation/platform_admin_section.dart';
+import 'package:pontocerto/features/platform_admin/presentation/widgets/governance/governance_bulk_email_panel.dart';
 import 'package:pontocerto/features/platform_admin/presentation/widgets/governance/governance_hub.dart';
 import 'package:pontocerto/features/platform_admin/presentation/services/platform_admin_service.dart';
 import 'package:pontocerto/core/ui/app_user_message.dart';
+import 'package:pontocerto/core/ui/shell_selection_guard.dart';
 
 class PlatformAdminPage extends ConsumerStatefulWidget {
   const PlatformAdminPage({
@@ -81,6 +83,9 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   String? _selectedAdminOfficeId;
   bool _officeActionBusy = false;
   final _accountingOfficeSearchEmail = TextEditingController();
+  final _supremeGovCompanyId = TextEditingController();
+  final _supremeGovOfficeId = TextEditingController();
+  bool _supremeGovBusy = false;
   final Set<String> _governanceActionBusyCompanies = <String>{};
 
   Future<List<PlatformAccountingOfficeSummary>>
@@ -185,6 +190,8 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     _trialAccountantEmail.dispose();
     _trialAccountantName.dispose();
     _accountingOfficeSearchEmail.dispose();
+    _supremeGovCompanyId.dispose();
+    _supremeGovOfficeId.dispose();
     super.dispose();
   }
 
@@ -778,6 +785,256 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     });
   }
 
+  Future<void> _runSupremeGov(Future<void> Function() action) async {
+    if (_supremeGovBusy) return;
+    setState(() => _supremeGovBusy = true);
+    try {
+      await action();
+      _reloadGovernance();
+    } catch (e) {
+      if (mounted) {
+        context.showUserError(AppErrorMapper.messageFrom(e));
+      }
+    } finally {
+      if (mounted) setState(() => _supremeGovBusy = false);
+    }
+  }
+
+  Future<void> _confirmSupremeDeleteCompany() async {
+    final id = _supremeGovCompanyId.text.trim();
+    if (id.isEmpty) {
+      context.showUserMessage('Informe o companyId.');
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir empresa?'),
+        content: Text(
+          'Remove company_settings, utilizadores da empresa e vinculos contador no Firestore, '
+          'e apaga os utilizadores no Firebase Auth. Irreversivel.\n\n$id',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB91C1C),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _runSupremeGov(() async {
+      await _service.supremeDeleteCompany(companyId: id);
+      if (mounted) context.showUserMessage('Empresa removida.');
+    });
+  }
+
+  Future<void> _confirmSupremeDeleteOffice() async {
+    final id = _supremeGovOfficeId.text.trim();
+    if (id.isEmpty) {
+      context.showUserMessage('Informe o officeId.');
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir escritorio?'),
+        content: Text(
+          'Exige carteira vazia no servidor. Remove o escritorio e contadores '
+          'ligados (Auth + Firestore). Irreversivel.\n\n$id',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB91C1C),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _runSupremeGov(() async {
+      await _service.supremeDeleteOffice(officeId: id);
+      if (mounted) context.showUserMessage('Escritorio removido.');
+    });
+  }
+
+  Widget _buildSupremeGovernanceCommandsCard() {
+    return AppWorkspaceCard(
+      title: 'Comandos supremos',
+      subtitle:
+          'Somente dono da empresa suprema. Ativar/desativar login (company_settings), '
+          'suspender/liberar escritorio, ou exclusao administrativa.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_supremeGovBusy)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: LinearProgressIndicator(),
+            ),
+          const Text(
+            'Empresa',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _supremeGovCompanyId,
+            decoration: const InputDecoration(
+              labelText: 'companyId',
+              hintText: 'comp_...',
+            ),
+          ),
+          const SizedBox(height: 10),
+          shellTapFriendly(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: _supremeGovBusy
+                      ? null
+                      : () => _runSupremeGov(() async {
+                            final cid = _supremeGovCompanyId.text.trim();
+                            if (cid.isEmpty) {
+                              context.showUserMessage('Informe o companyId.');
+                              return;
+                            }
+                            await _service.supremeSetCompanyAllowLogin(
+                              companyId: cid,
+                              allowLogin: true,
+                            );
+                            if (mounted) {
+                              context.showUserMessage(
+                                'Login da empresa ativado.',
+                              );
+                            }
+                          }),
+                  child: const Text('Ativar login'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _supremeGovBusy
+                      ? null
+                      : () => _runSupremeGov(() async {
+                            final cid = _supremeGovCompanyId.text.trim();
+                            if (cid.isEmpty) {
+                              context.showUserMessage('Informe o companyId.');
+                              return;
+                            }
+                            await _service.supremeSetCompanyAllowLogin(
+                              companyId: cid,
+                              allowLogin: false,
+                            );
+                            if (mounted) {
+                              context.showUserMessage(
+                                'Login da empresa desativado.',
+                              );
+                            }
+                          }),
+                  child: const Text('Desativar login'),
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFB91C1C),
+                  ),
+                  onPressed:
+                      _supremeGovBusy ? null : _confirmSupremeDeleteCompany,
+                  child: const Text('Excluir empresa'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Escritorio',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _supremeGovOfficeId,
+            decoration: const InputDecoration(
+              labelText: 'officeId',
+            ),
+          ),
+          const SizedBox(height: 10),
+          shellTapFriendly(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: _supremeGovBusy
+                      ? null
+                      : () => _runSupremeGov(() async {
+                            final oid = _supremeGovOfficeId.text.trim();
+                            if (oid.isEmpty) {
+                              context.showUserMessage('Informe o officeId.');
+                              return;
+                            }
+                            await _service.setAccountingOfficeAccess(
+                              officeId: oid,
+                              allowAccess: true,
+                            );
+                            if (mounted) {
+                              context.showUserMessage(
+                                'Acesso do escritorio liberado.',
+                              );
+                            }
+                          }),
+                  child: const Text('Liberar escritorio'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _supremeGovBusy
+                      ? null
+                      : () => _runSupremeGov(() async {
+                            final oid = _supremeGovOfficeId.text.trim();
+                            if (oid.isEmpty) {
+                              context.showUserMessage('Informe o officeId.');
+                              return;
+                            }
+                            await _service.setAccountingOfficeAccess(
+                              officeId: oid,
+                              allowAccess: false,
+                              reason:
+                                  'Suspenso pela empresa suprema (governanca).',
+                            );
+                            if (mounted) {
+                              context.showUserMessage(
+                                'Escritorio suspenso.',
+                              );
+                            }
+                          }),
+                  child: const Text('Suspender escritorio'),
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFB91C1C),
+                  ),
+                  onPressed:
+                      _supremeGovBusy ? null : _confirmSupremeDeleteOffice,
+                  child: const Text('Excluir escritorio'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _confirmDeleteLightweightTestCompany(
     StandaloneLightweightCompanyRow r,
   ) async {
@@ -1045,10 +1302,11 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                 style: const TextStyle(height: 1.38, fontSize: 13),
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                children: [
+              shellTapFriendly(
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF92400E)),
                     onPressed: busy
@@ -1222,6 +1480,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                   ],
                 ],
               ),
+              ),
             ],
           ),
         ),
@@ -1371,15 +1630,17 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
               title: Text(item.$1),
               subtitle: SelectableText(item.$2),
               isThreeLine: false,
-              trailing: IconButton(
-                tooltip: 'Copiar',
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: item.$2));
-                  if (mounted) {
-                    context.showUserMessage('Link copiado.');
-                  }
-                },
-                icon: const Icon(Icons.copy_rounded),
+              trailing: shellTapFriendly(
+                IconButton(
+                  tooltip: 'Copiar',
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: item.$2));
+                    if (mounted) {
+                      context.showUserMessage('Link copiado.');
+                    }
+                  },
+                  icon: const Icon(Icons.copy_rounded),
+                ),
               ),
             ),
         ],
@@ -1398,10 +1659,12 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
-        IconButton(
-          tooltip: 'Atualizar',
-          onPressed: _reloadGovernance,
-          icon: const Icon(Icons.refresh_rounded),
+        shellTapFriendly(
+          IconButton(
+            tooltip: 'Atualizar',
+            onPressed: _reloadGovernance,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
         ),
       ],
     );
@@ -1434,46 +1697,77 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
             );
           }
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final r in rows)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    r.companyName.isEmpty ? r.companyId : r.companyName,
-                  ),
-                  subtitle: Text(
-                    '${r.ownerEmail}\n${r.companyId}'
-                    '${_formatLeadOriginLine(r)}'
-                    '${r.accountantPendingStatus.isEmpty ? "" : "\ncontador pendente: ${r.accountantPendingStatus}"}'
-                    '${!r.standaloneDeletionAllowed && r.standaloneDeletionBlockedReason.isNotEmpty ? "\n[BLOQUEIO] ${r.standaloneDeletionBlockedReason}" : ""}',
-                  ),
-                  isThreeLine: true,
-                  trailing: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 148),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TextButton(
-                          onPressed: () =>
-                              _selectCompanyInAdminPanel(r.companyId),
-                          child: const Text('Financeiro'),
-                        ),
-                        IconButton(
-                          tooltip: r.standaloneDeletionAllowed
-                              ? 'Apagar teste servidor'
-                              : (r.standaloneDeletionBlockedReason.isEmpty
-                                  ? 'Nao pode apagar'
-                                  : r.standaloneDeletionBlockedReason),
-                          color: const Color(0xFFB91C1C),
-                          onPressed: r.standaloneDeletionAllowed
-                              ? () =>
-                                    _confirmDeleteLightweightTestCompany(r)
-                              : null,
-                          icon:
-                              const Icon(Icons.delete_forever_rounded),
-                        ),
-                      ],
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppBrandColors.border),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            r.companyName.isEmpty ? r.companyId : r.companyName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: AppBrandColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${r.ownerEmail}\n${r.companyId}'
+                            '${_formatLeadOriginLine(r)}'
+                            '${r.accountantPendingStatus.isEmpty ? "" : "\ncontador pendente: ${r.accountantPendingStatus}"}'
+                            '${!r.standaloneDeletionAllowed && r.standaloneDeletionBlockedReason.isNotEmpty ? "\n[BLOQUEIO] ${r.standaloneDeletionBlockedReason}" : ""}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  height: 1.35,
+                                  color: AppBrandColors.softText,
+                                ),
+                          ),
+                          const SizedBox(height: 14),
+                          shellTapFriendly(
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _selectCompanyInAdminPanel(r.companyId),
+                                  icon: const Icon(Icons.payments_outlined),
+                                  label: const Text('Financeiro'),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(46),
+                                    alignment: Alignment.center,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFFB91C1C),
+                                    side: const BorderSide(
+                                      color: Color(0xFFFECACA),
+                                    ),
+                                    minimumSize: const Size.fromHeight(46),
+                                    alignment: Alignment.center,
+                                  ),
+                                  onPressed: r.standaloneDeletionAllowed
+                                      ? () => _confirmDeleteLightweightTestCompany(r)
+                                      : null,
+                                  icon: const Icon(Icons.delete_forever_rounded),
+                                  label: const Text('Apagar'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1511,27 +1805,59 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
             );
           }
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final r in rows)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    r.officeName.isEmpty ? r.officeId : r.officeName,
-                  ),
-                  subtitle: Text(
-                    '${r.email}\n'
-                    '${r.officeId}\n'
-                    'carteira(index): ${r.linkedCompaniesInIndex} empresas | campo office: '
-                    '${r.linkedCompaniesCount}',
-                  ),
-                  isThreeLine: true,
-                  trailing: IconButton(
-                    tooltip:
-                        'Apagar apenas se carteira vazia (ver mensagem servidor)',
-                    color: const Color(0xFFB91C1C),
-                    onPressed: () =>
-                        _confirmDeleteLightweightTestOffice(r),
-                    icon: const Icon(Icons.delete_forever_rounded),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppBrandColors.border),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            r.officeName.isEmpty ? r.officeId : r.officeName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: AppBrandColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${r.email}\n'
+                            '${r.officeId}\n'
+                            'carteira(index): ${r.linkedCompaniesInIndex} empresas | campo office: '
+                            '${r.linkedCompaniesCount}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  height: 1.35,
+                                  color: AppBrandColors.softText,
+                                ),
+                          ),
+                          const SizedBox(height: 14),
+                          shellTapFriendly(
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFB91C1C),
+                                side: const BorderSide(color: Color(0xFFFECACA)),
+                                minimumSize: const Size.fromHeight(46),
+                                alignment: Alignment.center,
+                              ),
+                              onPressed: () =>
+                                  _confirmDeleteLightweightTestOffice(r),
+                              icon: const Icon(Icons.delete_forever_rounded),
+                              label: const Text('Apagar escritorio'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -1680,6 +2006,8 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     final panel = (widget.governancePanel ?? '').trim().toLowerCase();
     final hubMode = panel.isEmpty || panel == 'hub';
 
+    final session = ref.watch(sessionProvider);
+
     Widget shell(List<Widget> children) {
       return ListView(
         padding: const EdgeInsets.only(bottom: 32),
@@ -1694,6 +2022,10 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       ],
       _governanceTopBar(),
       const SizedBox(height: 8),
+      if (session != null && hasSupremePlatformAccess(session)) ...[
+        _buildSupremeGovernanceCommandsCard(),
+        const SizedBox(height: 12),
+      ],
     ];
 
     if (hubMode) {
@@ -1783,6 +2115,18 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
         ...head,
         const SizedBox(height: 4),
         _governanceCampaignLinksCard(),
+      ]);
+    }
+
+    if (panel == 'email_massa') {
+      return shell([
+        ...head,
+        const SizedBox(height: 4),
+        _gvFlowCaption(
+          'Destinatários agregados das mesmas fontes da governança; envio usa SMTP ou SendGrid já configurados.',
+        ),
+        const SizedBox(height: 12),
+        GovernanceBulkEmailPanel(service: _service),
       ]);
     }
 
@@ -2355,15 +2699,16 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                     title: 'Envio em massa de convites',
                     subtitle:
                         'Importa arquivo com empresa + contador, separa a leva imediata da fila pendente e aplica intervalo conservador entre disparos.',
-                    trailing: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: _bulkSending ? null : _pickBulkTrialList,
-                          icon: const Icon(Icons.upload_file_outlined),
-                          label: const Text('Importar arquivo'),
-                        ),
+                    trailing: shellTapFriendly(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _bulkSending ? null : _pickBulkTrialList,
+                            icon: const Icon(Icons.upload_file_outlined),
+                            label: const Text('Importar arquivo'),
+                          ),
                         OutlinedButton.icon(
                           onPressed:
                               (_bulkSending ||
@@ -2391,7 +2736,8 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                             _bulkSending ? 'Enviando...' : 'Disparar leva',
                           ),
                         ),
-                      ],
+                        ],
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2979,19 +3325,23 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                                                     const AppHeaderChip(
                                                       'deleted',
                                                     ),
-                                                    IconButton(
-                                                      tooltip:
-                                                          'Excluir definitivamente',
-                                                      onPressed:
-                                                          _purgingDeletedInvites
-                                                          ? null
-                                                          : () =>
-                                                                _purgeDeletedTrialInvites(
-                                                                  [invite.id],
-                                                                ),
-                                                      icon: const Icon(
-                                                        Icons
-                                                            .delete_forever_rounded,
+                                                    shellTapFriendly(
+                                                      IconButton(
+                                                        tooltip:
+                                                            'Excluir definitivamente',
+                                                        onPressed:
+                                                            _purgingDeletedInvites
+                                                            ? null
+                                                            : () =>
+                                                                  _purgeDeletedTrialInvites(
+                                                                    [
+                                                                      invite.id,
+                                                                    ],
+                                                                  ),
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .delete_forever_rounded,
+                                                        ),
                                                       ),
                                                     ),
                                                   ],
@@ -3029,10 +3379,12 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                         title: 'Checkout publico da landing',
                         subtitle:
                             'Define nomes, valores e links publicos dos planos exibidos na pagina de vendas.',
-                        trailing: OutlinedButton.icon(
-                          onPressed: () => _editPublicSalesConfig(config),
-                          icon: const Icon(Icons.storefront_outlined),
-                          label: const Text('Editar landing'),
+                        trailing: shellTapFriendly(
+                          OutlinedButton.icon(
+                            onPressed: () => _editPublicSalesConfig(config),
+                            icon: const Icon(Icons.storefront_outlined),
+                            label: const Text('Editar landing'),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3071,10 +3423,12 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
                         title: 'Demo publico',
                         subtitle:
                             'Define o ambiente demo publico. Por padrao, o sistema usa um workspace ficticio do Ponto Certo, sem expor dados reais.',
-                        trailing: OutlinedButton.icon(
-                          onPressed: () => _editPublicDemoConfig(config),
-                          icon: const Icon(Icons.visibility_outlined),
-                          label: const Text('Configurar demo'),
+                        trailing: shellTapFriendly(
+                          OutlinedButton.icon(
+                            onPressed: () => _editPublicDemoConfig(config),
+                            icon: const Icon(Icons.visibility_outlined),
+                            label: const Text('Configurar demo'),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -6100,10 +6454,11 @@ class _CompanyDetailCard extends StatelessWidget {
       title: item.companyName.isNotEmpty ? item.companyName : item.companyId,
       subtitle:
           'Tela de gestao comercial desta empresa, com bloqueio, liberacao, plano e composicao de valor.',
-      trailing: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
+      trailing: shellTapFriendly(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
           OutlinedButton.icon(
             onPressed: onEdit,
             icon: const Icon(Icons.tune_rounded),
@@ -6132,6 +6487,7 @@ class _CompanyDetailCard extends StatelessWidget {
               label: const Text('Liberar'),
             ),
         ],
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -6259,15 +6615,16 @@ class _CompanyFiscalStatusCard extends StatelessWidget {
       title: 'Operacao fiscal da empresa',
       subtitle:
           'Conferencia fiscal por empresa, com pendencias, dono da correcao e solicitacao automatica para a empresa quando faltar documento ou dado.',
-      trailing: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          OutlinedButton.icon(
-            onPressed: onRefresh,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Recarregar'),
-          ),
+      trailing: shellTapFriendly(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Recarregar'),
+            ),
           OutlinedButton.icon(
             onPressed: onSyncFocus,
             icon: const Icon(Icons.sync_rounded),
@@ -6288,7 +6645,8 @@ class _CompanyFiscalStatusCard extends StatelessWidget {
             icon: const Icon(Icons.mail_outline),
             label: const Text('Solicitar empresa'),
           ),
-        ],
+          ],
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

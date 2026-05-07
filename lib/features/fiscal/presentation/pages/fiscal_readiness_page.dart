@@ -116,9 +116,20 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
     if (controller == null) {
       return;
     }
-    final mergedCompanyData = Map<String, dynamic>.from(companyData);
-    mergedCompanyData['fiscalPaymentBankInfo'] = controller.text.trim();
     try {
+      final snap = await FirebaseFirestore.instance
+          .collection('company_settings')
+          .doc(sessao.companyId)
+          .get();
+      final persisted =
+          (snap.data()?['companyData'] as Map?)?.cast<String, dynamic>() ??
+              <String, dynamic>{};
+      final mergedCompanyData = Map<String, dynamic>.from(persisted);
+      for (final e in companyData.entries) {
+        mergedCompanyData[e.key] = e.value;
+      }
+      mergedCompanyData['fiscalPaymentBankInfo'] = controller.text.trim();
+
       await FirebaseFirestore.instance
           .collection('company_settings')
           .doc(sessao.companyId)
@@ -132,9 +143,15 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           );
       if (!mounted) return;
       _msg('Dados de recebimento gravados. Passam para o texto da nota ao emitir.');
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      _msg('Nao foi possivel gravar os dados de recebimento.');
+      _msg(
+        AppErrorMapper.messageFrom(
+          e,
+          fallback:
+              'Nao foi possivel gravar os dados de recebimento. Verifique conexao e permissoes.',
+        ),
+      );
     }
   }
 
@@ -626,7 +643,10 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           'inssRate': inssRate,
           'inssAmountCents': inssAmount,
           'taxRegime': taxRegimeController.text.trim(),
-          'opcaoSimplesNacional': ?dpsSimplesNacionalOverride,
+          // Opcao Simples Nacional (DPS nacional): omitida quando nula.
+          // ignore: use_null_aware_elements
+          if (dpsSimplesNacionalOverride != null)
+            'opcaoSimplesNacional': dpsSimplesNacionalOverride,
           'operationNature': _normalizeOperationNatureCode(
             operationNatureController.text,
             issRetained: issRetained,
@@ -704,9 +724,18 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
               .set(payload, SetOptions(merge: true));
           invoiceId = editing.id;
         }
-        // Dados cadastrais vivem em `company_settings` (a coleção `companies` não
-        // possui regra no Firestore e o deny-all final impede gravação).
-        final mergedCompanyData = Map<String, dynamic>.from(companyData);
+        // Preserva `company_settings.companyData` existente e aplica so o recorte
+        // usado no emitente + dados bancarios do texto da NF (evita apagar cadastro
+        // quando o emitente resolvido esta vazio ou parcial).
+        final rawPersistedCompanyData =
+            (companySettings['companyData'] as Map?)
+                ?.cast<String, dynamic>() ??
+            <String, dynamic>{};
+        final mergedCompanyData =
+            Map<String, dynamic>.from(rawPersistedCompanyData);
+        for (final e in companyData.entries) {
+          mergedCompanyData[e.key] = e.value;
+        }
         mergedCompanyData['fiscalPaymentBankInfo'] =
             fiscalPaymentBankInfoController.text.trim();
         await FirebaseFirestore.instance
@@ -746,8 +775,13 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
           ),
         );
         return invoiceId;
-      } catch (_) {
-        _msg('Nao foi possivel salvar a nota.');
+      } catch (e) {
+        _msg(
+          AppErrorMapper.messageFrom(
+            e,
+            fallback: 'Nao foi possivel salvar a nota.',
+          ),
+        );
         return null;
       }
     }
@@ -3331,12 +3365,11 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
                 (companySettings['companyData'] as Map?)
                     ?.cast<String, dynamic>() ??
                 <String, dynamic>{};
-            final hasConfiguredCompanyData = settingsCompanyData.isNotEmpty;
-            final companyData = sessao.role == Role.accountant
-                ? (hasConfiguredCompanyData
-                      ? <String, dynamic>{...settingsCompanyData}
-                      : <String, dynamic>{...userCompanyData})
-                : <String, dynamic>{...userCompanyData, ...settingsCompanyData};
+            final companyData = _resolveFiscalEmitterCompanyData(
+              sessao: sessao,
+              userCompanyData: userCompanyData,
+              settingsCompanyData: settingsCompanyData,
+            );
             final fiscalSettings = _FiscalSettings.fromSettings(
               companySettings,
             );
@@ -6452,8 +6485,13 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
             'updatedByUserName': sessao.nome,
             'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
-    } catch (_) {
-      _msg('Nao foi possivel salvar o checklist fiscal.');
+    } catch (e) {
+      _msg(
+        AppErrorMapper.messageFrom(
+          e,
+          fallback: 'Nao foi possivel salvar o checklist fiscal.',
+        ),
+      );
     }
   }
 
@@ -7068,6 +7106,60 @@ class _FiscalReadinessPageState extends ConsumerState<FiscalReadinessPage> {
         _competenceController.text = latestCompetence;
       });
     });
+  }
+
+  /// Cadastro ficticio do workspace demo publico — nao usar como emitente real.
+  bool _companyDataLooksLikeDemoEmitter(Map<String, dynamic> data) {
+    if (data.isEmpty) return false;
+    final cnpj = _onlyDigits(data['cnpj']?.toString() ?? '');
+    if (cnpj == '00000000000000') return true;
+    final im =
+        data['inscricaoMunicipal']?.toString().trim().toUpperCase() ?? '';
+    if (im == 'DEMO-IM') return true;
+    final email = data['email']?.toString().trim().toLowerCase() ?? '';
+    if (email == 'demo@pontocerto.local') return true;
+    final endereco = data['endereco']?.toString().trim().toLowerCase() ?? '';
+    if (endereco.contains('demonstrativo')) return true;
+    return false;
+  }
+
+  /// Fonte canonica: `company_settings.companyData` da empresa ativa ([sessao.companyId]);
+  /// complementa com `users.companyData` apenas quando o cadastro da empresa nao for demo.
+  /// Contador: nunca usa o perfil pessoal do escritorio como dados da empresa cliente.
+  Map<String, dynamic> _resolveFiscalEmitterCompanyData({
+    required Session sessao,
+    required Map<String, dynamic> userCompanyData,
+    required Map<String, dynamic> settingsCompanyData,
+  }) {
+    final user = Map<String, dynamic>.from(userCompanyData);
+    final settings = Map<String, dynamic>.from(settingsCompanyData);
+    final settingsDemo =
+        settings.isNotEmpty && _companyDataLooksLikeDemoEmitter(settings);
+    final userDemo = user.isNotEmpty && _companyDataLooksLikeDemoEmitter(user);
+
+    if (sessao.role == Role.accountant) {
+      if (settings.isNotEmpty && !settingsDemo) {
+        return settings;
+      }
+      return <String, dynamic>{};
+    }
+
+    if (settings.isNotEmpty && !settingsDemo) {
+      return {...user, ...settings};
+    }
+    if (settingsDemo && user.isNotEmpty && !userDemo) {
+      return user;
+    }
+    if (settingsDemo && userDemo) {
+      return <String, dynamic>{};
+    }
+    if (settingsDemo && user.isEmpty) {
+      return <String, dynamic>{};
+    }
+    if (user.isNotEmpty) {
+      return {...user, ...settings};
+    }
+    return settings;
   }
 
   String _onlyDigits(String input) {

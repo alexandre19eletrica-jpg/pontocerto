@@ -31,8 +31,13 @@ extension _FiscalReadinessGovernanceActions on _FiscalReadinessPageState {
         },
       );
       _msg('Configuracao fiscal atualizada.');
-    } catch (_) {
-      _msg('Nao foi possivel salvar a configuracao fiscal.');
+    } catch (e) {
+      _msg(
+        AppErrorMapper.messageFrom(
+          e,
+          fallback: 'Nao foi possivel salvar a configuracao fiscal.',
+        ),
+      );
     }
   }
 

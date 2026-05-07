@@ -147,6 +147,27 @@ String _taskFormatMoney(int cents) {
   return '${negativo ? '-' : ''}R\$ $reaisTexto,$centavos';
 }
 
+/// Linha compacta na lista de itens (sem rotulos longos tipo «Concluido» / «Quantidade»).
+String _taskItemServicoSubtitle(ItemServico item) {
+  final buf = StringBuffer()
+    ..write(item.concluido ? '\u2713' : '\u25CB')
+    ..write(' · ')
+    ..write(item.quantidadeNormalizada)
+    ..write(' un');
+  if (item.valorCents != null && item.valorCents != 0) {
+    buf
+      ..write(' · Unit. ')
+      ..write(_taskFormatMoney(item.valorCents!));
+  }
+  final total = item.totalCents;
+  if (total != null && total != 0) {
+    buf
+      ..write(' · Total ')
+      ..write(_taskFormatMoney(total));
+  }
+  return buf.toString();
+}
+
 class _OpcaoAnexo {
   _OpcaoAnexo(this.tipo, this.origem);
 

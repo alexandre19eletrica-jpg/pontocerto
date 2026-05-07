@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pontocerto/core/auth/session.dart';
+import 'package:pontocerto/core/platform/platform_access.dart';
 import 'package:pontocerto/core/errors/app_error_mapper.dart';
 import 'package:pontocerto/core/company/company_access_state.dart';
 import 'package:pontocerto/core/company/company_experience.dart';
@@ -118,7 +119,9 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
           _carregando = false;
         });
       }
-      await _loadAssistantConfigStatus();
+      if (hasSupremePlatformAccess(sessao)) {
+        await _loadAssistantConfigStatus();
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _carregando = false);
@@ -129,6 +132,7 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
   Future<void> _loadAssistantConfigStatus() async {
     final sessao = ref.read(sessionProvider);
     if (sessao == null || sessao.role != Role.owner) return;
+    if (!hasSupremePlatformAccess(sessao)) return;
     if (mounted) {
       setState(() => _assistantConfigLoading = true);
     }
@@ -330,14 +334,17 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
       ),
       beforeLogout: [
         IconButton(
-          onPressed: _carregando || _salvando ? null : _abrirEdicao,
-          icon: const Icon(Icons.edit, color: AppBrandColors.ink),
-          tooltip: 'Editar',
-        ),
-        IconButton(
           onPressed: _carregando || _salvando || _limpandoDados
               ? null
-              : _abrirLimpezaDados,
+              : () {
+                  if (sessao.isDemo) {
+                    context.showUserMessage(
+                      'Modo demo publico: limpeza de dados nao esta disponivel.',
+                    );
+                    return;
+                  }
+                  _abrirLimpezaDados();
+                },
           icon: const Icon(
             Icons.delete_sweep_outlined,
             color: AppBrandColors.ink,
@@ -351,7 +358,11 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
         ? const Center(child: CircularProgressIndicator())
         : AppGradientBackground(
             child: AppPageLayout(
-              child: ListView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: ListView(
                   children: [
                     AppWorkspaceCard(
                       title: 'Atalhos',
@@ -803,191 +814,191 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
                         );
                       },
                     ),
-                    const SizedBox(height: 12),
-                    Builder(
-                      builder: (context) {
-                        final settings = _AssistantSettings.fromSettings(
-                          companySettings,
-                        );
-                        final usageRaw = companySettings['assistantUsage'];
-                        final usage = usageRaw is Map
-                            ? usageRaw.cast<String, dynamic>()
-                            : <String, dynamic>{};
-                        final canManage = sessao.role == Role.owner;
-                        final requestCount =
-                            (usage['requestCount'] as num?)?.toInt() ?? 0;
-                        final tokenCount =
-                            (usage['totalTokens'] as num?)?.toInt() ?? 0;
-                        final periodKey =
-                            usage['periodKey']?.toString() ?? 'periodo atual';
-                        return AppWorkspaceCard(
-                          title: 'Governanca do assistente',
-                          subtitle:
-                              'Modelo SaaS centralizado: a plataforma controla acesso, franquia mensal e disponibilidade do assistente por empresa.',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  AppHeaderChip(
-                                    settings.enabled
-                                        ? 'Assistente ativo'
-                                        : 'Assistente desativado',
-                                  ),
-                                  AppHeaderChip('Plano ${settings.plan}'),
-                                  AppHeaderChip(
-                                    settings.monthlyRequestLimit > 0
-                                        ? '$requestCount/${settings.monthlyRequestLimit} atendimentos no mes'
-                                        : '$requestCount atendimentos sem teto',
-                                  ),
-                                  AppHeaderChip(
-                                    '$tokenCount tokens acumulados',
-                                  ),
-                                  AppHeaderChip('Periodo $periodKey'),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              SwitchListTile(
-                                value: settings.enabled,
-                                onChanged: canManage
-                                    ? (value) => _saveAssistantSettings(
-                                        sessao,
-                                        settings.copyWith(enabled: value),
-                                      )
-                                    : null,
-                                title: const Text(
-                                  'Assistente liberado para esta empresa',
+                    if (hasSupremePlatformAccess(sessao)) ...[
+                      const SizedBox(height: 12),
+                      Builder(
+                        builder: (context) {
+                          final settings = _AssistantSettings.fromSettings(
+                            companySettings,
+                          );
+                          final usageRaw = companySettings['assistantUsage'];
+                          final usage = usageRaw is Map
+                              ? usageRaw.cast<String, dynamic>()
+                              : <String, dynamic>{};
+                          final canManage = sessao.role == Role.owner;
+                          final requestCount =
+                              (usage['requestCount'] as num?)?.toInt() ?? 0;
+                          final tokenCount =
+                              (usage['totalTokens'] as num?)?.toInt() ?? 0;
+                          final periodKey =
+                              usage['periodKey']?.toString() ?? 'periodo atual';
+                          return AppWorkspaceCard(
+                            title: 'Governanca do assistente',
+                            subtitle:
+                                'Somente empresa suprema: limites, perfis e credencial central usados por todas as empresas cliente.',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    AppHeaderChip(
+                                      settings.enabled
+                                          ? 'Assistente ativo'
+                                          : 'Assistente desativado',
+                                    ),
+                                    AppHeaderChip('Plano ${settings.plan}'),
+                                    AppHeaderChip(
+                                      settings.monthlyRequestLimit > 0
+                                          ? '$requestCount/${settings.monthlyRequestLimit} atendimentos no mes'
+                                          : '$requestCount atendimentos sem teto',
+                                    ),
+                                    AppHeaderChip(
+                                      '$tokenCount tokens acumulados',
+                                    ),
+                                    AppHeaderChip('Periodo $periodKey'),
+                                  ],
                                 ),
-                                subtitle: const Text(
-                                  'Desliga ou religa o modulo inteiro sem afetar o restante do sistema.',
-                                ),
-                              ),
-                              SwitchListTile(
-                                value: settings.allowAccountantAccess,
-                                onChanged: canManage
-                                    ? (value) => _saveAssistantSettings(
-                                        sessao,
-                                        settings.copyWith(
-                                          allowAccountantAccess: value,
-                                        ),
-                                      )
-                                    : null,
-                                title: const Text('Contador usa o assistente'),
-                                subtitle: const Text(
-                                  'Mantem o contador dentro do mesmo canal de orientacao e preparo de textos.',
-                                ),
-                              ),
-                              SwitchListTile(
-                                value: settings.allowEmployeeAccess,
-                                onChanged: canManage
-                                    ? (value) => _saveAssistantSettings(
-                                        sessao,
-                                        settings.copyWith(
-                                          allowEmployeeAccess: value,
-                                        ),
-                                      )
-                                    : null,
-                                title: const Text(
-                                  'Funcionarios usam o assistente',
-                                ),
-                                subtitle: const Text(
-                                  'Libera ajuda operacional para o time de campo sem abrir configuracoes sensiveis.',
-                                ),
-                              ),
-                              SwitchListTile(
-                                value: settings.blockWhenLimitReached,
-                                onChanged: canManage
-                                    ? (value) => _saveAssistantSettings(
-                                        sessao,
-                                        settings.copyWith(
-                                          blockWhenLimitReached: value,
-                                        ),
-                                      )
-                                    : null,
-                                title: const Text(
-                                  'Bloquear ao atingir a franquia',
-                                ),
-                                subtitle: const Text(
-                                  'Quando ligado, o backend bloqueia novas consultas ao chegar no teto mensal.',
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<int>(
-                                initialValue: settings.monthlyRequestLimit,
-                                decoration: const InputDecoration(
-                                  labelText: 'Franquia mensal de atendimentos',
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 50,
-                                    child: Text('50 por mes'),
+                                const SizedBox(height: 12),
+                                SwitchListTile(
+                                  value: settings.enabled,
+                                  onChanged: canManage
+                                      ? (value) => _saveAssistantSettings(
+                                          sessao,
+                                          settings.copyWith(enabled: value),
+                                        )
+                                      : null,
+                                  title: const Text(
+                                    'Assistente liberado para esta empresa',
                                   ),
-                                  DropdownMenuItem(
-                                    value: 200,
-                                    child: Text('200 por mes'),
+                                  subtitle: const Text(
+                                    'Desliga ou religa o modulo inteiro sem afetar o restante do sistema.',
                                   ),
-                                  DropdownMenuItem(
-                                    value: 500,
-                                    child: Text('500 por mes'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 1000,
-                                    child: Text('1000 por mes'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 0,
-                                    child: Text('Sem limite'),
-                                  ),
-                                ],
-                                onChanged: canManage
-                                    ? (value) {
-                                        if (value == null) return;
-                                        _saveAssistantSettings(
+                                ),
+                                SwitchListTile(
+                                  value: settings.allowAccountantAccess,
+                                  onChanged: canManage
+                                      ? (value) => _saveAssistantSettings(
                                           sessao,
                                           settings.copyWith(
-                                            monthlyRequestLimit: value,
+                                            allowAccountantAccess: value,
                                           ),
-                                        );
-                                      }
-                                    : null,
-                              ),
-                              const SizedBox(height: 12),
-                              DropdownButtonFormField<String>(
-                                initialValue: settings.plan,
-                                decoration: const InputDecoration(
-                                  labelText: 'Plano interno do assistente',
+                                        )
+                                      : null,
+                                  title: const Text('Contador usa o assistente'),
+                                  subtitle: const Text(
+                                    'Mantem o contador dentro do mesmo canal de orientacao e preparo de textos.',
+                                  ),
                                 ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'solo',
-                                    child: Text('MEI / Solo'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'equipe',
-                                    child: Text('Empresa / Equipe'),
-                                  ),
-                                ],
-                                onChanged: canManage
-                                    ? (value) {
-                                        if (value == null) return;
-                                        _saveAssistantSettings(
+                                SwitchListTile(
+                                  value: settings.allowEmployeeAccess,
+                                  onChanged: canManage
+                                      ? (value) => _saveAssistantSettings(
                                           sessao,
-                                          settings.copyWith(plan: value),
-                                        );
-                                      }
-                                    : null,
-                              ),
-                              const SizedBox(height: 16),
-                              _buildAssistantCredentialInfoCard(
-                                showTechnical: canManage,
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                                          settings.copyWith(
+                                            allowEmployeeAccess: value,
+                                          ),
+                                        )
+                                      : null,
+                                  title: const Text(
+                                    'Funcionarios usam o assistente',
+                                  ),
+                                  subtitle: const Text(
+                                    'Libera ajuda operacional para o time de campo sem abrir configuracoes sensiveis.',
+                                  ),
+                                ),
+                                SwitchListTile(
+                                  value: settings.blockWhenLimitReached,
+                                  onChanged: canManage
+                                      ? (value) => _saveAssistantSettings(
+                                          sessao,
+                                          settings.copyWith(
+                                            blockWhenLimitReached: value,
+                                          ),
+                                        )
+                                      : null,
+                                  title: const Text(
+                                    'Bloquear ao atingir a franquia',
+                                  ),
+                                  subtitle: const Text(
+                                    'Quando ligado, o backend bloqueia novas consultas ao chegar no teto mensal.',
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                DropdownButtonFormField<int>(
+                                  initialValue: settings.monthlyRequestLimit,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Franquia mensal de atendimentos',
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 50,
+                                      child: Text('50 por mes'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 200,
+                                      child: Text('200 por mes'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 500,
+                                      child: Text('500 por mes'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 1000,
+                                      child: Text('1000 por mes'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 0,
+                                      child: Text('Sem limite'),
+                                    ),
+                                  ],
+                                  onChanged: canManage
+                                      ? (value) {
+                                          if (value == null) return;
+                                          _saveAssistantSettings(
+                                            sessao,
+                                            settings.copyWith(
+                                              monthlyRequestLimit: value,
+                                            ),
+                                          );
+                                        }
+                                      : null,
+                                ),
+                                const SizedBox(height: 12),
+                                DropdownButtonFormField<String>(
+                                  initialValue: settings.plan,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Plano interno do assistente',
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 'solo',
+                                      child: Text('MEI / Solo'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'equipe',
+                                      child: Text('Empresa / Equipe'),
+                                    ),
+                                  ],
+                                  onChanged: canManage
+                                      ? (value) {
+                                          if (value == null) return;
+                                          _saveAssistantSettings(
+                                            sessao,
+                                            settings.copyWith(plan: value),
+                                          );
+                                        }
+                                      : null,
+                                ),
+                                const SizedBox(height: 16),
+                                _buildSupremeAssistantCredentialPanel(sessao),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     AppWorkspaceCard(
                       title: 'Dados cadastrais',
@@ -1038,9 +1049,42 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
                       ),
                     ),
                   ],
-                ),
+                    ),
+                  ),
+                  SafeArea(
+                    top: false,
+                    minimum: EdgeInsets.zero,
+                    child: Material(
+                      elevation: 8,
+                      color: Theme.of(context).colorScheme.surface,
+                      shadowColor: Colors.black26,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                        child: FilledButton.icon(
+                          onPressed: _carregando || _salvando
+                              ? null
+                              : () {
+                                  if (sessao.isDemo) {
+                                    context.showUserMessage(
+                                      'Modo demo publico: edicao do cadastro nao esta disponivel.',
+                                    );
+                                    return;
+                                  }
+                                  _abrirEdicao();
+                                },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Editar cadastro da empresa'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-    );
+            ),
+          );
   }
 
   Future<void> _openMeiDasDialog(
@@ -2023,31 +2067,8 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
     }
   }
 
-  Widget _buildAssistantCredentialInfoCard({required bool showTechnical}) {
+  Widget _buildSupremeAssistantCredentialPanel(Session _) {
     final status = _assistantConfigStatus;
-    final hasCompany = status?.hasCompanyApiKey == true;
-    final hasPlatform = status?.hasPlatformApiKey == true;
-
-    final sourceChip = switch (status?.source) {
-      'company' => 'Credencial desta empresa: chave propria (legado)',
-      'platform' => 'Credencial: plataforma (suprema)',
-      _ => hasPlatform
-          ? 'Credencial: plataforma (suprema)'
-          : 'Credencial: verificar na plataforma',
-    };
-
-    final bodyText = !showTechnical
-        ? 'O assistente usa a mesma credencial OpenAI da plataforma (empresa suprema). Sua empresa nao precisa cadastrar token: basta usar o assistente. Limites de uso por empresa ficam na franquia mensal acima.'
-        : hasCompany
-            ? 'Esta empresa ainda possui chave OpenAI propria cadastrada (legado). O modelo do produto e credencial unica da suprema para todos; alinhe com o suporte se quiser remover o cadastro legado.'
-            : hasPlatform
-                ? 'O assistente esta ligado a credencial unica da plataforma (mesma da empresa suprema). Nao ha cadastro de token por empresa nesta tela: a empresa use o assistente e ajuste franquia e permissoes acima. A suprema controla a credencial e pode acompanhar consumo por empresa cadastrada.'
-                : 'Credencial da plataforma nao detectada agora; o assistente pode falhar ate a suprema concluir OPENAI_API_KEY. Avise o suporte se continuar indisponivel.';
-
-    final updatedAtLabel = status?.updatedAtIso.isNotEmpty == true
-        ? _formatIsoDateTime(status!.updatedAtIso)
-        : null;
-
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -2059,59 +2080,272 @@ class _CompanyPageState extends ConsumerState<CompanyPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Credencial do assistente',
+            'Credencial central (OpenAI) para todas as empresas',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
-            bodyText,
-            style: TextStyle(color: AppBrandColors.softText),
+            'Prioridade: OPENAI_API_KEY nas Cloud Functions, se existir. Caso contrario usa a chave gravada aqui (Firestore da empresa suprema).',
+            style: TextStyle(color: AppBrandColors.softText, height: 1.35),
           ),
-          if (showTechnical) ...[
-            const SizedBox(height: 10),
-            if (_assistantConfigLoading)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppBrandColors.softText,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Carregando status tecnico...',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppBrandColors.softText,
-                      ),
-                    ),
-                  ],
+          const SizedBox(height: 12),
+          if (_assistantConfigLoading)
+            Row(
+              children: [
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Text(
+                  'Carregando status...',
+                  style: TextStyle(color: AppBrandColors.softText, fontSize: 13),
+                ),
+              ],
+            )
+          else ...[
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                AppHeaderChip(sourceChip),
-                if (status != null)
-                  AppHeaderChip('Modelo ${status.model}'),
-                if ((status?.keyPreview ?? '').isNotEmpty)
-                  AppHeaderChip('Chave ${status!.keyPreview}'),
-                if (updatedAtLabel != null)
-                  AppHeaderChip('Atualizado $updatedAtLabel'),
-                if ((status?.updatedByName ?? '').isNotEmpty)
-                  AppHeaderChip('Por ${status!.updatedByName}'),
+                AppHeaderChip(
+                  status?.assistantOperational == true
+                      ? 'Assistente operacional'
+                      : 'Sem credencial ativa',
+                ),
+                if (status?.usesEnvApiKey == true)
+                  const AppHeaderChip('Variavel OPENAI_API_KEY ativa'),
+                if (status?.hasSupremeStoredKey == true)
+                  const AppHeaderChip('Chave no Firestore'),
+                if ((status?.model ?? '').isNotEmpty)
+                  AppHeaderChip('Modelo efetivo ${status!.model}'),
+              ],
+            ),
+            if ((status?.keyPreview ?? '').isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Ultima chave gravada no Firestore (mascarada): ${status!.keyPreview}',
+                style: TextStyle(color: AppBrandColors.softText, fontSize: 13),
+              ),
+            ],
+            if ((status?.updatedAtIso ?? '').isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Atualizado em ${_formatIsoDateTime(status!.updatedAtIso)}'
+                '${status.updatedByName.isNotEmpty ? ' por ${status.updatedByName}' : ''}',
+                style: TextStyle(color: AppBrandColors.softText, fontSize: 13),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {
+                    _openSupremeAssistantKeyDialog();
+                  },
+                  icon: const Icon(Icons.vpn_key_outlined),
+                  label: Text(
+                    status?.hasSupremeStoredKey == true
+                        ? 'Atualizar chave ou modelo'
+                        : 'Cadastrar chave no Firestore',
+                  ),
+                ),
+                if (status?.hasSupremeStoredKey == true)
+                  TextButton(
+                    onPressed: () {
+                      _confirmRemoveSupremeStoredKey();
+                    },
+                    child: const Text('Remover chave do Firestore'),
+                  ),
+                if (status?.hasSupremeStoredKey == true &&
+                    status?.usesEnvApiKey != true)
+                  TextButton(
+                    onPressed: () {
+                      _openSupremeAssistantModelOnlyDialog();
+                    },
+                    child: const Text('Salvar apenas modelo'),
+                  ),
               ],
             ),
           ],
         ],
       ),
     );
+  }
+
+  Future<void> _openSupremeAssistantKeyDialog() async {
+    final modelHint = _assistantConfigStatus?.supremeStoredModelHint.isNotEmpty == true
+        ? _assistantConfigStatus!.supremeStoredModelHint
+        : (_assistantConfigStatus?.model ?? '');
+    final keyCtrl = TextEditingController();
+    final modelCtrl = TextEditingController(text: modelHint);
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Credencial OpenAI da plataforma'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: keyCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Chave sk-...',
+                    hintText: 'Nova chave da OpenAI',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: modelCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Modelo (opcional)',
+                    hintText: 'gpt-4.1-mini',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final k = keyCtrl.text.trim();
+                if (k.length < 20 || !k.startsWith('sk-')) {
+                  if (dialogContext.mounted) {
+                    dialogContext.showUserMessage(
+                      'Informe uma chave valida (sk-...).',
+                    );
+                  }
+                  return;
+                }
+                final model = modelCtrl.text.trim();
+                Navigator.of(dialogContext).pop();
+                try {
+                  await _assistantAdminService.saveCompanyApiKey(
+                    k,
+                    model: model.isNotEmpty ? model : null,
+                  );
+                  await _loadAssistantConfigStatus();
+                  if (mounted) {
+                    context.showUserMessage('Credencial gravada para a plataforma.');
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    context.showUserError(AppErrorMapper.messageFrom(e));
+                  }
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      keyCtrl.dispose();
+      modelCtrl.dispose();
+    }
+  }
+
+  Future<void> _openSupremeAssistantModelOnlyDialog() async {
+    final modelHint = _assistantConfigStatus?.supremeStoredModelHint.isNotEmpty == true
+        ? _assistantConfigStatus!.supremeStoredModelHint
+        : (_assistantConfigStatus?.model ?? '');
+    final modelCtrl = TextEditingController(text: modelHint);
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Modelo OpenAI (Firestore)'),
+          content: TextField(
+            controller: modelCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Modelo',
+              hintText: 'gpt-4.1-mini',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final m = modelCtrl.text.trim();
+                if (m.isEmpty) {
+                  if (dialogContext.mounted) {
+                    dialogContext.showUserMessage('Informe o modelo.');
+                  }
+                  return;
+                }
+                Navigator.of(dialogContext).pop();
+                try {
+                  await _assistantAdminService.patchCompanyModel(m);
+                  await _loadAssistantConfigStatus();
+                  if (mounted) {
+                    context.showUserMessage('Modelo atualizado.');
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    context.showUserError(AppErrorMapper.messageFrom(e));
+                  }
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      modelCtrl.dispose();
+    }
+  }
+
+  Future<void> _confirmRemoveSupremeStoredKey() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remover chave do Firestore?'),
+        content: const Text(
+          'Remove apenas o documento assistant_secure da empresa suprema. '
+          'Se OPENAI_API_KEY existir nas Functions, o assistente continua operacional.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB91C1C),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await _assistantAdminService.removeCompanyApiKey();
+      await _loadAssistantConfigStatus();
+      if (mounted) {
+        context.showUserMessage('Chave removida do Firestore.');
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showUserError(AppErrorMapper.messageFrom(e));
+      }
+    }
   }
 
   Future<void> _writeAuditLog({

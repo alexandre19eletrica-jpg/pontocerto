@@ -1,5 +1,12 @@
 ﻿part of 'tasks_page.dart';
 
+class _TaskPdfPalette {
+  static final PdfColor ink = PdfColor.fromInt(0xFF1F2937);
+  static final PdfColor muted = PdfColor.fromInt(0xFF64748B);
+  static final PdfColor accent = PdfColor.fromInt(0xFF0F4C81);
+  static final PdfColor border = PdfColor.fromInt(0xFFD7DFEA);
+}
+
 extension _TaskDetailsMediaPdf on TaskDetailsPage {
   Future<void> _compartilharTarefaPdf(
     BuildContext context,
@@ -300,96 +307,745 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
         ? 'Relatorio de servico finalizado'
         : 'Orcamento de servico';
     final pdf = pw.Document();
+
+    final corpo = <pw.Widget>[
+      StandardPdfDocument.header(
+        title: titulo,
+        subtitle:
+            'Documento para o cliente acompanhar servicos, produtos e valores. '
+            'A empresa emissora aparece abaixo.',
+        company: StandardPdfCompanyInfo(
+          name: empresa.nome,
+          document: empresa.cnpj == '-' ? '' : empresa.cnpj,
+          address: empresa.endereco == '-' ? '' : empresa.endereco,
+        ),
+        metadata: _pdfCamposMetadadosResumo(tarefa),
+      ),
+      _pdfBlocoClienteServicoObra(tarefa),
+    ];
+
+    if (tarefa.itens.any((i) => i.nome.trim().isNotEmpty)) {
+      corpo.add(_pdfSecaoItensTabela(tarefa));
+    }
+
+    final matsPdf = _materiaisParaPdfCliente(tarefa);
+    if (matsPdf.isNotEmpty) {
+      corpo.add(_pdfSecaoMateriaisCliente(tarefa, matsPdf));
+    }
+
+    if (tarefa.status == StatusTarefa.finalizado) {
+      final blocosConclusao = _pdfWidgetsConclusaoServico(
+        anexosResolvidos,
+      );
+      if (blocosConclusao.isNotEmpty) {
+        corpo.add(_pdfSecaoTituloExterno('Conclusao do servico', blocosConclusao));
+      }
+    }
+
+    if (_pdfDeveExibirResumoValores(tarefa)) {
+      corpo.add(_pdfResumoValoresFinais(tarefa));
+    }
+
     pdf.addPage(
       pw.MultiPage(
-        pageTheme: StandardPdfDocument.pageTheme(),
-        build: (_) => [
-          StandardPdfDocument.header(
-            title: titulo,
-            subtitle:
-                'Documento padronizado para envio ao cliente e arquivo interno da empresa.',
-            company: StandardPdfCompanyInfo(
-              name: empresa.nome,
-              document: empresa.cnpj == '-' ? '' : empresa.cnpj,
-              address: empresa.endereco == '-' ? '' : empresa.endereco,
-            ),
-            metadata: [
-              StandardPdfField('Servico', tarefa.nome),
-              StandardPdfField('Status', _rotuloStatus(tarefa.status)),
-              StandardPdfField('Data da execucao', _formatarData(tarefa.dataExecucao)),
-              StandardPdfField('Responsavel', tarefa.autorNome),
-              StandardPdfField(
-                'Cliente',
-                tarefa.clienteNome.isEmpty ? '-' : tarefa.clienteNome,
-              ),
-              StandardPdfField(
-                'Documento do cliente',
-                tarefa.clienteDocumentoFormatado.isEmpty
-                    ? '-'
-                    : tarefa.clienteDocumentoFormatado,
-              ),
-              StandardPdfField(
-                'Valor total',
-                _formatarMoeda(_valorTotalEfetivoCents(tarefa)),
-              ),
-              StandardPdfField(
-                'Gerado em',
-                _formatarData(DateTime.now()),
-              ),
-            ],
-          ),
-          StandardPdfDocument.section(
-            title: 'Descricao do servico',
-            children: [
-              StandardPdfDocument.paragraph(
-                tarefa.descricao.trim().isEmpty
-                    ? 'Servico sem descricao complementar registrada.'
-                    : tarefa.descricao.trim(),
-              ),
-            ],
-          ),
-          StandardPdfDocument.section(
-            title: 'Itens do servico',
-            children: StandardPdfDocument.bulletList([
-              if (tarefa.itens.isEmpty) 'Nenhum item cadastrado.',
-              for (final item in tarefa.itens)
-                '${item.nome} | ${item.concluido ? 'Concluido' : 'Pendente'} | Quantidade ${item.quantidadeNormalizada}'
-                    '${item.valorCents == null ? '' : ' | Unitario ${_formatarMoeda(item.valorCents!)} | Total ${_formatarMoeda(item.totalCents ?? item.valorCents!)}'}',
-            ]),
-          ),
-          StandardPdfDocument.section(
-            title: 'Materiais previstos',
-            children: StandardPdfDocument.bulletList([
-              if (tarefa.materiaisNecessarios.isEmpty)
-                'Nenhum material necessario cadastrado.',
-              for (final material in tarefa.materiaisNecessarios)
-                material.descricaoCurta,
-            ]),
-          ),
-          if (tarefa.status == StatusTarefa.finalizado)
-            StandardPdfDocument.section(
-              title: 'Conclusao do servico',
-              children: [
-                ...StandardPdfDocument.bulletList([
-                  if (tarefa.materiaisUtilizados.isEmpty)
-                    'Nenhum material utilizado cadastrado.'
-                  else
-                    'Materiais utilizados: ${tarefa.materiaisUtilizados.map((m) => m.descricaoCurta).join(', ')}',
-                ]),
-                pw.SizedBox(height: 8),
-                ...StandardPdfDocument.bulletList([
-                  if (anexosResolvidos.isEmpty)
-                    'Nenhum anexo cadastrado.'
-                  else
-                    for (final item in anexosResolvidos)
-                      '${_formatoAnexo(item.anexo)}${item.anexo.descricao.trim().isEmpty ? '' : ' - ${item.anexo.descricao.trim()}'} | ${item.url}',
-                ]),
-              ],
-            ),
-        ],
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.fromLTRB(22, 20, 22, 26),
+        ),
+        build: (_) => corpo,
       ),
     );
     return pdf.save();
+  }
+
+  List<StandardPdfField> _pdfCamposMetadadosResumo(TarefaItem tarefa) {
+    String limpo(String v) => v.trim();
+
+    void incluir(List<StandardPdfField> lista, String rotulo, String valor) {
+      final v = limpo(valor);
+      if (v.isEmpty || v == '-') return;
+      lista.add(StandardPdfField(rotulo, v));
+    }
+
+    final meta = <StandardPdfField>[
+      StandardPdfField('Status', _rotuloStatus(tarefa.status)),
+      StandardPdfField(
+        'Valor total',
+        _formatarMoeda(_valorTotalCabecalhoPdf(tarefa)),
+      ),
+      StandardPdfField('Emitido em', _formatarData(DateTime.now())),
+    ];
+
+    final dataExec = tarefa.dataExecucao;
+    if (dataExec != null) {
+      incluir(meta, 'Data da execucao', _formatarData(dataExec));
+    }
+
+    incluir(meta, 'Responsavel pela execucao', tarefa.autorNome);
+
+    return meta;
+  }
+
+  /// Materiais que entram no PDF para o cliente (orcamento = previstos; finalizado = utilizados).
+  List<MaterialTarefa> _materiaisParaPdfCliente(TarefaItem tarefa) {
+    if (tarefa.status == StatusTarefa.finalizado) {
+      return tarefa.materiaisUtilizados.where((m) => m.nome.trim().isNotEmpty).toList();
+    }
+    return tarefa.materiaisNecessarios.where((m) => m.nome.trim().isNotEmpty).toList();
+  }
+
+  int _sumMateriaisNecessariosCents(TarefaItem tarefa) {
+    var soma = 0;
+    for (final m in tarefa.materiaisNecessarios) {
+      final t = m.totalMaterialCents;
+      if (t != null) soma += t;
+    }
+    return soma;
+  }
+
+  int _sumMateriaisParaTotalGeral(TarefaItem tarefa) {
+    if (tarefa.status == StatusTarefa.finalizado) {
+      return _sumMateriaisUtilizadosCents(tarefa);
+    }
+    return _sumMateriaisNecessariosCents(tarefa);
+  }
+
+  pw.Widget _pdfLinhaRotuloValor(String rotulo, String valor) {
+    final v = valor.trim();
+    if (v.isEmpty || v == '-') {
+      return pw.SizedBox.shrink();
+    }
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 5),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            width: 124,
+            child: pw.Text(
+              rotulo,
+              style: pw.TextStyle(
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+                color: _TaskPdfPalette.muted,
+              ),
+            ),
+          ),
+          pw.Expanded(
+            child: pw.Text(
+              v,
+              style: pw.TextStyle(
+                fontSize: 11,
+                color: _TaskPdfPalette.ink,
+                lineSpacing: 2,
+              ),
+              textAlign: pw.TextAlign.left,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfBlocoClienteServicoObra(TarefaItem tarefa) {
+    final desc = tarefa.descricao.trim();
+    final clienteNome = tarefa.clienteNome.trim();
+    final docCliente = tarefa.clienteDocumentoFormatado.trim();
+
+    final filhos = <pw.Widget>[
+      pw.Text(
+        'Cliente e servico',
+        style: pw.TextStyle(
+          color: _TaskPdfPalette.accent,
+          fontSize: 12,
+          fontWeight: pw.FontWeight.bold,
+        ),
+      ),
+      pw.SizedBox(height: 10),
+      _pdfLinhaRotuloValor(
+        'Cliente',
+        clienteNome.isEmpty ? '—' : clienteNome,
+      ),
+      _pdfLinhaRotuloValor(
+        'CPF / CNPJ do cliente',
+        docCliente.isEmpty ? '—' : docCliente,
+      ),
+      _pdfLinhaRotuloValor(
+        'Servico ou obra',
+        tarefa.nome.trim().isEmpty ? '—' : tarefa.nome.trim(),
+      ),
+    ];
+
+    final dataExec = tarefa.dataExecucao;
+    if (dataExec != null) {
+      filhos.add(
+        _pdfLinhaRotuloValor(
+          'Data (execucao / referencia)',
+          _formatarData(dataExec),
+        ),
+      );
+    }
+
+    if (desc.isNotEmpty) {
+      filhos.add(pw.SizedBox(height: 8));
+      filhos.add(
+        pw.Text(
+          'Descricao dos servicos / escopo',
+          style: pw.TextStyle(
+            fontSize: 9,
+            fontWeight: pw.FontWeight.bold,
+            color: _TaskPdfPalette.muted,
+          ),
+        ),
+      );
+      filhos.add(pw.SizedBox(height: 4));
+      filhos.add(
+        pw.Text(
+          desc,
+          style: pw.TextStyle(
+            color: _TaskPdfPalette.ink,
+            fontSize: 11,
+            lineSpacing: 4,
+          ),
+          textAlign: pw.TextAlign.left,
+        ),
+      );
+    }
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 12),
+      padding: const pw.EdgeInsets.all(14),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(12),
+        border: pw.Border.all(color: _TaskPdfPalette.border),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: filhos,
+      ),
+    );
+  }
+
+  int _sumItensServicoCents(TarefaItem tarefa) {
+    var soma = 0;
+    for (final i in tarefa.itens) {
+      final t = i.totalCents;
+      if (t != null) soma += t;
+    }
+    return soma;
+  }
+
+  int _sumMateriaisUtilizadosCents(TarefaItem tarefa) {
+    var soma = 0;
+    for (final m in tarefa.materiaisUtilizados) {
+      final t = m.totalMaterialCents;
+      if (t != null) soma += t;
+    }
+    return soma;
+  }
+
+  /// Soma itens + materiais (se finalizado); se nada valorizado, mantem total manual/automatico da tarefa.
+  int _valorTotalCabecalhoPdf(TarefaItem tarefa) {
+    final materiais = _sumMateriaisParaTotalGeral(tarefa);
+    final computed = _sumItensServicoCents(tarefa) + materiais;
+    if (computed > 0) return computed;
+    return _valorTotalEfetivoCents(tarefa);
+  }
+
+  bool _pdfDeveExibirResumoValores(TarefaItem tarefa) {
+    if (tarefa.itens.any((i) => i.nome.trim().isNotEmpty)) return true;
+    if (_materiaisParaPdfCliente(tarefa).isNotEmpty) return true;
+    return false;
+  }
+
+  pw.Widget _pdfCell(
+    String text, {
+    bool header = false,
+    pw.TextAlign align = pw.TextAlign.left,
+    PdfColor? color,
+    PdfColor? backgroundColor,
+  }) {
+    final style = pw.TextStyle(
+      fontSize: 9,
+      fontWeight: header ? pw.FontWeight.bold : pw.FontWeight.normal,
+      color: color ?? _TaskPdfPalette.ink,
+    );
+    final child = pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+      child: pw.Text(text, style: style, textAlign: align),
+    );
+    if (backgroundColor != null) {
+      return pw.Container(color: backgroundColor, child: child);
+    }
+    return child;
+  }
+
+  pw.Widget _pdfCaixaSubtotal(String titulo, String valor) {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 10),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromInt(0xFFF8FAFC),
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: _TaskPdfPalette.border),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            titulo,
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              color: _TaskPdfPalette.ink,
+            ),
+          ),
+          pw.Text(
+            valor,
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              color: _TaskPdfPalette.accent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfSecaoItensTabela(TarefaItem tarefa) {
+    final headerBg = PdfColor.fromInt(0xFFE8F0FE);
+    final rows = <pw.TableRow>[
+      pw.TableRow(
+        children: [
+          _pdfCell('Item / servico', header: true, backgroundColor: headerBg),
+          _pdfCell(
+            'Qtd',
+            header: true,
+            align: pw.TextAlign.right,
+            backgroundColor: headerBg,
+          ),
+          _pdfCell(
+            'Unit.',
+            header: true,
+            align: pw.TextAlign.right,
+            backgroundColor: headerBg,
+          ),
+          _pdfCell(
+            'Total linha',
+            header: true,
+            align: pw.TextAlign.right,
+            backgroundColor: headerBg,
+          ),
+          _pdfCell(
+            'Feito',
+            header: true,
+            align: pw.TextAlign.center,
+            backgroundColor: headerBg,
+          ),
+        ],
+      ),
+      for (final item in tarefa.itens)
+        if (item.nome.trim().isNotEmpty)
+          pw.TableRow(
+            children: [
+              _pdfCell(item.nome.trim()),
+              _pdfCell(
+                '${item.quantidadeNormalizada} un',
+                align: pw.TextAlign.right,
+              ),
+              _pdfCell(
+                item.valorCents != null && item.valorCents != 0
+                    ? _formatarMoeda(item.valorCents!)
+                    : '-',
+                align: pw.TextAlign.right,
+              ),
+              _pdfCell(
+                item.totalCents != null && item.totalCents != 0
+                    ? _formatarMoeda(item.totalCents!)
+                    : '-',
+                align: pw.TextAlign.right,
+              ),
+              _pdfCell(
+                item.concluido ? 'Sim' : 'Nao',
+                align: pw.TextAlign.center,
+                color: item.concluido ? PdfColors.green800 : _TaskPdfPalette.muted,
+              ),
+            ],
+          ),
+    ];
+
+    final totalItens = _sumItensServicoCents(tarefa);
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 14),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Servicos prestados',
+            style: pw.TextStyle(
+              color: _TaskPdfPalette.accent,
+              fontSize: 13,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'Cada linha descreve um servico com quantidade, valor unitario e total da linha.',
+            style: pw.TextStyle(color: _TaskPdfPalette.muted, fontSize: 9),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Table(
+            columnWidths: {
+              0: const pw.FlexColumnWidth(3.2),
+              1: const pw.FlexColumnWidth(1),
+              2: const pw.FlexColumnWidth(1.2),
+              3: const pw.FlexColumnWidth(1.2),
+              4: const pw.FlexColumnWidth(0.85),
+            },
+            border: pw.TableBorder.all(
+              color: _TaskPdfPalette.border,
+              width: 0.5,
+            ),
+            children: rows,
+          ),
+          _pdfCaixaSubtotal(
+            'Total dos servicos prestados',
+            _formatarMoeda(totalItens),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfSecaoMateriaisCliente(TarefaItem tarefa, List<MaterialTarefa> mats) {
+    final titulo = tarefa.status == StatusTarefa.finalizado
+        ? 'Produtos e materiais utilizados'
+        : 'Produtos e materiais previstos';
+    final hint = tarefa.status == StatusTarefa.finalizado
+        ? 'Valores dos produtos e materiais utilizados na execucao.'
+        : 'Valores dos produtos e materiais previstos para este servico.';
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 14),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            titulo,
+            style: pw.TextStyle(
+              color: _TaskPdfPalette.accent,
+              fontSize: 13,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            hint,
+            style: pw.TextStyle(color: _TaskPdfPalette.muted, fontSize: 9),
+          ),
+          pw.SizedBox(height: 8),
+          _pdfTabelaMateriaisPdf(
+            mats,
+            tituloSubtotal: 'Total de produtos e materiais',
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfTabelaMateriaisPdf(
+    List<MaterialTarefa> mats, {
+    String tituloSubtotal = 'Total de produtos e materiais',
+  }) {
+    final headerBg = PdfColor.fromInt(0xFFE8F0FE);
+    final rows = <pw.TableRow>[
+      pw.TableRow(
+        children: [
+          _pdfCell('Material', header: true, backgroundColor: headerBg),
+          _pdfCell(
+            'Qtd',
+            header: true,
+            align: pw.TextAlign.right,
+            backgroundColor: headerBg,
+          ),
+          _pdfCell(
+            'Un.',
+            header: true,
+            align: pw.TextAlign.center,
+            backgroundColor: headerBg,
+          ),
+          _pdfCell(
+            'Unit.',
+            header: true,
+            align: pw.TextAlign.right,
+            backgroundColor: headerBg,
+          ),
+          _pdfCell(
+            'Total linha',
+            header: true,
+            align: pw.TextAlign.right,
+            backgroundColor: headerBg,
+          ),
+        ],
+      ),
+      for (final m in mats)
+        pw.TableRow(
+          children: [
+            _pdfCell(
+              m.observacao.trim().isEmpty
+                  ? m.nome.trim()
+                  : '${m.nome.trim()} (${m.observacao.trim()})',
+            ),
+            _pdfCell(
+              '${m.quantidadeNormalizada}',
+              align: pw.TextAlign.right,
+            ),
+            _pdfCell(
+              m.unidadeNormalizada,
+              align: pw.TextAlign.center,
+            ),
+            _pdfCell(
+              m.valorCents != null && m.valorCents != 0
+                  ? _formatarMoeda(m.valorCents!)
+                  : '-',
+              align: pw.TextAlign.right,
+            ),
+            _pdfCell(
+              m.totalMaterialCents != null && m.totalMaterialCents != 0
+                  ? _formatarMoeda(m.totalMaterialCents!)
+                  : '-',
+              align: pw.TextAlign.right,
+            ),
+          ],
+        ),
+    ];
+
+    final totalMat = mats.fold<int>(0, (s, m) {
+      final t = m.totalMaterialCents;
+      return t != null ? s + t : s;
+    });
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Table(
+          columnWidths: {
+            0: const pw.FlexColumnWidth(3),
+            1: const pw.FlexColumnWidth(0.9),
+            2: const pw.FlexColumnWidth(0.7),
+            3: const pw.FlexColumnWidth(1.2),
+            4: const pw.FlexColumnWidth(1.2),
+          },
+          border: pw.TableBorder.all(
+            color: _TaskPdfPalette.border,
+            width: 0.5,
+          ),
+          children: rows,
+        ),
+        _pdfCaixaSubtotal(
+          tituloSubtotal,
+          _formatarMoeda(totalMat),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _pdfResumoValoresFinais(TarefaItem tarefa) {
+    final si = _sumItensServicoCents(tarefa);
+    final sm = _sumMateriaisParaTotalGeral(tarefa);
+    final grand = _valorTotalCabecalhoPdf(tarefa);
+    final temMateriais = _materiaisParaPdfCliente(tarefa).isNotEmpty;
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 18),
+      padding: const pw.EdgeInsets.all(14),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromInt(0xFFEFF6FF),
+        borderRadius: pw.BorderRadius.circular(12),
+        border: pw.Border.all(color: _TaskPdfPalette.accent, width: 1.2),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Resumo para pagamento',
+            style: pw.TextStyle(
+              color: _TaskPdfPalette.accent,
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Total dos servicos prestados',
+                style: pw.TextStyle(fontSize: 10, color: _TaskPdfPalette.ink),
+              ),
+              pw.Text(
+                _formatarMoeda(si),
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _TaskPdfPalette.ink,
+                ),
+              ),
+            ],
+          ),
+          if (temMateriais || sm != 0) ...[
+            pw.SizedBox(height: 6),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'Total de produtos e materiais',
+                  style: pw.TextStyle(fontSize: 10, color: _TaskPdfPalette.ink),
+                ),
+                pw.Text(
+                  _formatarMoeda(sm),
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                    color: _TaskPdfPalette.ink,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 10),
+            child: pw.Divider(thickness: 0.8, color: _TaskPdfPalette.border),
+          ),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'TOTAL GERAL (servicos + produtos)',
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _TaskPdfPalette.accent,
+                ),
+              ),
+              pw.Text(
+                _formatarMoeda(grand),
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _TaskPdfPalette.accent,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            'O valor «Valor total» no topo corresponde a esta soma quando ha valores '
+            'informados nos servicos e/ou nos produtos e materiais.',
+            style: pw.TextStyle(
+              fontSize: 8,
+              color: _TaskPdfPalette.muted,
+              lineSpacing: 2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfCartao({
+    required List<pw.Widget> filhos,
+  }) {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(bottom: 8),
+      padding: const pw.EdgeInsets.all(11),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: _TaskPdfPalette.border),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: filhos,
+      ),
+    );
+  }
+
+  pw.Widget _pdfCartaoAnexoPdf(({AnexoTarefa anexo, String url}) item) {
+    final linhas = <pw.Widget>[
+      pw.Text(
+        _formatoAnexo(item.anexo),
+        style: pw.TextStyle(
+          color: _TaskPdfPalette.ink,
+          fontSize: 11,
+          fontWeight: pw.FontWeight.bold,
+        ),
+      ),
+    ];
+    final desc = item.anexo.descricao.trim();
+    if (desc.isNotEmpty) {
+      linhas.add(pw.SizedBox(height: 4));
+      linhas.add(
+        pw.Text(desc, style: pw.TextStyle(color: _TaskPdfPalette.ink, fontSize: 10)),
+      );
+    }
+    linhas.add(pw.SizedBox(height: 4));
+    linhas.add(
+      pw.Text(
+        item.url.trim(),
+        style: pw.TextStyle(color: _TaskPdfPalette.muted, fontSize: 9),
+      ),
+    );
+    return _pdfCartao(filhos: linhas);
+  }
+
+  List<pw.Widget> _pdfWidgetsConclusaoServico(
+    List<({AnexoTarefa anexo, String url})> anexosResolvidos,
+  ) {
+    final out = <pw.Widget>[];
+
+    if (anexosResolvidos.isNotEmpty) {
+      out.add(
+        pw.Text(
+          'Anexos',
+          style: pw.TextStyle(
+            color: _TaskPdfPalette.ink,
+            fontSize: 11,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+      );
+      out.add(pw.SizedBox(height: 6));
+      for (final a in anexosResolvidos) {
+        out.add(_pdfCartaoAnexoPdf(a));
+      }
+    }
+
+    return out;
+  }
+
+  pw.Widget _pdfSecaoTituloExterno(String titulo, List<pw.Widget> children) {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 14),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            titulo,
+            style: pw.TextStyle(
+              color: _TaskPdfPalette.accent,
+              fontSize: 13,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          ...children,
+        ],
+      ),
+    );
   }
 
   Future<({String nome, String cnpj, String endereco})> _dadosEmpresaParaPdf() async {

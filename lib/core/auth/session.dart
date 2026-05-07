@@ -1,5 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Espelha `PUBLIC_DEMO_COMPANY_ID` / `public_demo_workspace` nas Functions.
+const _publicDemoWorkspaceCompanyId = 'public_demo_workspace';
+
+bool _sessionCompanyIsPublicDemoWorkspace(String companyId) {
+  return companyId.trim() == _publicDemoWorkspaceCompanyId;
+}
+
 enum Role { owner, manager, accountant, employee }
 
 class Session {
@@ -108,14 +115,17 @@ class SessionController extends StateNotifier<Session?> {
   void trocarEmpresa({required String companyId, String? nome}) {
     final atual = state;
     if (atual == null) return;
+    final trimmedId = companyId.trim();
+    final companyLooksDemo = _sessionCompanyIsPublicDemoWorkspace(trimmedId);
+    final reconciledDemo = atual.isDemo && companyLooksDemo;
     state = Session(
       userId: atual.userId,
-      companyId: companyId,
+      companyId: trimmedId,
       role: atual.role,
       nome: nome ?? atual.nome,
       email: atual.email,
-      isDemo: atual.isDemo,
-      demoProfile: atual.demoProfile,
+      isDemo: reconciledDemo,
+      demoProfile: reconciledDemo ? atual.demoProfile : '',
     );
   }
 
@@ -125,13 +135,20 @@ class SessionController extends StateNotifier<Session?> {
   }) {
     final role = _parseRole(dados['role']?.toString());
 
+    final docSaysDemo =
+        dados['demoReadOnly'] == true || dados['isDemo'] == true;
+    final workspaceSaysDemo = _sessionCompanyIsPublicDemoWorkspace(
+      dados['companyId']?.toString() ?? '',
+    );
+    final isDemo = docSaysDemo && workspaceSaysDemo;
+
     state = Session(
       userId: userId,
       companyId: dados['companyId']?.toString() ?? 'empresa_sem_id',
       role: role,
       nome: dados['nome']?.toString() ?? 'Usuario',
       email: dados['email']?.toString() ?? '',
-      isDemo: dados['demoReadOnly'] == true || dados['isDemo'] == true,
+      isDemo: isDemo,
       demoProfile: dados['demoProfile']?.toString() ?? '',
     );
   }

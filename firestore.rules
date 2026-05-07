@@ -20,10 +20,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    /** Mesma ideia do app: bloqueio so no workspace demo publico, nao por flag presa em conta real. */
     function isDemoReadOnlyUser() {
       return signedIn() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        userDoc().data.demoReadOnly == true;
+        userDoc().data.demoReadOnly == true &&
+        effectiveCompanyId() == 'public_demo_workspace';
     }
 
     function effectiveCompanyId() {
@@ -1119,9 +1121,21 @@ service cloud.firestore {
     match /fiscal_competence_checks/{docId} {
       allow read: if signedIn() && sameCompany(resource);
       allow create, update: if signedIn() &&
+        !isDemoReadOnlyUser() &&
         sameCompanyData(request.resource.data) &&
-        (isOwner() || isManager());
-      allow delete: if signedIn() && sameCompany(resource) && (isOwner() || isManager());
+        (
+          isOwner() ||
+          isManager() ||
+          (isAccountant() && accountantLinkedCompany(request.resource.data.companyId))
+        );
+      allow delete: if signedIn() &&
+        !isDemoReadOnlyUser() &&
+        sameCompany(resource) &&
+        (
+          isOwner() ||
+          isManager() ||
+          (isAccountant() && accountantLinkedCompany(resource.data.companyId))
+        );
     }
 
     match /service_invoices/{docId} {

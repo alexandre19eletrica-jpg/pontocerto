@@ -101,8 +101,7 @@ class _EmployeeTesterSignupPageState extends State<EmployeeTesterSignupPage> {
           onPressed: () => context.go('/vendas'),
         ),
       ),
-      body: SelectionArea(
-        child: AppGradientBackground(
+      body: AppGradientBackground(
           child: AppPageLayout(
             child: ListView(
               children: [
@@ -166,7 +165,6 @@ class _EmployeeTesterSignupPageState extends State<EmployeeTesterSignupPage> {
             ),
           ),
         ),
-      ),
     );
   }
 

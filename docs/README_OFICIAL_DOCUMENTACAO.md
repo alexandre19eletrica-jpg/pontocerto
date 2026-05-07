@@ -1,9 +1,9 @@
 # Documentacao Oficial do Projeto
 
-Data base: 02/05/2026
+Data base: 06/05/2026
 Projeto: Ponto Certo
 
-Versao local atual de referencia: `1.0.87+1058`
+Versao local atual de referencia: `1.0.88+1059`
 
 ## Objetivo
 
@@ -79,8 +79,11 @@ Quando houver mudanca relevante:
 
 Para pedidos de publicacao, build ou entrega operacional, o padrao oficial passa a ser:
 
+- **nao reinventar o que ja funciona**: para deploy web + Cloud Functions + Hosting usar **somente** o **«Comando unico (padrao historico)»** mais abaixo, validado na pratica; **nao** orientar variantes (outros scripts, sequencias paralelas, chamadas `powershell -File ...` dentro do PowerShell, etc.) salvo **falha objetiva** desse fluxo **e** atualizacao **neste documento** com o novo comando ja testado
+- ferramentas auxiliares no repo (`scripts/publish_all.ps1`, etc.) existem para quem optar; na **orientacao ao operador** e ao **assistente**, o referencial continua sendo **uma linha**: o comando historico oficial
 - entregar sempre um unico comando completo
 - o comando deve vir em sequencia corrida, sem opcoes paralelas para escolher
+- antes de `firebase deploy`, ter sessao valida no Firebase CLI (`firebase login` quando a ferramenta pedir ou conta errada)
 - o comando deve incluir, quando aplicavel:
 - limpeza de cache
 - restauracao de dependencias
@@ -94,6 +97,30 @@ Objetivo dessa regra:
 - evitar erro de execucao por quebra manual de linha
 - evitar perda de etapa entre build, deploy e pacote Android
 - padronizar a entrega operacional final do projeto
+
+### Comando unico (padrao historico — web + functions + hosting)
+
+Uma **unica** linha no PowerShell, com **`;`** entre etapas (evitar `&&` em PowerShell antigo). O projeto Firebase usa o **default** de `.firebaserc` (`pontocerto-e1dab`). Ajuste os caminhos se o clone nao estiver em `c:\Users\hp\pontocerto`.
+
+Copie **somente** a linha do bloco (sem `PS C:\...>`).
+
+```powershell
+Set-Location c:\Users\hp\pontocerto; flutter pub get; flutter build web --release; Set-Location functions; npm run build; Set-Location c:\Users\hp\pontocerto; firebase deploy --only functions,hosting
+```
+
+Primeira vez em cada maquina na pasta `functions`, se faltar `node_modules`:
+
+```powershell
+Set-Location c:\Users\hp\pontocerto\functions; npm install
+```
+
+Opcional **Play Store** (rodada com versao ja atualizada no `pubspec`):
+
+```powershell
+Set-Location c:\Users\hp\pontocerto; flutter build appbundle --release
+```
+
+Automacao extra no repo (analise, icons, `NODE_OPTIONS`, etc.): `scripts/publish_all.ps1` — **nao** substitui o comando oficial acima; use so se quiser esse fluxo assistido.
 
 ## Regra de precedencia
 

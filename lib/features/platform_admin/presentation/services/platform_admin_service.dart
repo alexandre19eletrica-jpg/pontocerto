@@ -116,6 +116,30 @@ class PlatformAdminService {
     return GovernanceRealRegistrationsResult(companies: companies, offices: offices);
   }
 
+  Future<List<GovernanceAudienceEmailRow>> collectGovernanceAudienceEmails() async {
+    final callable = _functions.httpsCallable('platformGovernanceCollectAudienceEmails');
+    final result = await callable.call();
+    final data = Map<String, dynamic>.from(result.data as Map);
+    return (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => GovernanceAudienceEmailRow.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> sendGovernanceAudienceEmail({
+    required String subject,
+    required String bodyText,
+    required List<String> recipients,
+  }) async {
+    final callable = _functions.httpsCallable('platformGovernanceSendAudienceEmail');
+    final result = await callable.call(<String, dynamic>{
+      'subject': subject,
+      'bodyText': bodyText,
+      'recipients': recipients,
+    });
+    return Map<String, dynamic>.from(result.data as Map);
+  }
+
   Future<IssuedTrialInvite> issueTrialInvite90Days({
     String? companyEmail,
     required String accountantEmail,
@@ -510,6 +534,28 @@ class PlatformAdminService {
       'reason': reason,
     });
   }
+
+  /// Apenas owner da empresa suprema (validado nas Functions).
+  Future<void> supremeSetCompanyAllowLogin({
+    required String companyId,
+    required bool allowLogin,
+  }) async {
+    final callable = _functions.httpsCallable('platformSupremeSetCompanyAllowLogin');
+    await callable.call(<String, dynamic>{
+      'companyId': companyId.trim(),
+      'allowLogin': allowLogin,
+    });
+  }
+
+  Future<void> supremeDeleteCompany({required String companyId}) async {
+    final callable = _functions.httpsCallable('platformSupremeDeleteCompany');
+    await callable.call(<String, dynamic>{'companyId': companyId.trim()});
+  }
+
+  Future<void> supremeDeleteOffice({required String officeId}) async {
+    final callable = _functions.httpsCallable('platformSupremeDeleteOffice');
+    await callable.call(<String, dynamic>{'officeId': officeId.trim()});
+  }
 }
 
 class PlatformCommercialUpdateResult {
@@ -878,6 +924,28 @@ class GovernanceRealRegistrationsResult {
 
   final List<GraduatedPublicCompanyRow> companies;
   final List<GraduatedPublicOfficeRow> offices;
+}
+
+/// Destinatário agregado para comunicação em massa (governança).
+class GovernanceAudienceEmailRow {
+  const GovernanceAudienceEmailRow({
+    required this.email,
+    required this.sources,
+  });
+
+  final String email;
+  final List<String> sources;
+
+  factory GovernanceAudienceEmailRow.fromMap(Map<String, dynamic> map) {
+    final raw = map['sources'];
+    final sources = raw is List
+        ? raw.map((e) => e.toString()).where((s) => s.trim().isNotEmpty).toList()
+        : const <String>[];
+    return GovernanceAudienceEmailRow(
+      email: map['email']?.toString() ?? '',
+      sources: sources,
+    );
+  }
 }
 
 /// Empresa que iniciou pela entrada publica leve e concluiu perfil (`directSignup` nao pendente).

@@ -68,6 +68,13 @@ class GovernanceHub extends StatelessWidget {
               icon: Icons.link_rounded,
               panel: 'links',
             ),
+            _card(
+              context,
+              title: 'E-mail em massa',
+              subtitle: 'Reunir e-mails da base, excluir destinatários e enviar texto simples.',
+              icon: Icons.mark_email_unread_outlined,
+              panel: 'email_massa',
+            ),
           ],
         );
       },

@@ -6,6 +6,15 @@ Regra de projeto: `.cursor/rules/documentacao-git-e-registro.mdc`.
 Este arquivo e o log operacional resumido do que foi publicado (web/functions/app).  
 Atualize sempre que entrar qualquer mudanca em producao.
 
+## 2026-05-06
+
+- **Governanca / comunicacao em massa**: painel **E-mail em massa** (`?v=email_massa`) com cartao no hub da governanca; callables `platformGovernanceCollectAudienceEmails` e `platformGovernanceSendAudienceEmail` (admin plataforma, runtime pesado no envio); reuniao de e-mails de carteira (owners + contador convite quando existir), pre-cadastro leve empresa/escritorio, pos-onboarding (Passo C), convites trial nao apagados; envio via `enviarEmailHtml` com corpo texto simples escapado para HTML e campo `text` opcional em SMTP/SendGrid; auditoria `governance_send_audience_email`. Flutter: `GovernanceBulkEmailPanel`, metodos em `PlatformAdminService`.
+- **Web / colar em campos**: `app_shell` — `Listener` do corpo e do menu lateral com `HitTestBehavior.deferToChild` para nao roubar foco ao tocar em `TextField` (menu contextual de colar no mobile/web). Tentativa de `BrowserContextMenu.enable()` removida por API indisponivel neste SDK Flutter.
+- **Tarefas / materiais com valores**: modelo `MaterialTarefa` com `valorCents`, `valorTotalLinhaCents`, `totalMaterialCents`; UI em `task_details_operations.dart`, `task_details_sections.dart`; persistencia em `TarefaItem`.
+- **Tarefas / PDF para o cliente**: reorganizacao do PDF (`task_details_media_pdf.dart`): cabecalho com empresa e metadados compactos; bloco **Cliente e servico** (cliente, documento, servico/obra, data, descricao continua alinhada a esquerda); tabela **Servicos prestados** com subtotal; **Produtos e materiais** em orcamento = previstos (`materiaisNecessarios`), em finalizado = utilizados (`materiaisUtilizados`); **Resumo para pagamento** (total servicos + total produtos + total geral coerente com cabecalho); margens de pagina ligeiramente reduzidas para melhor uso da folha; secao de conclusao sem repetir tabela de materiais (apenas anexos).
+- **Publicacao**: comando unico recomendado na sequencia `functions npm build` → `flutter pub get` → `flutter build web --release` → `firebase deploy --only hosting,functions,firestore,storage` (ajustar metas conforme mudancas).
+- **Versao de referencia no repo**: `pubspec.yaml` **1.0.88+1059** (alinhar Play/hosting quando publicar).
+
 ## 2026-05-02
 
 - **Correcao de entrada publica e demo**: rotas de pre-cadastro publico permaneceram acessiveis mesmo com sessao ativa, para permitir saida do demo direto ao acesso real. O login demo recebeu reforco com garantia de usuario auth demo no backend e limpeza de sessao no cliente antes do `signInWithCustomToken`.

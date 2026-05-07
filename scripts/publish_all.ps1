@@ -1,10 +1,16 @@
+# Automacao opcional (analyze, icons, NODE_OPTIONS, login:list). Comando oficial do projeto:
+# Set-Location c:\Users\hp\pontocerto; flutter pub get; flutter build web --release; Set-Location functions; npm run build; Set-Location c:\Users\hp\pontocerto; firebase deploy --only functions,hosting
+# Ver docs/README_OFICIAL_DOCUMENTACAO.md
 param(
   [switch]$Android,
-  [switch]$AndroidCopyToDesktop
+  [switch]$AndroidCopyToDesktop,
+  [switch]$SkipAnalyze,
+  [switch]$SkipFirebaseLoginConfirm
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$firebaseProject = 'pontocerto-e1dab'
 $flutterBat = 'C:\Users\hp\flutter\flutter\bin\flutter.bat'
 if (!(Test-Path $flutterBat)) {
   $flutterBat = 'flutter'
@@ -16,6 +22,15 @@ try {
   & $flutterBat pub get
   if ($LASTEXITCODE -ne 0) {
     throw "flutter pub get falhou ($LASTEXITCODE)"
+  }
+
+  if (!$SkipAnalyze) {
+    # Sem --no-fatal-* o analyze falha com exit 1 por warnings/infos; bloqueia deploy sem erro Dart real.
+    Write-Host '=== flutter analyze --no-pub (fatal so errors) ===' -ForegroundColor Cyan
+    & $flutterBat analyze --no-pub --no-fatal-infos --no-fatal-warnings
+    if ($LASTEXITCODE -ne 0) {
+      throw "flutter analyze falhou ($LASTEXITCODE)"
+    }
   }
 
   Write-Host '=== flutter build web --release (icons completos) ===' -ForegroundColor Cyan
@@ -35,7 +50,9 @@ try {
     Pop-Location
   }
 
-  Write-Host '=== firebase deploy ===' -ForegroundColor Cyan
+  & (Join-Path $PSScriptRoot 'firebase_confirm_login_before_deploy.ps1') -SkipFirebaseLoginConfirm:$SkipFirebaseLoginConfirm -ProjectId $firebaseProject
+
+  Write-Host "=== firebase deploy (functions + hosting) projeto $firebaseProject ===" -ForegroundColor Cyan
   # Reduz timeouts "Cannot determine backend specification" em redes Windows (Node prefere IPv4).
   $existingNodeOpts = [string]$env:NODE_OPTIONS
   if ($existingNodeOpts -notmatch 'dns-result-order=ipv4first') {
@@ -45,7 +62,7 @@ try {
       "--dns-result-order=ipv4first $existingNodeOpts"
     }
   }
-  firebase deploy
+  firebase deploy --only "functions,hosting" --project $firebaseProject
   if ($LASTEXITCODE -ne 0) {
     throw "firebase deploy falhou ($LASTEXITCODE)"
   }

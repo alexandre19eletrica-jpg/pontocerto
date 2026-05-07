@@ -308,7 +308,8 @@ extension _TaskDetailsOperations on TaskDetailsPage {
     TarefaItem tarefa,
   ) async {
     final controller = TextEditingController();
-    final valorController = TextEditingController();
+    final valorUnitarioController = TextEditingController();
+    final valorTotalLinhaController = TextEditingController();
     final quantidadeController = TextEditingController(text: '1');
     final servicos = ref
         .read(serviceCatalogProvider)
@@ -352,7 +353,9 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                           onTap: () {
                             setDialog(() => servicoSelecionadoId = s.id);
                             controller.text = s.nome;
-                            valorController.text = _centsParaInput(s.valorCents);
+                            valorUnitarioController.text =
+                                _centsParaInput(s.valorCents);
+                            valorTotalLinhaController.clear();
                           },
                         );
                       },
@@ -367,12 +370,22 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               ),
               const SizedBox(height: 8),
               TextField(
-                controller: valorController,
+                controller: valorUnitarioController,
                 inputFormatters: [CurrencyPtBrInputFormatter()],
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
-                  labelText: 'Valor (R\$) - opcional',
+                  labelText: 'Valor unitario (R\$) — opcional',
                   hintText: 'Ex.: 120,50',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: valorTotalLinhaController,
+                inputFormatters: [CurrencyPtBrInputFormatter()],
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Valor total da linha (R\$) — opcional',
+                  hintText: 'Vazio: quantidade x unitario',
                 ),
               ),
               const SizedBox(height: 8),
@@ -395,7 +408,20 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               onPressed: () async {
                 final nome = controller.text.trim();
                 if (nome.isEmpty) return;
-                final valorCents = _parseReaisParaCents(valorController.text);
+                final valorUnit = valorUnitarioController.text.trim();
+                final valorTotLinha = valorTotalLinhaController.text.trim();
+                final valorCents =
+                    valorUnit.isEmpty ? null : _parseReaisParaCents(valorUnit);
+                final valorTotalLinhaCents =
+                    valorTotLinha.isEmpty ? null : _parseReaisParaCents(valorTotLinha);
+                if (valorUnit.isNotEmpty && valorCents == null) {
+                  _msg(context, 'Valor unitario invalido.');
+                  return;
+                }
+                if (valorTotLinha.isNotEmpty && valorTotalLinhaCents == null) {
+                  _msg(context, 'Valor total da linha invalido.');
+                  return;
+                }
                 final quantidade =
                     int.tryParse(quantidadeController.text.trim()) ?? 1;
                 final itens = [
@@ -403,6 +429,7 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                   ItemServico(
                     nome: nome,
                     valorCents: valorCents,
+                    valorTotalLinhaCents: valorTotalLinhaCents,
                     quantidade: quantidade < 1 ? 1 : quantidade,
                   ),
                 ];
@@ -441,7 +468,8 @@ extension _TaskDetailsOperations on TaskDetailsPage {
       ),
     );
     controller.dispose();
-    valorController.dispose();
+    valorUnitarioController.dispose();
+    valorTotalLinhaController.dispose();
     quantidadeController.dispose();
   }
 
@@ -452,8 +480,11 @@ extension _TaskDetailsOperations on TaskDetailsPage {
     int idx,
   ) async {
     final controller = TextEditingController(text: tarefa.itens[idx].nome);
-    final valorController = TextEditingController(
+    final valorUnitarioController = TextEditingController(
       text: _centsParaInput(tarefa.itens[idx].valorCents),
+    );
+    final valorTotalLinhaController = TextEditingController(
+      text: _centsParaInput(tarefa.itens[idx].valorTotalLinhaCents),
     );
     final quantidadeController = TextEditingController(
       text: tarefa.itens[idx].quantidadeNormalizada.toString(),
@@ -497,7 +528,9 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                           onTap: () {
                             setDialog(() => servicoSelecionadoId = s.id);
                             controller.text = s.nome;
-                            valorController.text = _centsParaInput(s.valorCents);
+                            valorUnitarioController.text =
+                                _centsParaInput(s.valorCents);
+                            valorTotalLinhaController.clear();
                           },
                         );
                       },
@@ -512,12 +545,22 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               ),
               const SizedBox(height: 8),
               TextField(
-                controller: valorController,
+                controller: valorUnitarioController,
                 inputFormatters: [CurrencyPtBrInputFormatter()],
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
-                  labelText: 'Valor (R\$) - opcional',
+                  labelText: 'Valor unitario (R\$) — opcional',
                   hintText: 'Ex.: 120,50',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: valorTotalLinhaController,
+                inputFormatters: [CurrencyPtBrInputFormatter()],
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Valor total da linha (R\$) — opcional',
+                  hintText: 'Vazio: quantidade x unitario',
                 ),
               ),
               const SizedBox(height: 8),
@@ -537,7 +580,20 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               onPressed: () async {
                 final nome = controller.text.trim();
                 if (nome.isEmpty) return;
-                final valorCents = _parseReaisParaCents(valorController.text);
+                final valorUnit = valorUnitarioController.text.trim();
+                final valorTotLinha = valorTotalLinhaController.text.trim();
+                final valorCents =
+                    valorUnit.isEmpty ? null : _parseReaisParaCents(valorUnit);
+                final valorTotalLinhaCents =
+                    valorTotLinha.isEmpty ? null : _parseReaisParaCents(valorTotLinha);
+                if (valorUnit.isNotEmpty && valorCents == null) {
+                  _msg(context, 'Valor unitario invalido.');
+                  return;
+                }
+                if (valorTotLinha.isNotEmpty && valorTotalLinhaCents == null) {
+                  _msg(context, 'Valor total da linha invalido.');
+                  return;
+                }
                 final quantidade =
                     int.tryParse(quantidadeController.text.trim()) ?? 1;
                 final itens = <ItemServico>[
@@ -547,6 +603,7 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                         nome: nome,
                         concluido: tarefa.itens[i].concluido,
                         valorCents: valorCents,
+                        valorTotalLinhaCents: valorTotalLinhaCents,
                         quantidade: quantidade < 1 ? 1 : quantidade,
                       )
                     else
@@ -571,7 +628,8 @@ extension _TaskDetailsOperations on TaskDetailsPage {
       ),
     );
     controller.dispose();
-    valorController.dispose();
+    valorUnitarioController.dispose();
+    valorTotalLinhaController.dispose();
     quantidadeController.dispose();
   }
 
@@ -805,12 +863,16 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
                               title: Text(entry.material.nome),
-                              subtitle: Text(entry.material.descricaoCurta),
+                              subtitle: Text(
+                                entry.material.valorCents != null
+                                    ? '${entry.material.descricaoCurta} | Referencia: ${_formatarMoeda(entry.material.valorCents!)}'
+                                    : entry.material.descricaoCurta,
+                              ),
                               trailing: Wrap(
                                 spacing: 4,
                                 children: [
                                   IconButton(
-                                    tooltip: 'Planejado',
+                                    tooltip: 'Previsto',
                                     onPressed: () => _usarMaterialDoBanco(
                                       ref,
                                       tarefa,
@@ -884,6 +946,9 @@ extension _TaskDetailsOperations on TaskDetailsPage {
     final observacaoController = TextEditingController(
       text: material?.observacao ?? '',
     );
+    final valorPadraoController = TextEditingController(
+      text: _centsParaInput(material?.valorCents),
+    );
 
     await showDialog<void>(
       context: context,
@@ -910,6 +975,16 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: valorPadraoController,
+                inputFormatters: [CurrencyPtBrInputFormatter()],
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Valor unitario padrao (R\$) — opcional',
+                  hintText: 'Ex.: 12,50',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
                 controller: observacaoController,
                 maxLines: 3,
                 decoration: const InputDecoration(labelText: 'Observacao'),
@@ -928,6 +1003,14 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               if (nome.isEmpty) return;
               final quantidade =
                   int.tryParse(quantidadeController.text.trim()) ?? 1;
+              final valorPadraoTexto = valorPadraoController.text.trim();
+              final valorPadraoCents = valorPadraoTexto.isEmpty
+                  ? null
+                  : _parseReaisParaCents(valorPadraoTexto);
+              if (valorPadraoTexto.isNotEmpty && valorPadraoCents == null) {
+                _msg(context, 'Valor padrao invalido.');
+                return;
+              }
               final docId =
                   id ?? DateTime.now().microsecondsSinceEpoch.toString();
               await FirebaseFirestore.instance
@@ -941,6 +1024,7 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                         ? 'un'
                         : unidadeController.text.trim(),
                     'observacao': observacaoController.text.trim(),
+                    'valorCents': valorPadraoCents,
                     'updatedAt': FieldValue.serverTimestamp(),
                     if (id == null) 'createdAt': FieldValue.serverTimestamp(),
                   }, SetOptions(merge: true));
@@ -956,6 +1040,7 @@ extension _TaskDetailsOperations on TaskDetailsPage {
     quantidadeController.dispose();
     unidadeController.dispose();
     observacaoController.dispose();
+    valorPadraoController.dispose();
   }
 
   Future<void> _excluirCatalogoMaterial(String id) async {
@@ -996,6 +1081,8 @@ extension _TaskDetailsOperations on TaskDetailsPage {
     final quantidadeController = TextEditingController(text: '1');
     final unidadeController = TextEditingController(text: 'un');
     final observacaoController = TextEditingController();
+    final valorUnitarioController = TextEditingController();
+    final valorTotalController = TextEditingController();
     final sessao = ref.read(sessionProvider);
     await showDialog<void>(
       context: context,
@@ -1003,7 +1090,7 @@ extension _TaskDetailsOperations on TaskDetailsPage {
         title: Text(
           utilizado
               ? 'Adicionar material utilizado'
-              : 'Adicionar material necessario',
+              : 'Adicionar material previsto',
         ),
         content: SingleChildScrollView(
           child: Column(
@@ -1055,6 +1142,10 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                                       .unidadeNormalizada;
                                   observacaoController.text =
                                       material.observacao;
+                                  valorUnitarioController.text =
+                                      _centsParaInput(material.valorCents);
+                                  valorTotalController.text =
+                                      _centsParaInput(material.valorTotalLinhaCents);
                                 },
                               );
                             },
@@ -1082,6 +1173,26 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: valorUnitarioController,
+                inputFormatters: [CurrencyPtBrInputFormatter()],
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Valor unitario (R\$) — opcional',
+                  hintText: 'Ex.: 10,00',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: valorTotalController,
+                inputFormatters: [CurrencyPtBrInputFormatter()],
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Valor total da linha (R\$) — opcional',
+                  hintText: 'Vazio: quantidade x unitario',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
                 controller: observacaoController,
                 maxLines: 2,
                 decoration: const InputDecoration(labelText: 'Observacao'),
@@ -1096,15 +1207,29 @@ extension _TaskDetailsOperations on TaskDetailsPage {
           ),
           ElevatedButton(
             onPressed: () async {
-              final material = controller.text.trim();
-              if (material.isEmpty) return;
+              final materialNome = controller.text.trim();
+              if (materialNome.isEmpty) return;
               final quantidade =
                   int.tryParse(quantidadeController.text.trim()) ?? 1;
+              final tu = valorUnitarioController.text.trim();
+              final tt = valorTotalController.text.trim();
+              final vc = tu.isEmpty ? null : _parseReaisParaCents(tu);
+              final vt = tt.isEmpty ? null : _parseReaisParaCents(tt);
+              if (tu.isNotEmpty && vc == null) {
+                _msg(context, 'Valor unitario invalido.');
+                return;
+              }
+              if (tt.isNotEmpty && vt == null) {
+                _msg(context, 'Valor total da linha invalido.');
+                return;
+              }
               final item = MaterialTarefa(
-                nome: material,
+                nome: materialNome,
                 quantidade: quantidade < 1 ? 1 : quantidade,
                 unidade: unidadeController.text.trim(),
                 observacao: observacaoController.text.trim(),
+                valorCents: vc,
+                valorTotalLinhaCents: vt,
               );
               final necessarios = [...tarefa.materiaisNecessarios];
               final utilizados = [...tarefa.materiaisUtilizados];
@@ -1133,6 +1258,8 @@ extension _TaskDetailsOperations on TaskDetailsPage {
     quantidadeController.dispose();
     unidadeController.dispose();
     observacaoController.dispose();
+    valorUnitarioController.dispose();
+    valorTotalController.dispose();
   }
 
   Future<void> _editarMaterial(
@@ -1145,15 +1272,22 @@ extension _TaskDetailsOperations on TaskDetailsPage {
     final listaOrigem = utilizado
         ? tarefa.materiaisUtilizados
         : tarefa.materiaisNecessarios;
-    final controller = TextEditingController(text: listaOrigem[idx].nome);
+    final atual = listaOrigem[idx];
+    final controller = TextEditingController(text: atual.nome);
     final quantidadeController = TextEditingController(
-      text: listaOrigem[idx].quantidadeNormalizada.toString(),
+      text: atual.quantidadeNormalizada.toString(),
     );
     final unidadeController = TextEditingController(
-      text: listaOrigem[idx].unidadeNormalizada,
+      text: atual.unidadeNormalizada,
     );
     final observacaoController = TextEditingController(
-      text: listaOrigem[idx].observacao,
+      text: atual.observacao,
+    );
+    final valorUnitarioController = TextEditingController(
+      text: _centsParaInput(atual.valorCents),
+    );
+    final valorTotalController = TextEditingController(
+      text: _centsParaInput(atual.valorTotalLinhaCents),
     );
     await showDialog<void>(
       context: context,
@@ -1161,7 +1295,7 @@ extension _TaskDetailsOperations on TaskDetailsPage {
         title: Text(
           utilizado
               ? 'Editar material utilizado'
-              : 'Editar material necessario',
+              : 'Editar material previsto',
         ),
         content: SingleChildScrollView(
           child: Column(
@@ -1184,6 +1318,26 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: valorUnitarioController,
+                inputFormatters: [CurrencyPtBrInputFormatter()],
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Valor unitario (R\$) — opcional',
+                  hintText: 'Ex.: 10,00',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: valorTotalController,
+                inputFormatters: [CurrencyPtBrInputFormatter()],
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Valor total da linha (R\$) — opcional',
+                  hintText: 'Vazio: quantidade x unitario',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
                 controller: observacaoController,
                 maxLines: 2,
                 decoration: const InputDecoration(labelText: 'Observacao'),
@@ -1198,26 +1352,36 @@ extension _TaskDetailsOperations on TaskDetailsPage {
           ),
           ElevatedButton(
             onPressed: () async {
-              final material = controller.text.trim();
-              if (material.isEmpty) return;
+              final materialNome = controller.text.trim();
+              if (materialNome.isEmpty) return;
               final quantidade =
                   int.tryParse(quantidadeController.text.trim()) ?? 1;
+              final tu = valorUnitarioController.text.trim();
+              final tt = valorTotalController.text.trim();
+              final vc = tu.isEmpty ? null : _parseReaisParaCents(tu);
+              final vt = tt.isEmpty ? null : _parseReaisParaCents(tt);
+              if (tu.isNotEmpty && vc == null) {
+                _msg(context, 'Valor unitario invalido.');
+                return;
+              }
+              if (tt.isNotEmpty && vt == null) {
+                _msg(context, 'Valor total da linha invalido.');
+                return;
+              }
+              final atualizado = MaterialTarefa(
+                nome: materialNome,
+                quantidade: quantidade < 1 ? 1 : quantidade,
+                unidade: unidadeController.text.trim(),
+                observacao: observacaoController.text.trim(),
+                valorCents: vc,
+                valorTotalLinhaCents: vt,
+              );
               final necessarios = [...tarefa.materiaisNecessarios];
               final utilizados = [...tarefa.materiaisUtilizados];
               if (utilizado) {
-                utilizados[idx] = MaterialTarefa(
-                  nome: material,
-                  quantidade: quantidade < 1 ? 1 : quantidade,
-                  unidade: unidadeController.text.trim(),
-                  observacao: observacaoController.text.trim(),
-                );
+                utilizados[idx] = atualizado;
               } else {
-                necessarios[idx] = MaterialTarefa(
-                  nome: material,
-                  quantidade: quantidade < 1 ? 1 : quantidade,
-                  unidade: unidadeController.text.trim(),
-                  observacao: observacaoController.text.trim(),
-                );
+                necessarios[idx] = atualizado;
               }
               await ref
                   .read(tasksProvider.notifier)
@@ -1239,6 +1403,103 @@ extension _TaskDetailsOperations on TaskDetailsPage {
     quantidadeController.dispose();
     unidadeController.dispose();
     observacaoController.dispose();
+    valorUnitarioController.dispose();
+    valorTotalController.dispose();
+  }
+
+  Future<void> _copiarPrevistosParaUtilizados(
+    BuildContext context,
+    WidgetRef ref,
+    TarefaItem tarefa,
+  ) async {
+    final previstos = tarefa.materiaisNecessarios;
+    if (previstos.isEmpty) return;
+
+    final selected = List<bool>.filled(previstos.length, false);
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: const Text('Materiais utilizados a partir do previsto'),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Marque os itens do previsto que foram utilizados no servico. '
+                    'Eles serao copiados para Materiais utilizados (pode editar valores depois).',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  for (var i = 0; i < previstos.length; i++)
+                    CheckboxListTile(
+                      dense: true,
+                      value: selected[i],
+                      onChanged: (v) {
+                        setDialog(() => selected[i] = v ?? false);
+                      },
+                      title: Text(previstos[i].nome),
+                      subtitle: Text(
+                        previstos[i].descricaoCurta,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text('Copiar selecionados'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true || !context.mounted) return;
+
+    final copias = <MaterialTarefa>[];
+    for (var i = 0; i < previstos.length; i++) {
+      if (!selected[i]) continue;
+      final m = previstos[i];
+      copias.add(
+        MaterialTarefa(
+          nome: m.nome,
+          quantidade: m.quantidadeNormalizada,
+          unidade: m.unidadeNormalizada,
+          observacao: m.observacao,
+          valorCents: m.valorCents,
+          valorTotalLinhaCents: m.valorTotalLinhaCents,
+        ),
+      );
+    }
+    if (copias.isEmpty) {
+      _msg(context, 'Nenhum material selecionado.');
+      return;
+    }
+
+    await ref
+        .read(tasksProvider.notifier)
+        .updateById(
+          tarefa.id,
+          tarefa.copyWith(
+            materiaisUtilizados: [...tarefa.materiaisUtilizados, ...copias],
+          ),
+        );
+    if (context.mounted) {
+      _msg(context, '${copias.length} material(is) copiado(s) para utilizados.');
+    }
   }
 
   Future<void> _excluirMaterial(

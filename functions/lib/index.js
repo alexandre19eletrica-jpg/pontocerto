@@ -174,46 +174,75 @@ function obterConfigAssistant() {
 function assistantSecretRef(companyId) {
     return admin.firestore().collection('assistant_secure').doc(companyId);
 }
-async function obterConfigAssistantRuntime(companyId) {
+/** Primeiro ID da empresa suprema (espelha ordem de insercao em SUPREME_PLATFORM_COMPANY_IDS). */
+function primarySupremePlatformCompanyId() {
+    const first = SUPREME_PLATFORM_COMPANY_IDS.values().next().value;
+    const id = typeof first === 'string' ? first.trim() : '';
+    return id.length > 0 ? id : null;
+}
+/**
+ * Credencial unica do assistente para todas as empresas:
+ * 1) OPENAI_API_KEY nas Cloud Functions;
+ * 2) assistant_secure/{empresaSuprema} (cadastro pelo owner suprema).
+ * Chaves em assistant_secure de outras empresas sao ignoradas (legado).
+ */
+async function resolveUnifiedAssistantCredential() {
     const platformCfg = obterConfigAssistant();
-    const snap = await assistantSecretRef(companyId).get();
+    if (platformCfg.apiKey) {
+        return {
+            apiKey: platformCfg.apiKey,
+            model: platformCfg.model,
+        };
+    }
+    const supremeId = primarySupremePlatformCompanyId();
+    if (!supremeId) {
+        return { apiKey: '', model: platformCfg.model };
+    }
+    const snap = await assistantSecretRef(supremeId).get();
     const data = asRecord(snap.data());
-    const companyApiKey = asTrimmedString(data.apiKey);
-    const companyModel = asTrimmedString(data.model);
+    const storeKey = asTrimmedString(data.apiKey);
+    const storeModel = asTrimmedString(data.model);
     const updatedAt = data.updatedAt;
     const updatedAtIso = updatedAt instanceof admin.firestore.Timestamp ? updatedAt.toDate().toISOString() : undefined;
     const updatedByName = asTrimmedString(data.updatedByName);
-    if (companyApiKey) {
+    if (storeKey) {
         return {
-            apiKey: companyApiKey,
-            model: companyModel || platformCfg.model,
-            source: 'company',
-            keyPreview: maskSecret(companyApiKey),
+            apiKey: storeKey,
+            model: storeModel || platformCfg.model,
             updatedByName,
             updatedAtIso,
         };
     }
-    if (platformCfg.apiKey) {
+    return { apiKey: '', model: platformCfg.model, updatedByName, updatedAtIso };
+}
+async function obterConfigAssistantRuntime(_companyId) {
+    void _companyId;
+    const platformCfg = obterConfigAssistant();
+    const resolved = await resolveUnifiedAssistantCredential();
+    if (resolved.apiKey) {
         return {
-            ...platformCfg,
+            apiKey: resolved.apiKey,
+            model: resolved.model || platformCfg.model,
             source: 'platform',
             keyPreview: '',
-            updatedByName,
-            updatedAtIso,
+            updatedByName: resolved.updatedByName,
+            updatedAtIso: resolved.updatedAtIso,
         };
     }
     return {
-        ...platformCfg,
+        apiKey: '',
+        model: platformCfg.model,
         source: 'missing',
         keyPreview: '',
-        updatedByName,
-        updatedAtIso,
+        updatedByName: resolved.updatedByName,
+        updatedAtIso: resolved.updatedAtIso,
     };
 }
 function missingAssistantConfig(cfg) {
     const missing = [];
-    if (!cfg.apiKey)
-        missing.push('OPENAI_API_KEY da empresa ou da plataforma');
+    if (!cfg.apiKey) {
+        missing.push('credencial central do assistente (variavel OPENAI_API_KEY nas Functions ou cadastro na empresa suprema)');
+    }
     return missing;
 }
 function platformAdminEmails() {
@@ -224,6 +253,12 @@ function platformAdminEmails() {
 }
 function isSupremePlatformCompany(companyId) {
     return SUPREME_PLATFORM_COMPANY_IDS.has(companyId.trim());
+}
+function assertSupremePlatformOwner(claims) {
+    assertRole(claims, ['OWNER']);
+    if (!isSupremePlatformCompany(claims.companyId)) {
+        throw new functions.https.HttpsError('permission-denied', 'Apenas o owner da empresa suprema pode executar esta operacao.');
+    }
 }
 async function addTesterToFirebaseAppDistribution(params) {
     const appId = params.appId.trim();
@@ -771,6 +806,10 @@ function readPublicRequestMetadata(context) {
     };
 }
 async function ensurePublicDemoUser(params) {
+    if (params.uid !== PUBLIC_DEMO_OWNER_UID &&
+        params.uid !== PUBLIC_DEMO_ACCOUNTANT_UID) {
+        throw new functions.https.HttpsError('failed-precondition', 'Perfil demo: UID fora do par canonico publico.');
+    }
     const userRef = admin.firestore().collection('users').doc(params.uid);
     const companySnap = await admin
         .firestore()
@@ -821,14 +860,14 @@ async function ensurePublicDemoAuthUser(params) {
                 const typed = error;
                 if (typed.code === 'auth/email-already-exists') {
                     const holder = await admin.auth().getUserByEmail(emailRaw);
+                    if (holder.uid !== params.uid) {
+                        throw new functions.https.HttpsError('failed-precondition', 'Demo indisponivel: o email do perfil demo esta associado a outra conta Firebase Auth. ' +
+                            'Remova ou renomeie essa conta no Console antes de abrir o demo.');
+                    }
                     await admin.auth().updateUser(holder.uid, {
                         displayName,
                         disabled: false,
                         emailVerified: true,
-                    });
-                    functions.logger.warn('demo_auth_email_holder', {
-                        canonicalUid: params.uid,
-                        holderUid: holder.uid,
                     });
                     return holder.uid;
                 }
@@ -850,27 +889,6 @@ async function ensurePublicDemoAuthUser(params) {
         }
     }
     try {
-        const byEmail = await admin.auth().getUserByEmail(emailRaw);
-        await admin.auth().updateUser(byEmail.uid, {
-            displayName,
-            disabled: false,
-            emailVerified: true,
-        });
-        if (byEmail.uid !== params.uid) {
-            functions.logger.warn('demo_auth_uid_mismatch_existing_email', {
-                canonicalUid: params.uid,
-                actualUid: byEmail.uid,
-            });
-        }
-        return byEmail.uid;
-    }
-    catch (error) {
-        const typed = error;
-        if (typed.code !== 'auth/user-not-found') {
-            throw error;
-        }
-    }
-    try {
         const created = await admin.auth().createUser({
             uid: params.uid,
             email: emailRaw,
@@ -884,14 +902,14 @@ async function ensurePublicDemoAuthUser(params) {
         const typed = error;
         if (typed.code === 'auth/email-already-exists') {
             const holder = await admin.auth().getUserByEmail(emailRaw);
+            if (holder.uid !== params.uid) {
+                throw new functions.https.HttpsError('failed-precondition', 'Demo indisponivel: o email do perfil demo esta associado a outra conta Firebase Auth. ' +
+                    'Remova ou renomeie essa conta no Console antes de abrir o demo.');
+            }
             await admin.auth().updateUser(holder.uid, {
                 displayName,
                 disabled: false,
                 emailVerified: true,
-            });
-            functions.logger.warn('demo_auth_create_email_collision', {
-                canonicalUid: params.uid,
-                holderUid: holder.uid,
             });
             return holder.uid;
         }
@@ -922,6 +940,9 @@ async function ensurePublicDemoAccountantLink(params) {
     }, { merge: true });
 }
 async function ensurePublicDemoWorkspace(companyId) {
+    if (asTrimmedString(companyId) !== PUBLIC_DEMO_COMPANY_ID) {
+        throw new functions.https.HttpsError('failed-precondition', 'ensurePublicDemoWorkspace: apenas o workspace demo publico e permitido.');
+    }
     await admin
         .firestore()
         .collection('company_settings')
@@ -1935,7 +1956,7 @@ function buildAssistantFeatureInventory() {
     return [
         'Inventario real do sistema nesta versao:',
         '- Assistente: chat para orientacao operacional sobre o proprio Ponto Certo.',
-        '- Empresa: cadastro e edicao da empresa (inclui busca por CNPJ para preencher dados oficiais quando disponivel), configuracao fiscal, configuracao da OpenAI, contador e controles do assistente.',
+        '- Empresa: cadastro e edicao da empresa (inclui busca por CNPJ para preencher dados oficiais quando disponivel), configuracao fiscal, permissoes do contador; gestao tecnica da credencial do assistente apenas na empresa suprema.',
         '- Clientes: cadastro, consulta e revisao de clientes e tomadores.',
         '- Tarefas: tarefas operacionais ligadas ao dia a dia da empresa.',
         '- Ordens de servico: criacao, acompanhamento, atualizacao e exclusao.',
@@ -2005,7 +2026,7 @@ function buildAssistantFaqGuide() {
         '- proposta comercial em pdf: orientar para Propostas e informar que ja existem botoes para abrir PDF e compartilhar PDF.',
         '- documentos: orientar como canal de solicitacao, envio e conferencia de documentos por pedido, com anexos separados por solicitacao.',
         '- criar tarefa: orientar para Tarefas, usando o nome real do botao "Criar". Informar os campos reais: Nome, Descricao, Cliente, CPF ou CNPJ do cliente, Data da execucao e, quando for empresa, Direcionar para funcionario.',
-        '- configuracao da OpenAI: orientar para Empresa.',
+        '- assistente indisponivel ou erro de modelo: para empresas clientes orientar contato com suporte; para empresa suprema orientar conferencia da credencial central nas configuracoes internas da plataforma.',
         '- observabilidade: orientar para Observabilidade apenas quando o contexto for da empresa suprema.',
     ].join('\n');
 }
@@ -2013,7 +2034,7 @@ function buildAssistantModuleResponseGuide() {
     return [
         'Guia de resposta por modulo real do produto:',
         '- Assistente: orientar sobre uso do sistema e proximos passos, sem inventar automacoes inexistentes.',
-        '- Empresa: responder sobre dados cadastrais, perfil operacional, configuracao da OpenAI, governanca do contador e do assistente.',
+        '- Empresa: responder sobre dados cadastrais, perfil operacional, permissoes do contador; nunca orientar cliente final a cadastrar chave de API do assistente (credencial e apenas central/suprema).',
         '- Clientes: responder sobre cadastro, documento, cidade e tomador.',
         '- Tarefas: responder sobre execucao operacional, lista de tarefas e distribuicao por responsavel.',
         '- Ordens de servico: responder sobre abertura, andamento, finalizacao e exclusao.',
@@ -2524,8 +2545,8 @@ function analyzeRuntimeIncidentHeuristics(incidentData) {
         joined.includes('token da openai') ||
         joined.includes('assistente nao configurado')) {
         return {
-            summary: 'Falha classificada como configuracao do assistente. Nao ha correcao automatica segura sem revisar a chave e a franquia da empresa.',
-            recommendedAction: 'Revisar o token da OpenAI e a governanca do assistente na tela da empresa.',
+            summary: 'Falha classificada como indisponibilidade ou configuracao do assistente (credencial central da plataforma ou politicas/limites).',
+            recommendedAction: 'Equipe suprema: conferir OPENAI_API_KEY nas Functions ou credencial gravada na empresa suprema e revisar limites do assistente (company_settings). Clientes finais: suporte.',
             recommendedActionType: 'review_assistant_token',
             autoFixEligible: false,
             humanApprovalRequired: true,
@@ -4882,6 +4903,27 @@ function mapCompanyData(data) {
         return null;
     return data;
 }
+function isDemoPlaceholderCompanyData(data) {
+    const cnpj = String(data.cnpj ?? '').replace(/\D/g, '');
+    if (cnpj === '00000000000000')
+        return true;
+    const im = String(data.inscricaoMunicipal ?? '')
+        .trim()
+        .toUpperCase();
+    if (im === 'DEMO-IM')
+        return true;
+    const email = String(data.email ?? '')
+        .trim()
+        .toLowerCase();
+    if (email === 'demo@pontocerto.local')
+        return true;
+    const endereco = String(data.endereco ?? '')
+        .trim()
+        .toLowerCase();
+    if (endereco.includes('demonstrativo'))
+        return true;
+    return false;
+}
 function slugifyFiscalText(value) {
     return String(value ?? '')
         .trim()
@@ -6061,12 +6103,16 @@ function createInviteTransport(params) {
 async function enviarEmailHtml(params) {
     if (params.sendgridKey) {
         mail_1.default.setApiKey(params.sendgridKey);
-        await mail_1.default.send({
+        const mailPayload = {
             to: params.toEmail,
             from: params.fromEmail,
             subject: params.subject,
             html: params.html,
-        });
+        };
+        if (params.text) {
+            mailPayload.text = params.text;
+        }
+        await mail_1.default.send(mailPayload);
         return;
     }
     if (params.smtpUser && params.smtpAppPassword) {
@@ -6083,6 +6129,7 @@ async function enviarEmailHtml(params) {
             from: params.fromEmail,
             subject: params.subject,
             html: params.html,
+            ...(params.text ? { text: params.text } : {}),
         });
         return;
     }
@@ -8466,6 +8513,173 @@ exports.platformDeleteLightweightTestOffice = functions.https.onCall(async (data
     });
     return { ok: true, officeId };
 });
+/**
+ * Owner empresa suprema: ligar/desligar login da empresa alvo (commercialSettings.allowLogin).
+ */
+exports.platformSupremeSetCompanyAllowLogin = functions.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    assertSupremePlatformOwner(claims);
+    const companyId = asTrimmedString(data?.companyId);
+    if (!companyId || companyId === PUBLIC_DEMO_COMPANY_ID || isSupremePlatformCompany(companyId)) {
+        throw new functions.https.HttpsError('invalid-argument', 'companyId invalido ou protegido (suprema/demo).');
+    }
+    if (typeof data?.allowLogin !== 'boolean') {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe allowLogin (boolean).');
+    }
+    const allowLogin = data.allowLogin === true;
+    const settingsRef = admin.firestore().collection('company_settings').doc(companyId);
+    const settingsSnap = await settingsRef.get();
+    if (!settingsSnap.exists) {
+        throw new functions.https.HttpsError('not-found', 'Empresa nao encontrada em company_settings.');
+    }
+    const settingsData = asRecord(settingsSnap.data());
+    const rawFlat = { ...commercialSettings(settingsData) };
+    await settingsRef.set({
+        companyId,
+        commercialSettings: {
+            ...rawFlat,
+            allowLogin,
+            updatedByPlatformAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedByPlatformUid: claims.uid,
+            platformNote: asTrimmedString(data?.reason) ||
+                (allowLogin ? 'Login liberado pela suprema.' : 'Login bloqueado pela suprema.'),
+        },
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await writeAudit({
+        claims,
+        module: 'platform',
+        action: 'supreme_set_company_allow_login',
+        entityPath: 'company_settings',
+        entityId: companyId,
+        before: { allowLogin: rawFlat.allowLogin },
+        after: { allowLogin },
+    });
+    return { ok: true, companyId, allowLogin };
+});
+/**
+ * Owner empresa suprema: apagar empresa e utilizadores associados (uso administrativo).
+ */
+exports.platformSupremeDeleteCompany = functions.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    assertSupremePlatformOwner(claims);
+    const companyId = asTrimmedString(data?.companyId);
+    if (!companyId || companyId === PUBLIC_DEMO_COMPANY_ID || isSupremePlatformCompany(companyId)) {
+        throw new functions.https.HttpsError('invalid-argument', 'companyId invalido ou protegido (suprema/demo).');
+    }
+    const settingsSnap = await admin.firestore().collection('company_settings').doc(companyId).get();
+    const companyUsers = await admin
+        .firestore()
+        .collection('users')
+        .where('companyId', '==', companyId)
+        .limit(80)
+        .get();
+    const allLinks = await admin
+        .firestore()
+        .collection('accountant_links')
+        .where('companyId', '==', companyId)
+        .limit(200)
+        .get();
+    if (!allLinks.empty) {
+        const batch = admin.firestore().batch();
+        for (const d of allLinks.docs) {
+            batch.delete(d.ref);
+        }
+        await batch.commit();
+    }
+    for (const d of companyUsers.docs) {
+        try {
+            await admin.auth().deleteUser(d.id);
+        }
+        catch (err) {
+            functions.logger.warn('platformSupremeDeleteCompany auth delete', {
+                uid: d.id,
+                error: errorMessage(err, ''),
+            });
+        }
+        await admin.firestore().collection('users').doc(d.id).delete();
+    }
+    if (settingsSnap.exists) {
+        await settingsSnap.ref.delete();
+    }
+    await writeAudit({
+        claims,
+        module: 'platform',
+        action: 'supreme_delete_company',
+        entityPath: 'company_settings',
+        entityId: companyId,
+        before: { hadSettings: settingsSnap.exists, usersRemoved: companyUsers.size },
+        after: { removed: true },
+    });
+    return { ok: true, companyId };
+});
+/**
+ * Owner empresa suprema: apagar escritorio sem empresas na carteira (Firestore index).
+ */
+exports.platformSupremeDeleteOffice = functions.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    assertSupremePlatformOwner(claims);
+    const officeId = asTrimmedString(data?.officeId);
+    if (!officeId || officeId === PUBLIC_DEMO_OFFICE_ID) {
+        throw new functions.https.HttpsError('invalid-argument', 'officeId obrigatorio (e nao pode ser o escritorio demo).');
+    }
+    const linked = await listCompanySettingsLinkedToOffice(officeId);
+    if (linked.length > 0) {
+        throw new functions.https.HttpsError('failed-precondition', `Escritorio ainda tem ${linked.length} empresa(s) na carteira. Desvincule ou apague antes.`);
+    }
+    const officeSnap = await accountingOfficeRef().doc(officeId).get();
+    if (!officeSnap.exists) {
+        throw new functions.https.HttpsError('not-found', 'Escritorio nao encontrado.');
+    }
+    const o = asRecord(officeSnap.data());
+    const accountantSnap = await admin
+        .firestore()
+        .collection('users')
+        .where('officeId', '==', officeId)
+        .limit(50)
+        .get();
+    for (const d of accountantSnap.docs) {
+        const u = asRecord(d.data());
+        if (roleParaFirestore(u.role) !== 'ACCOUNTANT') {
+            throw new functions.https.HttpsError('failed-precondition', 'Existem utilizadores nao-contador ligados a este officeId. Exclusao bloqueada.');
+        }
+        const uid = d.id;
+        const linksByAcct = await admin
+            .firestore()
+            .collection('accountant_links')
+            .where('accountantUserId', '==', uid)
+            .limit(200)
+            .get();
+        if (!linksByAcct.empty) {
+            const batch = admin.firestore().batch();
+            for (const link of linksByAcct.docs) {
+                batch.delete(link.ref);
+            }
+            await batch.commit();
+        }
+        try {
+            await admin.auth().deleteUser(uid);
+        }
+        catch (err) {
+            functions.logger.warn('platformSupremeDeleteOffice auth delete', {
+                uid,
+                error: errorMessage(err, ''),
+            });
+        }
+        await admin.firestore().collection('users').doc(uid).delete();
+    }
+    await accountingOfficeRef().doc(officeId).delete();
+    await writeAudit({
+        claims,
+        module: 'platform',
+        action: 'supreme_delete_office',
+        entityPath: 'accounting_offices',
+        entityId: officeId,
+        before: { email: asTrimmedString(o.email) },
+        after: { removed: true },
+    });
+    return { ok: true, officeId };
+});
 exports.platformListGovernanceRealRegistrations = functions.https.onCall(async (_data, context) => {
     const claims = assertClaims(context);
     const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
@@ -8567,6 +8781,257 @@ exports.platformListGovernanceRealRegistrations = functions.https.onCall(async (
         ok: true,
         companies,
         offices,
+    };
+});
+function normalizeAudienceEmail(raw) {
+    return asTrimmedString(raw).toLowerCase();
+}
+function isPlausibleAudienceEmail(email) {
+    if (!email || email.length > 120) {
+        return false;
+    }
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+function governanceAudienceAdd(bucket, emailRaw, source) {
+    const email = normalizeAudienceEmail(emailRaw);
+    if (!isPlausibleAudienceEmail(email)) {
+        return;
+    }
+    let set = bucket.get(email);
+    if (!set) {
+        set = new Set();
+        bucket.set(email, set);
+    }
+    set.add(source);
+}
+async function collectGovernanceAudienceEmailsInternal() {
+    const bucket = new Map();
+    const PUBLIC_LIGHTWEIGHT_SOURCES = ['public_lightweight_signup', 'public_lightweight_access'];
+    const usersSnap = await admin
+        .firestore()
+        .collection('users')
+        .where('role', '==', 'OWNER')
+        .limit(200)
+        .get();
+    const canonRows = await Promise.all(usersSnap.docs.map(async (doc) => {
+        const data = asRecord(doc.data());
+        const companyId = asTrimmedString(data.companyId);
+        let accountantEmail = '';
+        if (companyId) {
+            const settingsSnap = await admin.firestore().collection('company_settings').doc(companyId).get();
+            const settingsData = asRecord(settingsSnap.data());
+            const accountantPending = asRecord(settingsData.accountantOnboardingPending);
+            accountantEmail = asTrimmedString(accountantPending.accountantEmail);
+        }
+        return {
+            companyId,
+            millis: firestoreCreatedMillis(data.createdAt),
+            ownerEmail: asTrimmedString(data.email),
+            accountantEmail,
+        };
+    }));
+    const bestMillis = new Map();
+    const canonicalByCompany = new Map();
+    for (const row of canonRows) {
+        if (!row.companyId || row.companyId === PUBLIC_DEMO_COMPANY_ID) {
+            continue;
+        }
+        const prev = bestMillis.get(row.companyId);
+        if (prev === undefined || row.millis < prev) {
+            bestMillis.set(row.companyId, row.millis);
+            canonicalByCompany.set(row.companyId, {
+                ownerEmail: row.ownerEmail,
+                accountantEmail: row.accountantEmail,
+            });
+        }
+    }
+    for (const entry of canonicalByCompany.values()) {
+        governanceAudienceAdd(bucket, entry.ownerEmail, 'Empresa cadastrada (owner)');
+        governanceAudienceAdd(bucket, entry.accountantEmail, 'Empresa cadastrada (contador convite)');
+    }
+    const ownersLightSnap = await admin
+        .firestore()
+        .collection('users')
+        .where('role', '==', 'OWNER')
+        .where('lightweightProfilePending', '==', true)
+        .limit(120)
+        .get();
+    const lightBuckets = new Map();
+    for (const doc of ownersLightSnap.docs) {
+        const data = asRecord(doc.data());
+        const companyId = asTrimmedString(data.companyId);
+        if (!companyId || companyId === PUBLIC_DEMO_COMPANY_ID) {
+            continue;
+        }
+        const prev = lightBuckets.get(companyId);
+        const ms = firestoreCreatedMillis(data.createdAt);
+        if (!prev) {
+            lightBuckets.set(companyId, doc);
+            continue;
+        }
+        const prevMs = firestoreCreatedMillis(asRecord(prev.data()).createdAt);
+        if (ms < prevMs) {
+            lightBuckets.set(companyId, doc);
+        }
+    }
+    for (const doc of lightBuckets.values()) {
+        const data = asRecord(doc.data());
+        governanceAudienceAdd(bucket, asTrimmedString(data.email), 'Pre-cadastro empresa leve');
+    }
+    const lwOfficeSnap = await accountingOfficeRef()
+        .where('lightweightProfilePending', '==', true)
+        .limit(100)
+        .get();
+    for (const doc of lwOfficeSnap.docs) {
+        if (doc.id === PUBLIC_DEMO_OFFICE_ID) {
+            continue;
+        }
+        const o = asRecord(doc.data());
+        governanceAudienceAdd(bucket, asTrimmedString(o.email), 'Escritorio pre-cadastro leve');
+    }
+    const settingsSnap = await admin
+        .firestore()
+        .collection('company_settings')
+        .where('directSignup.source', 'in', PUBLIC_LIGHTWEIGHT_SOURCES)
+        .limit(200)
+        .get();
+    for (const doc of settingsSnap.docs) {
+        const companyId = doc.id;
+        if (companyId === PUBLIC_DEMO_COMPANY_ID) {
+            continue;
+        }
+        const data = asRecord(doc.data());
+        const ds = asRecord(data.directSignup);
+        if (ds.lightweightProfilePending === true) {
+            continue;
+        }
+        const ownerSnap = await admin
+            .firestore()
+            .collection('users')
+            .where('companyId', '==', companyId)
+            .where('role', '==', 'OWNER')
+            .limit(1)
+            .get();
+        if (!ownerSnap.empty) {
+            const ou = asRecord(ownerSnap.docs[0].data());
+            governanceAudienceAdd(bucket, asTrimmedString(ou.email), 'Pos onboarding empresa');
+        }
+    }
+    const graduatedOfficesSnap = await accountingOfficeRef()
+        .where('source', '==', 'public_lightweight_signup')
+        .limit(200)
+        .get();
+    for (const doc of graduatedOfficesSnap.docs) {
+        if (doc.id === PUBLIC_DEMO_OFFICE_ID) {
+            continue;
+        }
+        const o = asRecord(doc.data());
+        if (o.lightweightProfilePending === true) {
+            continue;
+        }
+        governanceAudienceAdd(bucket, asTrimmedString(o.email), 'Pos onboarding escritorio');
+    }
+    const trialSnap = await trialInviteRef().orderBy('tokenIssuedAt', 'desc').limit(300).get();
+    for (const doc of trialSnap.docs) {
+        const item = asRecord(doc.data());
+        if (asTrimmedString(item.status) === 'deleted') {
+            continue;
+        }
+        governanceAudienceAdd(bucket, asTrimmedString(item.companyEmail), 'Trial convite (empresa)');
+        governanceAudienceAdd(bucket, asTrimmedString(item.accountantEmail), 'Trial convite (contador)');
+    }
+    const items = Array.from(bucket.entries())
+        .map(([email, sources]) => ({
+        email,
+        sources: Array.from(sources).sort((a, b) => a.localeCompare(b)),
+    }))
+        .sort((a, b) => a.email.localeCompare(b.email));
+    return items;
+}
+exports.platformGovernanceCollectAudienceEmails = functions.https.onCall(async (_data, context) => {
+    const claims = assertClaims(context);
+    const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+    assertPlatformAdmin(claims, userProfile);
+    const items = await collectGovernanceAudienceEmailsInternal();
+    return {
+        ok: true,
+        items,
+        total: items.length,
+    };
+});
+exports.platformGovernanceSendAudienceEmail = HEAVY_RUNTIME.https.onCall(async (data, context) => {
+    const claims = assertClaims(context);
+    const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+    assertPlatformAdmin(claims, userProfile);
+    const subject = asTrimmedString(data?.subject);
+    const bodyText = typeof data?.bodyText === 'string' ? data.bodyText : '';
+    const rawRecipients = Array.isArray(data?.recipients) ? data.recipients : [];
+    if (!subject || subject.length > 180) {
+        throw new functions.https.HttpsError('invalid-argument', 'Assunto obrigatorio (maximo 180 caracteres).');
+    }
+    const trimmedBody = bodyText.trim();
+    if (!trimmedBody || trimmedBody.length > 40000) {
+        throw new functions.https.HttpsError('invalid-argument', 'Corpo obrigatorio (maximo 40000 caracteres).');
+    }
+    const recipients = rawRecipients
+        .map((item) => normalizeAudienceEmail(String(item ?? '')))
+        .filter((email) => isPlausibleAudienceEmail(email));
+    const uniqueRecipients = Array.from(new Set(recipients)).slice(0, 80);
+    if (!uniqueRecipients.length) {
+        throw new functions.https.HttpsError('invalid-argument', 'Lista de destinatarios invalida ou vazia.');
+    }
+    const inviteCfg = obterConfigEmail();
+    const missingMail = missingInviteConfig(inviteCfg);
+    if (missingMail.length) {
+        throw new functions.https.HttpsError('failed-precondition', `Configure envio de email (${missingMail.join(', ')}).`);
+    }
+    const html = `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.55; color: #111; white-space: pre-wrap;">${escapeHtml(trimmedBody)}</div>`;
+    let sent = 0;
+    let failed = 0;
+    const errors = [];
+    for (const toEmail of uniqueRecipients) {
+        try {
+            await enviarEmailHtml({
+                toEmail,
+                subject,
+                html,
+                text: trimmedBody,
+                fromEmail: inviteCfg.fromEmail,
+                sendgridKey: inviteCfg.sendgridKey,
+                smtpUser: inviteCfg.smtpUser,
+                smtpAppPassword: inviteCfg.smtpAppPassword,
+                smtpHost: inviteCfg.smtpHost,
+                smtpPort: inviteCfg.smtpPort,
+                smtpSecure: inviteCfg.smtpSecure,
+            });
+            sent++;
+        }
+        catch (err) {
+            failed++;
+            if (errors.length < 8) {
+                errors.push(`${toEmail}: ${String(err?.message ?? err)}`);
+            }
+        }
+    }
+    await writeAudit({
+        claims,
+        module: 'platform',
+        action: 'governance_send_audience_email',
+        entityPath: 'governance_bulk_email',
+        entityId: 'bulk',
+        before: {},
+        after: {
+            subject,
+            recipientsRequested: uniqueRecipients.length,
+            sent,
+            failed,
+        },
+    });
+    return {
+        ok: true,
+        sent,
+        failed,
+        errors,
     };
 });
 exports.platformGetCompanyFiscalStatus = functions.https.onCall(async (data, context) => {
@@ -14256,25 +14721,59 @@ exports.getInviteConfigurationStatus = functions.https.onCall(async (_data, cont
 exports.assistantGetCompanyConfigStatus = functions.https.onCall(async (_data, context) => {
     const claims = assertClaims(context);
     assertRole(claims, ['OWNER']);
-    const runtimeCfg = await obterConfigAssistantRuntime(claims.companyId);
-    const companySecretSnap = await assistantSecretRef(claims.companyId).get();
-    const companySecret = asRecord(companySecretSnap.data());
+    const unified = await resolveUnifiedAssistantCredential();
+    const assistantOperational = unified.apiKey.length > 0;
+    const envHasKey = !!obterConfigAssistant().apiKey;
+    if (!isSupremePlatformCompany(claims.companyId)) {
+        return {
+            credentialDetailRestricted: true,
+            assistantOperational,
+        };
+    }
+    const supremeId = claims.companyId.trim();
+    const supremeSnap = await assistantSecretRef(supremeId).get();
+    const supremeSecret = asRecord(supremeSnap.data());
+    const supremeStoredKey = asTrimmedString(supremeSecret.apiKey);
+    const supremeStoredModel = asTrimmedString(supremeSecret.model);
+    const updatedAt = supremeSecret.updatedAt;
+    const updatedAtIso = updatedAt instanceof admin.firestore.Timestamp ? updatedAt.toDate().toISOString() : '';
+    let source;
+    if (envHasKey) {
+        source = 'platform_env';
+    }
+    else if (supremeStoredKey) {
+        source = 'platform_supreme_store';
+    }
+    else {
+        source = 'missing';
+    }
     return {
-        source: runtimeCfg.source,
-        model: runtimeCfg.model,
-        hasCompanyApiKey: !!asTrimmedString(companySecret.apiKey),
-        hasPlatformApiKey: !!obterConfigAssistant().apiKey,
-        keyPreview: runtimeCfg.source === 'company' ? runtimeCfg.keyPreview : '',
-        updatedByName: runtimeCfg.updatedByName ?? '',
-        updatedAtIso: runtimeCfg.updatedAtIso ?? '',
+        credentialDetailRestricted: false,
+        assistantOperational,
+        source,
+        model: assistantOperational ? unified.model : obterConfigAssistant().model,
+        hasCompanyApiKey: false,
+        hasPlatformApiKey: assistantOperational,
+        usesEnvApiKey: envHasKey,
+        hasSupremeStoredKey: !!supremeStoredKey,
+        keyPreview: supremeStoredKey ? maskSecret(supremeStoredKey) : '',
+        supremeStoredModelHint: supremeStoredModel ||
+            (supremeStoredKey ? obterConfigAssistant().model : ''),
+        updatedByName: asTrimmedString(supremeSecret.updatedByName),
+        updatedAtIso,
     };
 });
 exports.assistantSaveCompanyApiKey = functions.https.onCall(async (data, context) => {
     const claims = assertClaims(context);
     assertRole(claims, ['OWNER']);
+    if (!isSupremePlatformCompany(claims.companyId)) {
+        throw new functions.https.HttpsError('permission-denied', 'Apenas o owner da empresa suprema pode cadastrar ou remover a credencial central do assistente.');
+    }
+    const supremeId = claims.companyId.trim();
+    const secretRef = assistantSecretRef(supremeId);
     const apiKey = asTrimmedString(data?.apiKey);
+    const model = asTrimmedString(data?.model);
     const remove = data?.remove === true;
-    const secretRef = assistantSecretRef(claims.companyId);
     const beforeSnap = await secretRef.get();
     const beforeData = asRecord(beforeSnap.data());
     const userProfile = await carregarUsuarioMesmoTenant(claims.uid, claims);
@@ -14286,39 +14785,76 @@ exports.assistantSaveCompanyApiKey = functions.https.onCall(async (data, context
             module: 'assistant',
             action: 'assistant_company_api_key_remove',
             entityPath: 'assistant_secure',
-            entityId: claims.companyId,
+            entityId: supremeId,
             before: beforeData,
             after: {
-                companyId: claims.companyId,
+                companyId: supremeId,
                 keyPreview: '',
                 source: 'removed',
             },
         });
         return { ok: true, removed: true };
     }
-    if (apiKey.length < 20 || !apiKey.startsWith('sk-')) {
-        throw new functions.https.HttpsError('invalid-argument', 'Informe uma chave valida da OpenAI para a empresa.');
+    if (apiKey.length === 0 && model.length > 0) {
+        const existingKey = asTrimmedString(beforeData.apiKey);
+        if (!existingKey) {
+            throw new functions.https.HttpsError('failed-precondition', 'Cadastre a chave OpenAI antes de alterar apenas o modelo.');
+        }
+        await secretRef.set({
+            model,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedByUid: claims.uid,
+            updatedByName: userName,
+        }, { merge: true });
+        await writeAudit({
+            claims,
+            module: 'assistant',
+            action: 'assistant_company_model_patch',
+            entityPath: 'assistant_secure',
+            entityId: supremeId,
+            before: beforeData,
+            after: {
+                companyId: supremeId,
+                model,
+                updatedByUid: claims.uid,
+                updatedByName: userName,
+            },
+        });
+        return {
+            ok: true,
+            removed: false,
+            modelOnly: true,
+            keyPreview: maskSecret(existingKey),
+        };
     }
-    await secretRef.set({
-        companyId: claims.companyId,
+    if (apiKey.length < 20 || !apiKey.startsWith('sk-')) {
+        throw new functions.https.HttpsError('invalid-argument', 'Informe uma chave valida da OpenAI (sk-...).');
+    }
+    const payload = {
+        companyId: supremeId,
         provider: 'openai',
         apiKey,
         keyPreview: maskSecret(apiKey),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedByUid: claims.uid,
         updatedByName: userName,
-    }, { merge: true });
+    };
+    if (model.length > 0) {
+        payload.model = model;
+    }
+    await secretRef.set(payload, { merge: true });
     await writeAudit({
         claims,
         module: 'assistant',
         action: 'assistant_company_api_key_save',
         entityPath: 'assistant_secure',
-        entityId: claims.companyId,
+        entityId: supremeId,
         before: beforeData,
         after: {
-            companyId: claims.companyId,
+            companyId: supremeId,
             provider: 'openai',
             keyPreview: maskSecret(apiKey),
+            model: model || asTrimmedString(beforeData.model),
             updatedByUid: claims.uid,
             updatedByName: userName,
         },
@@ -15229,13 +15765,36 @@ async function refreshCompanyProvisioningState(params) {
         focusProvisioning,
     };
 }
-function resolveCompanyDataFromSettingsOrUser(settingsData, userData) {
+function resolveCompanyDataFromSettingsOrUser(settingsData, userData, opts) {
     const settingsCompanyData = mapCompanyData(settingsData.companyData);
-    if (settingsCompanyData)
-        return settingsCompanyData;
     const userCompanyData = mapCompanyData(userData?.companyData);
-    if (userCompanyData)
-        return userCompanyData;
+    const role = String(opts?.role ?? '').toUpperCase();
+    const settingsDemo = settingsCompanyData != null && isDemoPlaceholderCompanyData(settingsCompanyData);
+    const userDemo = userCompanyData != null && isDemoPlaceholderCompanyData(userCompanyData);
+    if (role === 'ACCOUNTANT') {
+        if (settingsCompanyData && !settingsDemo) {
+            return { ...settingsCompanyData };
+        }
+        return null;
+    }
+    if (settingsCompanyData && !settingsDemo) {
+        return { ...(userCompanyData ?? {}), ...settingsCompanyData };
+    }
+    if (settingsDemo && userCompanyData && !userDemo) {
+        return { ...userCompanyData };
+    }
+    if (settingsDemo && userDemo) {
+        return null;
+    }
+    if (settingsDemo && !userCompanyData) {
+        return null;
+    }
+    if (userCompanyData) {
+        return { ...userCompanyData, ...(settingsCompanyData ?? {}) };
+    }
+    if (settingsCompanyData) {
+        return { ...settingsCompanyData };
+    }
     return null;
 }
 exports.syncCompanyProfile = functions.https.onCall(async (data, context) => {
@@ -15327,7 +15886,9 @@ exports.fiscalRefreshCompanyProvisioning = functions.https.onCall(async (_data, 
         assertRole(claims, ['OWNER', 'MANAGER']);
     }
     const userData = asRecord(userSnap.data());
-    const companyData = resolveCompanyDataFromSettingsOrUser(settingsData, userData);
+    const companyData = resolveCompanyDataFromSettingsOrUser(settingsData, userData, {
+        role: claims.role,
+    });
     if (!companyData) {
         throw new functions.https.HttpsError('failed-precondition', 'Dados da empresa nao encontrados para reprocessar a automacao fiscal.');
     }
@@ -16260,7 +16821,7 @@ exports.fiscalSyncFocusCompany = HEAVY_RUNTIME.https.onCall(async (_data, contex
         admin.firestore().collection('users').doc(claims.uid).get(),
         settingsRef.get(),
     ]);
-    const companyData = resolveCompanyDataFromSettingsOrUser(asRecord(settingsSnap.data()), asRecord(userSnap.data()));
+    const companyData = resolveCompanyDataFromSettingsOrUser(asRecord(settingsSnap.data()), asRecord(userSnap.data()), { role: claims.role });
     if (!companyData) {
         throw new functions.https.HttpsError('failed-precondition', 'Dados da empresa nao encontrados para sincronizar com a Focus.');
     }
@@ -16344,7 +16905,7 @@ exports.fiscalIssueServiceInvoice = HEAVY_RUNTIME.https.onCall(async (data, cont
     });
     if (providerIsFocus(asTrimmedString(setup.provider))) {
         const userSnap = await admin.firestore().collection('users').doc(claims.uid).get();
-        const companyData = resolveCompanyDataFromSettingsOrUser(settingsData, asRecord(userSnap.data()));
+        const companyData = resolveCompanyDataFromSettingsOrUser(settingsData, asRecord(userSnap.data()), { role: claims.role });
         if (companyData) {
             await syncFocusCompany({
                 claims,
