@@ -98,6 +98,14 @@ Objetivo dessa regra:
 - evitar perda de etapa entre build, deploy e pacote Android
 - padronizar a entrega operacional final do projeto
 
+### Publicacao apenas Hosting (alteracao so em Flutter web)
+
+Quando nao houver mudanca em Cloud Functions, pode usar:
+
+```powershell
+Set-Location c:\Users\hp\pontocerto; flutter build web --release; firebase deploy --only hosting
+```
+
 ### Comando unico (padrao historico — web + functions + hosting)
 
 Uma **unica** linha no PowerShell, com **`;`** entre etapas (evitar `&&` em PowerShell antigo). O projeto Firebase usa o **default** de `.firebaserc` (`pontocerto-e1dab`). Ajuste os caminhos se o clone nao estiver em `c:\Users\hp\pontocerto`.

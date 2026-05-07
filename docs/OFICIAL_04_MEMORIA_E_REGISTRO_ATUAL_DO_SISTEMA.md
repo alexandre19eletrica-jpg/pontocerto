@@ -1,10 +1,12 @@
 # Memoria e Registro Atual Oficial do Sistema
 
-Data base: 02/05/2026
+Data base: 06/05/2026
 Projeto: Ponto Certo
 
 
-**Registo (06/05/2026 — governanca e-mail em massa + PDF tarefas para cliente + shell colar):** governanca ganhou painel **E-mail em massa** (`platformGovernanceCollectAudienceEmails`, `platformGovernanceSendAudienceEmail`, UI `GovernanceBulkEmailPanel`). PDF de tarefa reorganizado para cliente: bloco cliente/servico/descricao, tabelas de servicos e produtos/materiais com subtotais e resumo global (orcamento usa materiais previstos; finalizado usa utilizados). `app_shell` usa `HitTestBehavior.deferToChild` nos listeners que focavam o corpo/menu para nao impedir colar em campos. Materiais de tarefa com valores unitario/total de linha (`MaterialTarefa`). Ver `REGISTRO_ATUALIZACOES.md` (**2026-05-06**).
+**Registo (06/05/2026 — PDF tarefas cliente, lista vertical + totais utilizados + UI totais materiais):** PDF de tarefa (`task_details_media_pdf.dart`): servicos e materiais em **cartao unico** cada, **numeracao um item por linha**, texto sem pontuacao tipografica problematica; totais fora do cartao; **Valor total** no topo e total geral no resumo = **servicos + apenas materiais utilizados**; materiais no corpo com `_resolverMateriaisPdf` (fallback ao previsto se finalizado sem utilizados). Na UI do detalhe da tarefa: **Valor total - materiais previstos** e **Valor total - materiais utilizados**. Publicacao web validada: `flutter build web --release` + `firebase deploy --only hosting`. Ver `REGISTRO_ATUALIZACOES.md` (**2026-05-06**).
+
+**Registo (06/05/2026 — governanca e-mail em massa + shell colar + precos em materiais):** painel **E-mail em massa** na governanca (`platformGovernanceCollectAudienceEmails`, `platformGovernanceSendAudienceEmail`, `GovernanceBulkEmailPanel`). `app_shell`: listeners com **HitTestBehavior.deferToChild** para nao roubar foco ao colar em campos. **MaterialTarefa** com valor unitario e total de linha. O PDF final do cliente segue o registo imediatamente acima (lista vertical, totais utilizados no topo).
 
 **Registo (06/05/2026 — pre-cadastro leve empresa/escritorio: falso erro apos sucesso):** o cliente fazia parse com `response.data as Map`, o que pode falhar em web/interop mesmo com Callable OK; falhas subsequentes em analytics/Meta faziam cair no `catch` genérico "Erro ao criar acesso" após o servidor já ter criado conta e disparado e-mail (`mapFromCallableData`, analytics em try/catch, `GoRouterState` capturado antes do await). Backend: `notificarNovoCadastroAdministrativo` em `publicCreateCompanyWorkspaceAccess` e `publicCreateAccountantWorkspaceAccess` envolvido em try/log para não derrubar a resposta mesmo se algo escapasse. Serviço `AccountingOfficeSignupService` usa o mesmo parser em todas as callables públicas relacionadas.
 

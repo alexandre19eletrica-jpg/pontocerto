@@ -4,6 +4,7 @@ Data: 06/05/2026
 
 ## Situacao
 
+- **Encerramento 06/05/2026**: rodada de **tarefas** fechada na documentacao: PDF cliente com lista numerada em coluna, totais do topo alinhados a **materiais utilizados**, cartoes de valor total de materiais na tela de detalhe, publicacao web (`build web` + `deploy --only hosting`) confirmada pelo operador. Registos em `REGISTRO_ATUALIZACOES.md` (**2026-05-06**), `OFICIAL_04`, `README_OFICIAL_DOCUMENTACAO.md`.
 - **Registo 06/05/2026**: Documentacao em `REGISTRO_ATUALIZACOES.md` (**2026-05-06**), `OFICIAL_04` e `README_OFICIAL_DOCUMENTACAO.md` para governanca e-mail em massa, PDF de tarefas orientado ao cliente, valores em materiais de tarefa e ajuste de foco/colar no shell. Commit e push no GitHub na mesma data quando aplicavel.
 - **REGRA SUPREMA OPERACIONAL (02/05/2026)**: o Codex fica responsavel **apenas pela edicao de codigo, regras e documentacao tecnica** dentro do repositorio. **Publicacao, build, analyze, deploy, AAB, copia do artefacto e limpeza de cache** passam a ser executados **por voce no seu terminal**. Ao final de **toda** rodada de edicao, o Codex deve entregar os comandos prontos, revisados e no formato correto para PowerShell, evitando erro de execucao no terminal do operador, cobrindo sempre:
   - `analyze`
