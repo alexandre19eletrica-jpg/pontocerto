@@ -328,9 +328,15 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
       corpo.add(_pdfSecaoItensTabela(tarefa));
     }
 
-    final matsPdf = _materiaisParaPdfCliente(tarefa);
-    if (matsPdf.isNotEmpty) {
-      corpo.add(_pdfSecaoMateriaisCliente(tarefa, matsPdf));
+    final materiaisPdf = _resolverMateriaisPdf(tarefa);
+    if (materiaisPdf.lista.isNotEmpty) {
+      corpo.add(
+        _pdfSecaoMateriaisCliente(
+          tarefa,
+          materiaisPdf.lista,
+          fallbackPrevisto: materiaisPdf.fallbackPrevisto,
+        ),
+      );
     }
 
     if (tarefa.status == StatusTarefa.finalizado) {
@@ -386,28 +392,34 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
     return meta;
   }
 
-  /// Materiais que entram no PDF para o cliente (orcamento = previstos; finalizado = utilizados).
-  List<MaterialTarefa> _materiaisParaPdfCliente(TarefaItem tarefa) {
+  /// Lista mostrada no PDF e totais: orcamento = previstos; finalizado = utilizados,
+  /// ou previstos como fallback se finalizado sem linhas em utilizados.
+  ({List<MaterialTarefa> lista, bool fallbackPrevisto}) _resolverMateriaisPdf(
+    TarefaItem tarefa,
+  ) {
+    bool ok(MaterialTarefa m) => m.nome.trim().isNotEmpty;
     if (tarefa.status == StatusTarefa.finalizado) {
-      return tarefa.materiaisUtilizados.where((m) => m.nome.trim().isNotEmpty).toList();
+      final u = tarefa.materiaisUtilizados.where(ok).toList();
+      if (u.isNotEmpty) return (lista: u, fallbackPrevisto: false);
+      final n = tarefa.materiaisNecessarios.where(ok).toList();
+      return (lista: n, fallbackPrevisto: n.isNotEmpty);
     }
-    return tarefa.materiaisNecessarios.where((m) => m.nome.trim().isNotEmpty).toList();
+    final n = tarefa.materiaisNecessarios.where(ok).toList();
+    return (lista: n, fallbackPrevisto: false);
   }
 
-  int _sumMateriaisNecessariosCents(TarefaItem tarefa) {
+  List<MaterialTarefa> _materiaisParaPdfCliente(TarefaItem tarefa) =>
+      _resolverMateriaisPdf(tarefa).lista;
+
+  /// Soma linhas em [materiaisUtilizados] (nome preenchido). Usada no valor do topo e no resumo geral do PDF.
+  int _sumMateriaisUtilizadosSomenteCents(TarefaItem tarefa) {
     var soma = 0;
-    for (final m in tarefa.materiaisNecessarios) {
+    for (final m in tarefa.materiaisUtilizados) {
+      if (m.nome.trim().isEmpty) continue;
       final t = m.totalMaterialCents;
       if (t != null) soma += t;
     }
     return soma;
-  }
-
-  int _sumMateriaisParaTotalGeral(TarefaItem tarefa) {
-    if (tarefa.status == StatusTarefa.finalizado) {
-      return _sumMateriaisUtilizadosCents(tarefa);
-    }
-    return _sumMateriaisNecessariosCents(tarefa);
   }
 
   pw.Widget _pdfLinhaRotuloValor(String rotulo, String valor) {
@@ -464,15 +476,15 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
       pw.SizedBox(height: 10),
       _pdfLinhaRotuloValor(
         'Cliente',
-        clienteNome.isEmpty ? '—' : clienteNome,
+        clienteNome.isEmpty ? '-' : clienteNome,
       ),
       _pdfLinhaRotuloValor(
         'CPF / CNPJ do cliente',
-        docCliente.isEmpty ? '—' : docCliente,
+        docCliente.isEmpty ? '-' : docCliente,
       ),
       _pdfLinhaRotuloValor(
         'Servico ou obra',
-        tarefa.nome.trim().isEmpty ? '—' : tarefa.nome.trim(),
+        tarefa.nome.trim().isEmpty ? '-' : tarefa.nome.trim(),
       ),
     ];
 
@@ -536,18 +548,9 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
     return soma;
   }
 
-  int _sumMateriaisUtilizadosCents(TarefaItem tarefa) {
-    var soma = 0;
-    for (final m in tarefa.materiaisUtilizados) {
-      final t = m.totalMaterialCents;
-      if (t != null) soma += t;
-    }
-    return soma;
-  }
-
-  /// Soma itens + materiais (se finalizado); se nada valorizado, mantem total manual/automatico da tarefa.
+  /// Servicos + materiais utilizados; se soma zero, mantem total manual/automatico da tarefa.
   int _valorTotalCabecalhoPdf(TarefaItem tarefa) {
-    final materiais = _sumMateriaisParaTotalGeral(tarefa);
+    final materiais = _sumMateriaisUtilizadosSomenteCents(tarefa);
     final computed = _sumItensServicoCents(tarefa) + materiais;
     if (computed > 0) return computed;
     return _valorTotalEfetivoCents(tarefa);
@@ -559,52 +562,70 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
     return false;
   }
 
-  pw.Widget _pdfCell(
-    String text, {
-    bool header = false,
-    pw.TextAlign align = pw.TextAlign.left,
-    PdfColor? color,
-    PdfColor? backgroundColor,
-  }) {
-    final style = pw.TextStyle(
-      fontSize: 9,
-      fontWeight: header ? pw.FontWeight.bold : pw.FontWeight.normal,
-      color: color ?? _TaskPdfPalette.ink,
-    );
-    final child = pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 7),
-      child: pw.Text(text, style: style, textAlign: align),
-    );
-    if (backgroundColor != null) {
-      return pw.Container(color: backgroundColor, child: child);
-    }
-    return child;
+  /// Uma linha logica por trecho: sem quebras manuais e troca de pontuacao tipografica por ASCII.
+  String _pdfTextoFluxoUnico(String texto) {
+    var t = texto.replaceAll(RegExp(r'[\r\n]+'), ' ');
+    t = t.replaceAll('\u2014', '-'); // em dash
+    t = t.replaceAll('\u2013', '-'); // en dash
+    t = t.replaceAll('\u00b7', ','); // middle dot
+    t = t.replaceAll('\u2022', ','); // bullet
+    t = t.replaceAll('\u00a0', ' '); // nbsp
+    t = t.replaceAll('\u2026', '...'); // ellipsis
+    t = t.replaceAll('\u201c', '"'); // left double quote
+    t = t.replaceAll('\u201d', '"'); // right double quote
+    t = t.replaceAll('\u2018', "'"); // left single
+    t = t.replaceAll('\u2019', "'"); // right single
+    t = t.replaceAll('|', ',');
+    return t.replaceAll(RegExp(r' +'), ' ').trim();
   }
 
-  pw.Widget _pdfCaixaSubtotal(String titulo, String valor) {
+  pw.Widget _pdfCartaoListaLinhas(List<String> linhas) {
+    final effective = linhas.isEmpty ? <String>['-'] : linhas;
+    final styleBase = pw.TextStyle(
+      fontSize: 10,
+      color: _TaskPdfPalette.ink,
+      lineSpacing: 1.2,
+    );
     return pw.Container(
-      margin: const pw.EdgeInsets.only(top: 10),
-      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: pw.BoxDecoration(
-        color: PdfColor.fromInt(0xFFF8FAFC),
-        borderRadius: pw.BorderRadius.circular(8),
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(12),
         border: pw.Border.all(color: _TaskPdfPalette.border),
       ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < effective.length; i++) ...[
+            if (i > 0) pw.SizedBox(height: 6),
+            pw.Text(effective[i], style: styleBase),
+          ],
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfLinhaValorTotalForaCard(String rotulo, String valorFormatado) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(top: 10),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(
-            titulo,
-            style: pw.TextStyle(
-              fontSize: 10,
-              fontWeight: pw.FontWeight.bold,
-              color: _TaskPdfPalette.ink,
+          pw.Expanded(
+            child: pw.Text(
+              rotulo,
+              style: pw.TextStyle(
+                fontSize: 11,
+                fontWeight: pw.FontWeight.bold,
+                color: _TaskPdfPalette.ink,
+              ),
             ),
           ),
           pw.Text(
-            valor,
+            valorFormatado,
             style: pw.TextStyle(
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: pw.FontWeight.bold,
               color: _TaskPdfPalette.accent,
             ),
@@ -614,69 +635,52 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
     );
   }
 
-  pw.Widget _pdfSecaoItensTabela(TarefaItem tarefa) {
-    final headerBg = PdfColor.fromInt(0xFFE8F0FE);
-    final rows = <pw.TableRow>[
-      pw.TableRow(
-        children: [
-          _pdfCell('Item / servico', header: true, backgroundColor: headerBg),
-          _pdfCell(
-            'Qtd',
-            header: true,
-            align: pw.TextAlign.right,
-            backgroundColor: headerBg,
-          ),
-          _pdfCell(
-            'Unit.',
-            header: true,
-            align: pw.TextAlign.right,
-            backgroundColor: headerBg,
-          ),
-          _pdfCell(
-            'Total linha',
-            header: true,
-            align: pw.TextAlign.right,
-            backgroundColor: headerBg,
-          ),
-          _pdfCell(
-            'Feito',
-            header: true,
-            align: pw.TextAlign.center,
-            backgroundColor: headerBg,
-          ),
-        ],
-      ),
-      for (final item in tarefa.itens)
-        if (item.nome.trim().isNotEmpty)
-          pw.TableRow(
-            children: [
-              _pdfCell(item.nome.trim()),
-              _pdfCell(
-                '${item.quantidadeNormalizada} un',
-                align: pw.TextAlign.right,
-              ),
-              _pdfCell(
-                item.valorCents != null && item.valorCents != 0
-                    ? _formatarMoeda(item.valorCents!)
-                    : '-',
-                align: pw.TextAlign.right,
-              ),
-              _pdfCell(
-                item.totalCents != null && item.totalCents != 0
-                    ? _formatarMoeda(item.totalCents!)
-                    : '-',
-                align: pw.TextAlign.right,
-              ),
-              _pdfCell(
-                item.concluido ? 'Sim' : 'Nao',
-                align: pw.TextAlign.center,
-                color: item.concluido ? PdfColors.green800 : _TaskPdfPalette.muted,
-              ),
-            ],
-          ),
-    ];
+  List<String> _pdfLinhasItensServicoNumerados(TarefaItem tarefa) {
+    final itens = tarefa.itens.where((i) => i.nome.trim().isNotEmpty).toList();
+    final out = <String>[];
+    for (var i = 0; i < itens.length; i++) {
+      final item = itens[i];
+      final buf = StringBuffer('${i + 1}. ${_pdfTextoFluxoUnico(item.nome)}');
+      buf.write(', ${item.quantidadeNormalizada} un');
+      if (item.valorCents != null && item.valorCents != 0) {
+        buf.write(', Unit. ${_formatarMoeda(item.valorCents!)}');
+      }
+      final tc = item.totalCents;
+      if (tc != null && tc != 0) {
+        buf.write(', Total ${_formatarMoeda(tc)}');
+      }
+      buf.write(', ');
+      buf.write(item.concluido ? 'Sim' : 'Nao');
+      out.add(buf.toString());
+    }
+    return out;
+  }
 
+  List<String> _pdfLinhasMateriaisNumerados(List<MaterialTarefa> mats) {
+    final out = <String>[];
+    for (var i = 0; i < mats.length; i++) {
+      final m = mats[i];
+      final buf = StringBuffer('${i + 1}. ${_pdfTextoFluxoUnico(m.nome)}');
+      if (m.valorCents != null && m.valorCents != 0) {
+        buf.write(', Unit. ${_formatarMoeda(m.valorCents!)}');
+      }
+      final tm = m.totalMaterialCents;
+      if (tm != null && tm != 0) {
+        buf.write(', Total ${_formatarMoeda(tm)}');
+      }
+      buf.write(', ${m.quantidadeNormalizada} ${m.unidadeNormalizada}');
+      final obs = m.observacao.trim();
+      if (obs.isNotEmpty) {
+        buf.write(', ${_pdfTextoFluxoUnico(obs)}');
+      }
+      out.add(buf.toString());
+    }
+    return out;
+  }
+
+  pw.Widget _pdfSecaoItensTabela(TarefaItem tarefa) {
     final totalItens = _sumItensServicoCents(tarefa);
+    final linhas = _pdfLinhasItensServicoNumerados(tarefa);
 
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 14),
@@ -693,25 +697,12 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
           ),
           pw.SizedBox(height: 4),
           pw.Text(
-            'Cada linha descreve um servico com quantidade, valor unitario e total da linha.',
+            'Um item por linha, numerado; texto sem caracteres especiais.',
             style: pw.TextStyle(color: _TaskPdfPalette.muted, fontSize: 9),
           ),
           pw.SizedBox(height: 8),
-          pw.Table(
-            columnWidths: {
-              0: const pw.FlexColumnWidth(3.2),
-              1: const pw.FlexColumnWidth(1),
-              2: const pw.FlexColumnWidth(1.2),
-              3: const pw.FlexColumnWidth(1.2),
-              4: const pw.FlexColumnWidth(0.85),
-            },
-            border: pw.TableBorder.all(
-              color: _TaskPdfPalette.border,
-              width: 0.5,
-            ),
-            children: rows,
-          ),
-          _pdfCaixaSubtotal(
+          _pdfCartaoListaLinhas(linhas),
+          _pdfLinhaValorTotalForaCard(
             'Total dos servicos prestados',
             _formatarMoeda(totalItens),
           ),
@@ -720,13 +711,25 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
     );
   }
 
-  pw.Widget _pdfSecaoMateriaisCliente(TarefaItem tarefa, List<MaterialTarefa> mats) {
-    final titulo = tarefa.status == StatusTarefa.finalizado
-        ? 'Produtos e materiais utilizados'
-        : 'Produtos e materiais previstos';
-    final hint = tarefa.status == StatusTarefa.finalizado
-        ? 'Valores dos produtos e materiais utilizados na execucao.'
-        : 'Valores dos produtos e materiais previstos para este servico.';
+  pw.Widget _pdfSecaoMateriaisCliente(
+    TarefaItem tarefa,
+    List<MaterialTarefa> mats, {
+    bool fallbackPrevisto = false,
+  }) {
+    final titulo = fallbackPrevisto
+        ? 'Produtos e materiais (previsto - referencia)'
+        : (tarefa.status == StatusTarefa.finalizado
+            ? 'Produtos e materiais utilizados'
+            : 'Produtos e materiais previstos');
+    final subtitulo = fallbackPrevisto
+        ? 'Nao ha itens em Materiais utilizados nesta tarefa; valores abaixo referem-se ao previsto.'
+        : 'Um material por linha, numerado; texto sem caracteres especiais.';
+
+    final totalMat = mats.fold<int>(0, (s, m) {
+      final t = m.totalMaterialCents;
+      return t != null ? s + t : s;
+    });
+    final linhas = _pdfLinhasMateriaisNumerados(mats);
 
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 14),
@@ -743,119 +746,23 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
           ),
           pw.SizedBox(height: 4),
           pw.Text(
-            hint,
+            subtitulo,
             style: pw.TextStyle(color: _TaskPdfPalette.muted, fontSize: 9),
           ),
           pw.SizedBox(height: 8),
-          _pdfTabelaMateriaisPdf(
-            mats,
-            tituloSubtotal: 'Total de produtos e materiais',
+          _pdfCartaoListaLinhas(linhas),
+          _pdfLinhaValorTotalForaCard(
+            'Total de produtos e materiais',
+            _formatarMoeda(totalMat),
           ),
         ],
       ),
-    );
-  }
-
-  pw.Widget _pdfTabelaMateriaisPdf(
-    List<MaterialTarefa> mats, {
-    String tituloSubtotal = 'Total de produtos e materiais',
-  }) {
-    final headerBg = PdfColor.fromInt(0xFFE8F0FE);
-    final rows = <pw.TableRow>[
-      pw.TableRow(
-        children: [
-          _pdfCell('Material', header: true, backgroundColor: headerBg),
-          _pdfCell(
-            'Qtd',
-            header: true,
-            align: pw.TextAlign.right,
-            backgroundColor: headerBg,
-          ),
-          _pdfCell(
-            'Un.',
-            header: true,
-            align: pw.TextAlign.center,
-            backgroundColor: headerBg,
-          ),
-          _pdfCell(
-            'Unit.',
-            header: true,
-            align: pw.TextAlign.right,
-            backgroundColor: headerBg,
-          ),
-          _pdfCell(
-            'Total linha',
-            header: true,
-            align: pw.TextAlign.right,
-            backgroundColor: headerBg,
-          ),
-        ],
-      ),
-      for (final m in mats)
-        pw.TableRow(
-          children: [
-            _pdfCell(
-              m.observacao.trim().isEmpty
-                  ? m.nome.trim()
-                  : '${m.nome.trim()} (${m.observacao.trim()})',
-            ),
-            _pdfCell(
-              '${m.quantidadeNormalizada}',
-              align: pw.TextAlign.right,
-            ),
-            _pdfCell(
-              m.unidadeNormalizada,
-              align: pw.TextAlign.center,
-            ),
-            _pdfCell(
-              m.valorCents != null && m.valorCents != 0
-                  ? _formatarMoeda(m.valorCents!)
-                  : '-',
-              align: pw.TextAlign.right,
-            ),
-            _pdfCell(
-              m.totalMaterialCents != null && m.totalMaterialCents != 0
-                  ? _formatarMoeda(m.totalMaterialCents!)
-                  : '-',
-              align: pw.TextAlign.right,
-            ),
-          ],
-        ),
-    ];
-
-    final totalMat = mats.fold<int>(0, (s, m) {
-      final t = m.totalMaterialCents;
-      return t != null ? s + t : s;
-    });
-
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Table(
-          columnWidths: {
-            0: const pw.FlexColumnWidth(3),
-            1: const pw.FlexColumnWidth(0.9),
-            2: const pw.FlexColumnWidth(0.7),
-            3: const pw.FlexColumnWidth(1.2),
-            4: const pw.FlexColumnWidth(1.2),
-          },
-          border: pw.TableBorder.all(
-            color: _TaskPdfPalette.border,
-            width: 0.5,
-          ),
-          children: rows,
-        ),
-        _pdfCaixaSubtotal(
-          tituloSubtotal,
-          _formatarMoeda(totalMat),
-        ),
-      ],
     );
   }
 
   pw.Widget _pdfResumoValoresFinais(TarefaItem tarefa) {
     final si = _sumItensServicoCents(tarefa);
-    final sm = _sumMateriaisParaTotalGeral(tarefa);
+    final sm = _sumMateriaisUtilizadosSomenteCents(tarefa);
     final grand = _valorTotalCabecalhoPdf(tarefa);
     final temMateriais = _materiaisParaPdfCliente(tarefa).isNotEmpty;
 
@@ -902,7 +809,7 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text(
-                  'Total de produtos e materiais',
+                  'Total materiais utilizados',
                   style: pw.TextStyle(fontSize: 10, color: _TaskPdfPalette.ink),
                 ),
                 pw.Text(
@@ -924,7 +831,7 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                'TOTAL GERAL (servicos + produtos)',
+                'TOTAL GERAL (servicos + materiais utilizados)',
                 style: pw.TextStyle(
                   fontSize: 11,
                   fontWeight: pw.FontWeight.bold,
@@ -943,8 +850,9 @@ extension _TaskDetailsMediaPdf on TaskDetailsPage {
           ),
           pw.SizedBox(height: 6),
           pw.Text(
-            'O valor «Valor total» no topo corresponde a esta soma quando ha valores '
-            'informados nos servicos e/ou nos produtos e materiais.',
+            'O "Valor total" no topo soma os servicos e apenas materiais utilizados. '
+            'Materiais previstos (ou previsto como referencia no PDF) aparecem na secao com '
+            'subtotal proprio abaixo do cartao, mas so entram no topo quando copiados em utilizados.',
             style: pw.TextStyle(
               fontSize: 8,
               color: _TaskPdfPalette.muted,

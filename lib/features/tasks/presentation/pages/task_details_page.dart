@@ -183,6 +183,7 @@ class TaskDetailsPage extends ConsumerWidget {
             titulo: 'Materiais previstos',
             lista: tarefa.materiaisNecessarios,
             canManage: !readOnlyAccountant,
+            tituloCartaoTotal: 'Valor total — materiais previstos',
             onAdd: () => _adicionarMaterial(
               context,
               ref,
@@ -210,6 +211,7 @@ class TaskDetailsPage extends ConsumerWidget {
             titulo: 'Materiais utilizados',
             lista: tarefa.materiaisUtilizados,
             canManage: !readOnlyAccountant,
+            tituloCartaoTotal: 'Valor total — materiais utilizados',
             onAdd: () => _adicionarMaterial(
               context,
               ref,

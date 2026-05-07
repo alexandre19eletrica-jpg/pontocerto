@@ -863,10 +863,9 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
                               title: Text(entry.material.nome),
-                              subtitle: Text(
-                                entry.material.valorCents != null
-                                    ? '${entry.material.descricaoCurta} | Referencia: ${_formatarMoeda(entry.material.valorCents!)}'
-                                    : entry.material.descricaoCurta,
+                              subtitle: _subtitleMaterialBancoSugestao(
+                                context,
+                                entry.material,
                               ),
                               trailing: Wrap(
                                 spacing: 4,
@@ -964,6 +963,16 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: valorPadraoController,
+                inputFormatters: [CurrencyPtBrInputFormatter()],
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Valor unitario padrao (R\$) — opcional',
+                  hintText: 'Ex.: 12,50',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
                 controller: quantidadeController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Quantidade padrao'),
@@ -972,16 +981,6 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               TextField(
                 controller: unidadeController,
                 decoration: const InputDecoration(labelText: 'Unidade'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: valorPadraoController,
-                inputFormatters: [CurrencyPtBrInputFormatter()],
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Valor unitario padrao (R\$) — opcional',
-                  hintText: 'Ex.: 12,50',
-                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -1132,7 +1131,7 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                               return ListTile(
                                 dense: true,
                                 title: Text(material.nome),
-                                subtitle: Text(material.descricaoCurta),
+                                subtitle: _subtitleMaterialBancoSugestao(context, material),
                                 onTap: () {
                                   controller.text = material.nome;
                                   quantidadeController.text = material
@@ -1162,17 +1161,6 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               ),
               const SizedBox(height: 8),
               TextField(
-                controller: quantidadeController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Quantidade'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: unidadeController,
-                decoration: const InputDecoration(labelText: 'Unidade'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
                 controller: valorUnitarioController,
                 inputFormatters: [CurrencyPtBrInputFormatter()],
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1190,6 +1178,17 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                   labelText: 'Valor total da linha (R\$) — opcional',
                   hintText: 'Vazio: quantidade x unitario',
                 ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: quantidadeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Quantidade'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: unidadeController,
+                decoration: const InputDecoration(labelText: 'Unidade'),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -1307,17 +1306,6 @@ extension _TaskDetailsOperations on TaskDetailsPage {
               ),
               const SizedBox(height: 8),
               TextField(
-                controller: quantidadeController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Quantidade'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: unidadeController,
-                decoration: const InputDecoration(labelText: 'Unidade'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
                 controller: valorUnitarioController,
                 inputFormatters: [CurrencyPtBrInputFormatter()],
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1335,6 +1323,17 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                   labelText: 'Valor total da linha (R\$) — opcional',
                   hintText: 'Vazio: quantidade x unitario',
                 ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: quantidadeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Quantidade'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: unidadeController,
+                decoration: const InputDecoration(labelText: 'Unidade'),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -1443,11 +1442,7 @@ extension _TaskDetailsOperations on TaskDetailsPage {
                         setDialog(() => selected[i] = v ?? false);
                       },
                       title: Text(previstos[i].nome),
-                      subtitle: Text(
-                        previstos[i].descricaoCurta,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      subtitle: _subtitleMaterialBancoSugestao(context, previstos[i]),
                     ),
                 ],
               ),
@@ -1524,5 +1519,31 @@ extension _TaskDetailsOperations on TaskDetailsPage {
             materiaisUtilizados: utilizados,
           ),
         );
+  }
+
+  Widget _subtitleMaterialBancoSugestao(BuildContext context, MaterialTarefa m) {
+    final obs = m.observacao.trim();
+    final tema = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _taskMaterialLinhaPrecos(m),
+          style: tema.textTheme.bodySmall,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (obs.isNotEmpty)
+          Text(
+            obs,
+            style: tema.textTheme.bodySmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+      ],
+    );
   }
 }

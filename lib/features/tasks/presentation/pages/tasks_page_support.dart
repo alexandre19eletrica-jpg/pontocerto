@@ -168,6 +168,36 @@ String _taskItemServicoSubtitle(ItemServico item) {
   return buf.toString();
 }
 
+/// Mesmo padrao visual da linha de servico ([_taskItemServicoSubtitle]), sem estado concluido.
+/// Soma dos totais de linha dos materiais (valor manual ou unitario x quantidade).
+int _taskSumMaterialListCents(List<MaterialTarefa> lista) {
+  var soma = 0;
+  for (final m in lista) {
+    final t = m.totalMaterialCents;
+    if (t != null) soma += t;
+  }
+  return soma;
+}
+
+String _taskMaterialLinhaPrecos(MaterialTarefa m) {
+  final buf = StringBuffer()
+    ..write(m.quantidadeNormalizada)
+    ..write(' ')
+    ..write(m.unidadeNormalizada);
+  if (m.valorCents != null && m.valorCents != 0) {
+    buf
+      ..write(' · Unit. ')
+      ..write(_taskFormatMoney(m.valorCents!));
+  }
+  final total = m.totalMaterialCents;
+  if (total != null && total != 0) {
+    buf
+      ..write(' · Total ')
+      ..write(_taskFormatMoney(total));
+  }
+  return buf.toString();
+}
+
 class _OpcaoAnexo {
   _OpcaoAnexo(this.tipo, this.origem);
 

@@ -25,6 +25,7 @@ extension _TaskDetailsSections on TaskDetailsPage {
     VoidCallback? onCopiarDosPrevistos,
     required void Function(int idx) onEdit,
     required void Function(int idx) onDelete,
+    String? tituloCartaoTotal,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,11 +66,7 @@ extension _TaskDetailsSections on TaskDetailsPage {
           (entry) => _surface(
             child: ListTile(
               title: Text(entry.value.nome),
-              subtitle: Text(
-                _subtituloMaterialLista(entry.value),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              subtitle: _subtitleMaterialComoServico(context, entry.value),
               trailing: Wrap(
                 spacing: 4,
                 children: [
@@ -88,6 +85,15 @@ extension _TaskDetailsSections on TaskDetailsPage {
             ),
           ),
         ),
+        if (tituloCartaoTotal != null && lista.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          _surface(
+            child: ListTile(
+              title: Text(tituloCartaoTotal),
+              subtitle: Text(_taskFormatMoney(_taskSumMaterialListCents(lista))),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -137,19 +143,30 @@ extension _TaskDetailsSections on TaskDetailsPage {
     return ListTile(title: Text(message));
   }
 
-  String _subtituloMaterialLista(MaterialTarefa material) {
-    final parts = <String>[
-      '${material.quantidadeNormalizada} ${material.unidadeNormalizada}',
-    ];
+  /// Lista de materiais alinhada aos itens de servico: linha de quantidades/valores separada da observacao.
+  Widget _subtitleMaterialComoServico(BuildContext context, MaterialTarefa material) {
     final obs = material.observacao.trim();
-    if (obs.isNotEmpty) parts.add(obs);
-    if (material.valorCents != null && material.valorCents != 0) {
-      parts.add('Unit. ${_formatarMoeda(material.valorCents!)}');
-    }
-    final tot = material.totalMaterialCents;
-    if (tot != null && tot != 0) {
-      parts.add('Total ${_formatarMoeda(tot)}');
-    }
-    return parts.join(' · ');
+    final tema = Theme.of(context);
+    final linhaPrecos = _taskMaterialLinhaPrecos(material);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          linhaPrecos.isEmpty ? '${material.quantidadeNormalizada} ${material.unidadeNormalizada}' : linhaPrecos,
+          style: tema.textTheme.bodyMedium,
+        ),
+        if (obs.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            obs,
+            style: tema.textTheme.bodySmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
   }
 }
