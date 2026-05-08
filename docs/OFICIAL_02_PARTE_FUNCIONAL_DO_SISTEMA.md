@@ -1,6 +1,6 @@
 # Parte Funcional Oficial do Sistema
 
-Data base: 07/05/2026
+Data base: 08/05/2026
 Projeto: Ponto Certo
 
 ## Objetivo
@@ -8,15 +8,27 @@ Projeto: Ponto Certo
 Este documento define o que o sistema faz de verdade hoje.
 Ele e a referencia oficial para produto, suporte, vendas, assistente e continuidade.
 
+## Divisao oficial dos quatro documentos (ligacao entre si)
+
+| Documento | Conteudo |
+|-----------|----------|
+| **OFICIAL_01** | **Visual** — aparencia e hierarquia de telas do Ponto Certo. |
+| **OFICIAL_02** (este) | **Funcional** — comportamento, fluxos e permissoes **do produto Ponto Certo** neste repositorio. |
+| **OFICIAL_03** | **Arquitectura** — implementacao tecnica alinhada a este comportamento. |
+| **OFICIAL_04** | **Memoria** — o que foi decidido e quando (evita contradizer 01–03 sem registo). |
+
+**Dois executaveis desktop diferentes (nao misturar):**
+
+- **Ponto Certo Windows (`pontocerto.exe`)** — Flutter **deste** repo; Firebase com **`DefaultFirebaseOptions.windows`**; login/dados em nuvem alinhados ao Web; Firestore **sem** persistencia local nesta plataforma (`lib/core/firebase/firebase_init.dart`) por estabilidade do exe.
+- **Studio Ponto Certo** — aplicacao desktop **fora deste monorepo** (repo/pasta proprios), orientada ao operador do agente de engenharia/worker local; **nao** constitui modulo do ERP aqui descrito; continuidade pontual na **OFICIAL_04** quando necessario.
+
 ## Estrutura funcional do sistema
 
 O Ponto Certo e um sistema multiempresa com operacao principal web e app operacional para funcionario.
 
-**Cliente Windows (exe Flutter):** Firebase inicializa com **`DefaultFirebaseOptions.windows`** (`firebase_options.dart`); fluxo de login e dados em nuvem alinha-se ao da Web. Persistência Firestore **local** fica **desactivada** só nesta plataforma (estabilidade do executável).
-
 Versao local atual de referencia:
 
-- `1.0.87+1058`
+- `1.0.88+1059` (`pubspec.yaml`)
 
 Na frente comercial publica atual existe **dois callables de entrada leve**:
 

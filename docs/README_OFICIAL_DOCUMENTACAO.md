@@ -1,23 +1,32 @@
 # Documentacao Oficial do Projeto
 
-Data base: 07/05/2026
+Data base: 08/05/2026
 Projeto: Ponto Certo
 
-Versao local atual de referencia: `1.0.88+1059`
+Versao local atual de referencia: `1.0.88+1059` (`pubspec.yaml`)
 
 ## Objetivo
 
 Este arquivo e o ponto de entrada oficial da documentacao do projeto.
 Ele existe para evitar dispersao, duplicidade e uso de documento antigo como referencia principal.
 
+## Divisao dos quatro OFICIAL (ligacao entre si)
+
+| Ficheiro | Leia para |
+|----------|-----------|
+| [OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md](OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md) | Como deve **parecer** (visual). |
+| [OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md](OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md) | O que **faz** (funcional). |
+| [OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md](OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md) | Como esta **construido** (arquitectura). |
+| [OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md](OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md) | **Memoria** datada e decisoes (liga o cronologico aos outros tres). |
+
 ## Fonte oficial unica
 
 Toda leitura do sistema deve partir destes 4 documentos:
 
-1. [OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md)
-2. [OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md)
-3. [OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md)
-4. [OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md)
+1. [OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md](OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md)
+2. [OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md](OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md)
+3. [OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md](OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md)
+4. [OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md](OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md)
 
 ## Como usar
 
@@ -60,12 +69,12 @@ O prompt e a memoria operacional do assistente passam a ser derivados desses doc
 
 Esses arquivos continuam importantes, mas passam a ser subordinados aos 4 oficiais:
 
-- [PROMPT_ASSISTENTE_PONTO_CERTO.md](/C:/Users/hp/pontocerto/docs/PROMPT_ASSISTENTE_PONTO_CERTO.md)
-- [CONTINUIDADE_ATUAL.md](/C:/Users/hp/pontocerto/docs/registro_continuidade/CONTINUIDADE_ATUAL.md)
-- [MEMORIA_VIVA_SISTEMA.md](/C:/Users/hp/pontocerto/docs/registro_continuidade/MEMORIA_VIVA_SISTEMA.md)
-- [ESTADO_ATUAL_DO_SISTEMA.md](/C:/Users/hp/pontocerto/docs/registro_continuidade/ESTADO_ATUAL_DO_SISTEMA.md)
-- [ALINHAMENTO_MODULOS_E_PERMISSOES.md](/C:/Users/hp/pontocerto/docs/registro_continuidade/ALINHAMENTO_MODULOS_E_PERMISSOES.md)
-- [MATRIZ_ACESSO_PONTO_CERTO.txt](/C:/Users/hp/pontocerto/docs/registro_continuidade/MATRIZ_ACESSO_PONTO_CERTO.txt)
+- [PROMPT_ASSISTENTE_PONTO_CERTO.md](PROMPT_ASSISTENTE_PONTO_CERTO.md)
+- [CONTINUIDADE_ATUAL.md](registro_continuidade/CONTINUIDADE_ATUAL.md)
+- [MEMORIA_VIVA_SISTEMA.md](registro_continuidade/MEMORIA_VIVA_SISTEMA.md)
+- [ESTADO_ATUAL_DO_SISTEMA.md](registro_continuidade/ESTADO_ATUAL_DO_SISTEMA.md)
+- [ALINHAMENTO_MODULOS_E_PERMISSOES.md](registro_continuidade/ALINHAMENTO_MODULOS_E_PERMISSOES.md)
+- [MATRIZ_ACESSO_PONTO_CERTO.txt](registro_continuidade/MATRIZ_ACESSO_PONTO_CERTO.txt)
 
 ## Regra de governanca documental
 

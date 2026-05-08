@@ -1,6 +1,6 @@
 # Parte Visual Oficial do Sistema
 
-Data base: 07/05/2026
+Data base: 08/05/2026
 Projeto: Ponto Certo
 
 ## Objetivo
@@ -12,6 +12,19 @@ Ele existe para evitar divergencia entre:
 - vitrines comerciais
 - demos internas
 - novas implementacoes de UI
+
+Versao de referencia do app (este repositorio): `1.0.88+1059` (`pubspec.yaml`).
+
+## Divisao oficial dos quatro documentos (ligacao entre si)
+
+| Documento | Conteudo |
+|-----------|----------|
+| **OFICIAL_01** (este) | **Visual** — como as telas do **Ponto Certo** (web, Android, exe ERP) devem parecer e organizar-se. |
+| **OFICIAL_02** | **Funcional** — o que o utilizador consegue fazer, fluxos e permissoes. |
+| **OFICIAL_03** | **Arquitectura** — modulos, rotas, Functions, integracoes e dados. |
+| **OFICIAL_04** | **Memoria** — registo datado, decisoes e continuidade (inclui assuntos cuja UI vive fora deste repo quando relevante). |
+
+**Ambito deste ficheiro:** nao descreve pixel-a-pixel o **Studio Ponto Certo** (IDE desktop separado, outro codigo). A UI web/Android/exe do produto **Ponto Certo** sim; referencias ao agente de engenharia na **Plataforma** referem-se as telas **dentro** deste projeto (`/platform-admin/agente-engenharia`).
 
 ## Principio visual central
 

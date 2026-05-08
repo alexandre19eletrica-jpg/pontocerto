@@ -1,10 +1,20 @@
 # Memoria e Registro Atual Oficial do Sistema
 
-Data base: 07/05/2026
+Data base: 08/05/2026
 Projeto: Ponto Certo
 
+## Divisao oficial dos quatro documentos (ligacao entre si)
 
-**Registo (08/05/2026 — Windows exe ERP vs Studio):** o cenário “executável no PC a não responder” referido pelo operador aplicava-se ao **Studio Ponto Certo** (repo/pasta **`StudioPontoCerto`**, não o cliente Flutter principal neste repositório). No **Ponto Certo** (`lib/` deste mono-repo) mantêm-se mesmas melhorias de arranque Windows (Firebase **`windows`**, **`usePathUrlStrategy`** só Web, Firestore sem persistência local no Windows) por utilidade ao **`pontocerto.exe`**. O Studio deve ser ajustado na cópia local **`C:\StudioPontoCerto`** (dois **`addPostFrameCallback`** antes de **`Firebase.initializeApp`**, **`studio_shell`** sem bloquear a shell em **`await roots.load()`**, pasta por defeito **`C:\Users\hp\pontocerto`** na detecção).
+| Documento | Papel |
+|-----------|--------|
+| **OFICIAL_01** | Visual do **Ponto Certo** (este repo). |
+| **OFICIAL_02** | Funcional do **Ponto Certo**. |
+| **OFICIAL_03** | Arquitectura tecnica do **Ponto Certo** (+ backend partilhado com ferramentas externas). |
+| **OFICIAL_04** (este) | **Memoria**: decisoes, datas, versao; ponte quando algo (ex.: **Studio** desktop) **nao** esta no codigo deste mono-repo mas afecta continuidade ou operadores. |
+
+Este ficheiro **nao** substitui 01–03 em visual/funcional/arquitectura; regista *o que foi acordado* para nao ficarem «desligados» uns dos outros.
+
+**Registo (08/05/2026 — Windows exe ERP vs Studio):** o cenário “executável no PC a não responder” referido pelo operador aplicava-se ao **Studio Ponto Certo** (repo/pasta **`StudioPontoCerto`**, não o cliente Flutter principal neste repositório). No **Ponto Certo** (`lib/` deste mono-repo) mantêm-se melhorias de arranque Windows (Firebase **`windows`**, **`usePathUrlStrategy`** só Web, Firestore sem persistência local no Windows) por utilidade ao **`pontocerto.exe`** — ver **OFICIAL_03**. O Studio ajusta-se na cópia local (ex.: **`C:\StudioPontoCerto`**): frames extra antes de **`Firebase.initializeApp`**, shell sem bloquear em **`await roots.load()`**, divisão de providers para não inicializar **Functions** antes do login, **Firebase Auth** apenas após gesto (**Entrar** / «sessão guardada»), **`FirebaseFunctions`** lazy no serviço do agente.
 
 **Registo (07/05/2026 — Agente de Engenharia: Plataforma + publicacao web):** UI **fora da Governanca** — rota **`/platform-admin/agente-engenharia`**, primeiro item do submenu **Plataforma > Agente Engenharia** (apenas **OWNER empresa suprema**); cartao removido do hub Governanca; link antigo `?v=engineering_agent` redireciona para a nova rota. Layout orientado a chat: barra compacta (projeto, modo, novo projeto, menu **Entrega e acoes**); lista de sessoes em coluna (desktop) ou folha inferior (ecra estreito); area de mensagens em altura flexivel; campo de escrita multilinha. Publicacao confirmada pelo operador: build web + deploy **`functions` + `hosting`**. Prompt OpenAI e janela de historico nas Functions **sem mudanca funcional nesta rodada** (continua `buildEngineeringAgentSystemPromptPontocerto` / `buildEngineeringAgentSystemPromptExternal`, ultimas **16** mensagens por pedido, `temperature` **0.2**).
 

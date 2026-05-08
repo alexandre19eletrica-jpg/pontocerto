@@ -1,11 +1,22 @@
 ﻿# Arquitetura Tecnica Completa do Sistema
 
-Data base: 07/05/2026
+Data base: 08/05/2026
 Projeto: Ponto Certo
 
 ## Objetivo
 
 Este documento consolida a arquitetura tecnica oficial do sistema para desenvolvimento, auditoria e continuidade.
+
+## Divisao oficial dos quatro documentos (ligacao entre si)
+
+| Documento | Conteudo |
+|-----------|----------|
+| **OFICIAL_01** | **Visual**. |
+| **OFICIAL_02** | **Funcional** — referencia de comportamento. |
+| **OFICIAL_03** (este) | **Arquitectura** — como o codigo e os servicos realizam o funcional. |
+| **OFICIAL_04** | **Memoria** — decisoes e cronologia; consultar quando houver duvida entre «o que dizia o doc» e «o que ficou decidido». |
+
+**Codigo neste repositorio (`lib/`, `functions/`, etc.)** implementa o **Ponto Certo**. O **Studio Ponto Certo** (desktop, worker local) e projeto **separado**: integra-se ao mesmo backend Firebase/Functions descrito aqui para `engineeringAgent*`, mas **nao** faz parte da arvore Flutter deste mono-repo.
 
 ## Camadas principais
 
