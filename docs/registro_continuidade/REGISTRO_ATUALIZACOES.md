@@ -6,6 +6,13 @@ Regra de projeto: `.cursor/rules/documentacao-git-e-registro.mdc`.
 Este arquivo e o log operacional resumido do que foi publicado (web/functions/app).  
 Atualize sempre que entrar qualquer mudanca em producao.
 
+## 2026-05-07
+
+- **Agente de Engenharia / navegacao**: saida da Governanca para **`/platform-admin/agente-engenharia`**; primeiro item **Plataforma > Agente Engenharia** (`PlatformAdminSection.engineeringAgent`, `kPlatformAdminEngineeringAgentPath`); cartao removido de `GovernanceHub`; redirect GoRouter de **`governanca?v=engineering_agent`** para a nova rota.
+- **Agente de Engenharia / UI**: `EngineeringAgentPage` — toolbar compacta; sessoes em painel estreito ou bottom sheet; chat em **Expanded**; **TextField** de mensagem multilinha; acoes e slots estruturados via menu **Entrega e acoes** (`PopupMenuButton`).
+- **Publicacao**: sequencia operator — `flutter build web --release --no-tree-shake-icons`; `npm run build` em `functions`; `firebase deploy --only "functions,hosting" --project pontocerto-e1dab` (pacote completo). Backend do agente **sem alteracao de prompt/thread** nesta rodada.
+- **Documentacao oficial**: `OFICIAL_01`, `OFICIAL_02`, `OFICIAL_03`, `OFICIAL_04`, `CONTINUIDADE_ATUAL.md`, `README_OFICIAL_DOCUMENTACAO.md` alinhados a esta navegacao e deploy.
+
 ## 2026-05-06
 
 - **Governanca / comunicacao em massa**: painel **E-mail em massa** (`?v=email_massa`) com cartao no hub da governanca; callables `platformGovernanceCollectAudienceEmails` e `platformGovernanceSendAudienceEmail` (admin plataforma, runtime pesado no envio); reuniao de e-mails de carteira (owners + contador convite quando existir), pre-cadastro leve empresa/escritorio, pos-onboarding (Passo C), convites trial nao apagados; envio via `enviarEmailHtml` com corpo texto simples escapado para HTML e campo `text` opcional em SMTP/SendGrid; auditoria `governance_send_audience_email`. Flutter: `GovernanceBulkEmailPanel`, metodos em `PlatformAdminService`.

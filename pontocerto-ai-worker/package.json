@@ -1,0 +1,22 @@
+{
+  "name": "pontocerto-ai-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Worker local do Agente de Engenharia Ponto Certo — PowerShell, Flutter, Firebase CLI, Git (execucao no seu PC).",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^12.7.0",
+    "ws": "^8.18.0"
+  }
+}

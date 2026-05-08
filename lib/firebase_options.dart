@@ -33,10 +33,9 @@ class DefaultFirebaseOptions {
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        // Mesmo conjunto que Web (Firebase Flutter desktop); registar app Windows
+        // no console substitui estes valores via FlutterFire CLI se preferir.
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -58,6 +57,15 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAAYas9k5i3Up8NqHh-g-nx_vskULZmnGI',
+    appId: '1:1074663509241:web:095492e2ec92739da06628',
+    messagingSenderId: '1074663509241',
+    projectId: 'pontocerto-e1dab',
+    authDomain: 'pontocerto-e1dab.firebaseapp.com',
+    storageBucket: 'pontocerto-e1dab.firebasestorage.app',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyAAYas9k5i3Up8NqHh-g-nx_vskULZmnGI',
     appId: '1:1074663509241:web:095492e2ec92739da06628',
     messagingSenderId: '1074663509241',

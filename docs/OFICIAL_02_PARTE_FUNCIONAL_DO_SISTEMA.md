@@ -1,6 +1,6 @@
 # Parte Funcional Oficial do Sistema
 
-Data base: 02/05/2026
+Data base: 07/05/2026
 Projeto: Ponto Certo
 
 ## Objetivo
@@ -11,6 +11,8 @@ Ele e a referencia oficial para produto, suporte, vendas, assistente e continuid
 ## Estrutura funcional do sistema
 
 O Ponto Certo e um sistema multiempresa com operacao principal web e app operacional para funcionario.
+
+**Cliente Windows (exe Flutter):** Firebase inicializa com **`DefaultFirebaseOptions.windows`** (`firebase_options.dart`); fluxo de login e dados em nuvem alinha-se ao da Web. Persistência Firestore **local** fica **desactivada** só nesta plataforma (estabilidade do executável).
 
 Versao local atual de referencia:
 
@@ -54,6 +56,19 @@ Depois do cadastro publico completo com CNPJ liberado, o sistema encaminha o uti
 - Observabilidade
 - Governanca comercial global
 - Administracao global de empresas
+
+### Agente de Engenharia (Plataforma, empresa suprema)
+
+Painel interno em **`/platform-admin/agente-engenharia`** (submenu **Plataforma**, primeiro item — apenas **OWNER da empresa suprema**; mesmo criterio nas Cloud Functions). Conversa em portugues com modelo OpenAI cuja **credencial segue o mesmo pipeline do assistente** (`obterConfigAssistantRuntime` na empresa suprema), **sem chave no cliente**. Pedidos HTTP usam **system prompt** distinto para **modo Ponto Certo** (`__pontocerto_builtin__`) vs **projeto externo/novo**; historico enviado ao modelo: ate **16** mensagens recentes da sessao (user/assistant alternados), mais a mensagem atual; **temperatura 0.2**. Memoria persistente: documentos Firestore da sessao/subcoleção `messages`; campos derivados na sessao (`lastPlan`, `lastFiles`, …) alimentam UI e **Gerar comando**; **Registrar continuidade** grava nota em `engineering_agent_tasks` + auditoria (**nao** entra automaticamente no proximo prompt).
+
+**Dois modos de trabalho:**
+
+1. **Modo Ponto Certo** (`projectId` builtin `__pontocerto_builtin__`): evolui o monorepo oficial; system prompt obriga leitura/respeito dos docs `OFICIAL_*`, `CONTINUIDADE_ATUAL`, `REGISTRO_ATUALIZACOES`, `ESTADO_SISTEMA_VERIFICAVEL_GERADO`; regras Firebase/multiempresa/suprema/publicacao.
+2. **Modo projeto externo ou novo** (documentos em `engineering_agent_projects` criados pelo operador): contexto **isolado** — nao impor docs OFICIAL do Ponto Certo; stack heuristica a partir de manifesto/README colado; `rootPath` e declaracao de autorizacao (sem acesso a disco no servidor).
+
+Comportamento esperado do modelo: marcadores `<<<PLANO>>>`, `<<<ARQUIVOS>>>`, `<<<DOC>>>`, `<<<RISCOS>>>`, `<<<IMPACTO>>>`, `<<<PATCH_PREVIEW>>>`, `<<<COMANDO>>>`, `<<<RESPOSTA>>>`; comando PowerShell **uma linha**; sem deploy/AAB/push automaticos; sem segredos na UI.
+
+Firestore (Admin SDK apenas): sessoes por `projectId`, subcoleção `messages`, `engineering_agent_projects`, `engineering_agent_project_contexts`, `engineering_agent_patches` (rascunho por mensagem), `engineering_agent_operator_prefs`, `engineering_agent_tasks`, `engineering_agent_audit`. **Registrar continuidade** grava texto em task + auditoria. Worker local descrito em `docs/engineering_agent_worker/README.md`; execucao real no disco na proxima fase.
 
 ### Governanca comercial e financeira global
 

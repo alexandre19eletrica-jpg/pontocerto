@@ -1,5 +1,6 @@
 /// Seções do painel interno [PlatformAdminPage], roteadas em `/platform-admin/...`.
 enum PlatformAdminSection {
+  engineeringAgent,
   escritorios,
   governanca,
   convidar,
@@ -7,6 +8,7 @@ enum PlatformAdminSection {
   integracoes,
 }
 
+const String kPlatformAdminEngineeringAgentPath = '/platform-admin/agente-engenharia';
 const String kPlatformAdminEscritoriosPath = '/platform-admin/escritorios';
 const String kPlatformAdminGovernancaPath = '/platform-admin/governanca';
 const String kPlatformAdminConvidarPath = '/platform-admin/convidar';

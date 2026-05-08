@@ -1055,6 +1055,45 @@ service cloud.firestore {
       allow read, create, update, delete: if false;
     }
 
+    match /engineering_agent_sessions/{docId} {
+      allow read, write: if false;
+      match /messages/{messageId} {
+        allow read, write: if false;
+      }
+    }
+
+    match /engineering_agent_messages/{docId} {
+      allow read, write: if false;
+    }
+
+    match /engineering_agent_tasks/{docId} {
+      allow read, write: if false;
+    }
+
+    match /engineering_agent_audit/{docId} {
+      allow read, write: if false;
+    }
+
+    match /engineering_agent_projects/{docId} {
+      allow read, write: if false;
+    }
+
+    match /engineering_agent_project_contexts/{docId} {
+      allow read, write: if false;
+    }
+
+    match /engineering_agent_patches/{docId} {
+      allow read, write: if false;
+    }
+
+    match /engineering_agent_operator_prefs/{docId} {
+      allow read, write: if false;
+    }
+
+    match /engineering_agent_worker_jobs/{docId} {
+      allow read, write: if false;
+    }
+
     match /payroll_documents/{docId} {
       allow read: if signedIn() &&
         (

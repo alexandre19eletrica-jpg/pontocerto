@@ -21811,6 +21811,1023 @@ exports.lookupBrazilCep = functions.https.onCall(async (data, context) => {
   return { ...payload, cacheHit: false };
 });
 
+// --- Agente de Engenharia (governanca plataforma; credencial OpenAI = mesmo pipeline do assistente) ---
+
+const ENGINEERING_AGENT_THREAD_LIMIT = 16;
+
+const ENGINEERING_AGENT_BUILTIN_PROJECT_ID = '__pontocerto_builtin__';
+
+function buildEngineeringAgentMarkerBlock(): string[] {
+  return [
+    'Use obrigatoriamente os marcadores abaixo (linhas exatas). Nao altere os nomes das tags.',
+    '<<<PLANO>>>',
+    '(plano curto)',
+    '<<<ARQUIVOS>>>',
+    '(caminhos relativos, um por linha, ou - )',
+    '<<<DOC>>>',
+    '(documentacao a atualizar ou - ; no modo externo: docs do projeto autorizado, sem misturar com OFICIAL_* do Ponto Certo)',
+    '<<<RISCOS>>>',
+    '(riscos evitados ou mitigados — bullet curto)',
+    '<<<IMPACTO>>>',
+    '(impacto visual / funcional / arquitetural — bullet curto)',
+    '<<<PATCH_PREVIEW>>>',
+    '(diff ou patch resumido em texto; nao executar comandos destrutivos sem aprovacao do operador)',
+    '<<<COMANDO>>>',
+    '(uma unica linha PowerShell ou - )',
+    '<<<RESPOSTA>>>',
+    '(explicacao detalhada, passos, orientacao)',
+  ];
+}
+
+function buildEngineeringAgentSystemPromptPontocerto(): string {
+  return [
+    'Voce e o Agente de Engenharia interno do produto Ponto Certo — **modo Ponto Certo**.',
+    'Responda sempre em portugues do Brasil.',
+    '',
+    'Regras obrigatorias (este modo):',
+    '- Evolui o Ponto Certo real; nao crie um sistema paralelo do zero salvo pedido explicito do operador para prototipo descartavel.',
+    '- Nunca revele nem peca token OpenAI, Firebase, Focus, Asaas ou outros segredos.',
+    '- Nao prometa deploy automatico, push em master, AAB ou comandos destrutivos sem confirmacao explicita.',
+    '- Respeite Flutter, Firebase, Functions, Firestore rules, multiempresa, permissoes, auditoria e empresa suprema.',
+    '- O codigo e docs oficiais nao estao neste servidor; o operador deve consultar no clone local:',
+    '  docs/OFICIAL_01_PARTE_VISUAL_DO_SISTEMA.md',
+    '  docs/OFICIAL_02_PARTE_FUNCIONAL_DO_SISTEMA.md',
+    '  docs/OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md',
+    '  docs/OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md',
+    '  docs/registro_continuidade/CONTINUIDADE_ATUAL.md',
+    '  docs/registro_continuidade/REGISTRO_ATUALIZACOES.md',
+    '  docs/ESTADO_SISTEMA_VERIFICAVEL_GERADO.md',
+    '- Apos alteracao relevante, indique quais OFICIAL_* e continuidade atualizar; REGISTRO_ATUALIZACOES apenas quando houver publicacao/build/versao.',
+    '- Comando PowerShell final: uma unica linha; lib/web Flutter → build web + deploy hosting; functions → build + deploy functions; firestore.rules → deploy rules; AAB somente com versao incrementada conforme docs.',
+    '- Indique sempre projeto (Ponto Certo), arquivos afetados, risco e impacto.',
+    '',
+    ...buildEngineeringAgentMarkerBlock(),
+  ].join('\n');
+}
+
+function buildEngineeringAgentSystemPromptExternal(params: {
+  projectName: string;
+  projectType: string;
+  rootPath: string;
+  stackDetected: string;
+  contextNotes: string;
+}): string {
+  return [
+    'Voce e o Agente de Engenharia — **modo projeto externo/universal**.',
+    'Responda sempre em portugues do Brasil.',
+    '',
+    `Projeto autorizado: "${params.projectName}" (tipo: ${params.projectType}).`,
+    `Root declarado pelo operador (nao acede fora disto sem worker local): ${params.rootPath || '-'}.`,
+    `Stack/heuristica: ${params.stackDetected || 'nao detetada'}.`,
+    params.contextNotes ? `Contexto repo (fragmentos/README/package): ${params.contextNotes}` : '',
+    '',
+    'Regras deste modo:',
+    '- **Nao** use os documentos OFICIAL_01..04 nem continuidade do Ponto Certo como regra obrigatoria; trabalhe apenas no repositorio/projeto autorizado.',
+    '- Nunca mistures pedidos ou convencoes do Ponto Certo com este projeto.',
+    '- Nunca revele tokens ou segredos; nao executes deploy nem comandos destrutivos sem aprovacao.',
+    '- Se o operador pedir explicitamente, podes propor criacao de projeto novo dentro do root autorizado.',
+    '- Deteta stack a partir do manifesto/colagem do operador (package.json, pubspec.yaml, firebase.json, Dockerfile, etc.).',
+    '- Documentacao: atualiza apenas docs pertinentes **deste** projeto (ex.: README), nao docs oficiais do Ponto Certo.',
+    '- Indique projeto, arquivos afetados, risco, impacto e comando PowerShell numa linha quando aplicavel.',
+    '',
+    ...buildEngineeringAgentMarkerBlock(),
+  ]
+    .filter((line) => line.length > 0)
+    .join('\n');
+}
+
+function detectEngineeringStackSnippet(snippet: string): string {
+  const s = snippet.slice(0, 24000).toLowerCase();
+  const hints: string[] = [];
+  if (s.includes('flutter') || s.includes('pubspec.yaml') || s.includes('"sdk":')) {
+    hints.push('Flutter/Dart');
+  }
+  if (s.includes('package.json') || s.includes('"dependencies"') || s.includes('node_modules')) {
+    hints.push('Node.js/npm');
+  }
+  if (s.includes('firebase.json') || s.includes('firestore.rules')) {
+    hints.push('Firebase');
+  }
+  if (s.includes('dockerfile') || s.includes('docker-compose')) {
+    hints.push('Docker');
+  }
+  if (s.includes('[tool.poetry]') || s.includes('pyproject.toml')) {
+    hints.push('Python');
+  }
+  if (s.includes('cargo.toml')) {
+    hints.push('Rust');
+  }
+  return hints.length > 0 ? hints.join(', ') : 'Indefinido — peca ao operador README ou manifesto.';
+}
+
+function parseEngineeringAgentMarkers(reply: string): {
+  plan: string;
+  files: string;
+  docs: string;
+  risks: string;
+  impact: string;
+  patchPreview: string;
+  command: string;
+  answer: string;
+} {
+  const sliceBetween = (text: string, startTag: string, endTags: string[]): string => {
+    const start = text.indexOf(startTag);
+    if (start < 0) {
+      return '';
+    }
+    let rest = text.slice(start + startTag.length);
+    let end = rest.length;
+    for (const tag of endTags) {
+      const i = rest.indexOf(tag);
+      if (i >= 0 && i < end) {
+        end = i;
+      }
+    }
+    return rest.slice(0, end).trim();
+  };
+
+  const plan = sliceBetween(reply, '<<<PLANO>>>', ['<<<ARQUIVOS>>>']);
+  const files = sliceBetween(reply, '<<<ARQUIVOS>>>', ['<<<DOC>>>']);
+  const docs = sliceBetween(reply, '<<<DOC>>>', ['<<<RISCOS>>>']);
+  const risks = sliceBetween(reply, '<<<RISCOS>>>', ['<<<IMPACTO>>>']);
+  const impact = sliceBetween(reply, '<<<IMPACTO>>>', ['<<<PATCH_PREVIEW>>>']);
+  const patchPreview = sliceBetween(reply, '<<<PATCH_PREVIEW>>>', ['<<<COMANDO>>>']);
+  const command = sliceBetween(reply, '<<<COMANDO>>>', ['<<<RESPOSTA>>>']);
+  let answer = sliceBetween(reply, '<<<RESPOSTA>>>', []);
+  if (!answer) {
+    answer = reply.trim();
+  }
+  return { plan, files, docs, risks, impact, patchPreview, command, answer };
+}
+
+async function engineeringAgentChatCompletion(params: {
+  config: AssistantConfig;
+  system: string;
+  turns: Array<{ role: 'user' | 'assistant'; content: string }>;
+  userMessage: string;
+}): Promise<{ text: string; usage: Record<string, unknown> }> {
+  const messages: Array<{ role: string; content: string }> = [
+    { role: 'system', content: params.system },
+    ...params.turns.map((t) => ({ role: t.role, content: t.content })),
+    { role: 'user', content: params.userMessage },
+  ];
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${params.config.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: params.config.model,
+      temperature: 0.2,
+      messages,
+    }),
+  });
+  const payload = (await response.json()) as Record<string, unknown>;
+  if (!response.ok) {
+    const err = asRecord(payload.error);
+    throw new functions.https.HttpsError(
+      'internal',
+      asTrimmedString(err.message) || 'Falha ao consultar o modelo.',
+    );
+  }
+  const choices = Array.isArray(payload.choices) ? payload.choices : [];
+  const first = choices.length > 0 ? asRecord(choices[0]) : {};
+  const msg = asRecord(first.message);
+  const text = asTrimmedString(msg.content);
+  return { text, usage: asRecord(payload.usage) };
+}
+
+async function assertEngineeringAgentCaller(context: functions.https.CallableContext): Promise<{
+  claims: Claims;
+  profile: Record<string, unknown>;
+}> {
+  const claims = assertClaims(context);
+  assertSupremePlatformAccess(claims);
+  const profile = await carregarUsuarioMesmoTenant(claims.uid, claims);
+  return { claims, profile };
+}
+
+exports.engineeringAgentListSessions = functions.https.onCall(async (data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  const filterProjectId = asTrimmedString(data?.projectId) || ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+  const snap = await admin
+    .firestore()
+    .collection('engineering_agent_sessions')
+    .where('ownerUid', '==', claims.uid)
+    .orderBy('updatedAt', 'desc')
+    .limit(80)
+    .get();
+
+  let sessions = snap.docs.map((d) => {
+    const row = asRecord(d.data());
+    const pid = asTrimmedString(row.projectId) || ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+    return {
+      id: d.id,
+      title: asTrimmedString(row.title) || 'Sessao',
+      updatedAtIso: timestampToIsoString(row.updatedAt),
+      preview: asTrimmedString(row.lastPreview).slice(0, 200),
+      patchApproved: row.patchApproved === true,
+      projectId: pid,
+    };
+  });
+
+  if (filterProjectId === ENGINEERING_AGENT_BUILTIN_PROJECT_ID) {
+    sessions = sessions.filter((s) => s.projectId === ENGINEERING_AGENT_BUILTIN_PROJECT_ID);
+  } else {
+    sessions = sessions.filter((s) => s.projectId === filterProjectId);
+  }
+  sessions = sessions.slice(0, 40);
+
+  return { ok: true, sessions };
+});
+
+exports.engineeringAgentGetSession = functions.https.onCall(async (data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  const sessionId = asTrimmedString(data?.sessionId);
+  if (!sessionId) {
+    throw new functions.https.HttpsError('invalid-argument', 'sessionId obrigatorio.');
+  }
+  const sref = admin.firestore().collection('engineering_agent_sessions').doc(sessionId);
+  const ss = await sref.get();
+  if (!ss.exists) {
+    throw new functions.https.HttpsError('not-found', 'Sessao nao encontrada.');
+  }
+  const sdata = asRecord(ss.data());
+  if (asTrimmedString(sdata.ownerUid) !== claims.uid) {
+    throw new functions.https.HttpsError('permission-denied', 'Sessao de outro utilizador.');
+  }
+  const msgs = await sref.collection('messages').orderBy('createdAt', 'asc').limit(80).get();
+  const messages = msgs.docs.map((d) => {
+    const m = asRecord(d.data());
+    return {
+      id: d.id,
+      role: asTrimmedString(m.role) || 'user',
+      text: asTrimmedString(m.text),
+      createdAtIso: timestampToIsoString(m.createdAt),
+    };
+  });
+
+  const pid = asTrimmedString(sdata.projectId) || ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+  const ptype = asTrimmedString(sdata.projectType) || 'pontocerto';
+
+  return {
+    ok: true,
+    session: {
+      id: sessionId,
+      title: asTrimmedString(sdata.title),
+      patchApproved: sdata.patchApproved === true,
+      projectId: pid,
+      projectType: ptype,
+      lastPlan: asTrimmedString(sdata.lastPlan),
+      lastFiles: asTrimmedString(sdata.lastFiles),
+      lastDocs: asTrimmedString(sdata.lastDocs),
+      lastRisks: asTrimmedString(sdata.lastRisks),
+      lastImpact: asTrimmedString(sdata.lastImpact),
+      lastPatchPreview: asTrimmedString(sdata.lastPatchPreview),
+      lastCommand: asTrimmedString(sdata.lastCommand),
+      updatedAtIso: timestampToIsoString(sdata.updatedAt),
+    },
+    messages,
+  };
+});
+
+exports.engineeringAgentSendMessage = HEAVY_RUNTIME.https.onCall(async (data, context) => {
+  const { claims, profile } = await assertEngineeringAgentCaller(context);
+  const message = asTrimmedString(data?.message);
+  let sessionId = asTrimmedString(data?.sessionId);
+  const requestedProjectId = asTrimmedString(data?.projectId) || ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+  if (!message) {
+    throw new functions.https.HttpsError('invalid-argument', 'message obrigatoria.');
+  }
+
+  const assistantCfg = await obterConfigAssistantRuntime(claims.companyId);
+  const missingCfg = missingAssistantConfig(assistantCfg);
+  if (missingCfg.length > 0) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `Modelo indisponivel. Configure: ${missingCfg.join(', ')}.`,
+    );
+  }
+
+  const db = admin.firestore();
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  let sessionRef = sessionId ? db.collection('engineering_agent_sessions').doc(sessionId) : null;
+
+  let externalProject: Record<string, unknown> | null = null;
+  let projectContextDoc: Record<string, unknown> | null = null;
+  let effectiveProjectId = ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+  let effectiveProjectType = 'pontocerto';
+
+  if (requestedProjectId !== ENGINEERING_AGENT_BUILTIN_PROJECT_ID) {
+    const pref = await db.collection('engineering_agent_projects').doc(requestedProjectId).get();
+    if (!pref.exists) {
+      throw new functions.https.HttpsError('not-found', 'Projeto nao encontrado ou sem autorizacao.');
+    }
+    externalProject = asRecord(pref.data());
+    if (asTrimmedString(externalProject.ownerUid) !== claims.uid) {
+      throw new functions.https.HttpsError('permission-denied', 'Projeto de outro utilizador.');
+    }
+    effectiveProjectId = requestedProjectId;
+    effectiveProjectType = asTrimmedString(externalProject.type) || 'externo';
+    const ctxSnap = await db.collection('engineering_agent_project_contexts').doc(requestedProjectId).get();
+    projectContextDoc = ctxSnap.exists ? asRecord(ctxSnap.data()) : {};
+    await pref.ref.set({ lastUsedAt: now, updatedAt: now }, { merge: true });
+  }
+
+  if (sessionRef) {
+    const snap = await sessionRef.get();
+    if (!snap.exists || asTrimmedString(asRecord(snap.data()).ownerUid) !== claims.uid) {
+      throw new functions.https.HttpsError('permission-denied', 'Sessao invalida.');
+    }
+    const existingPid =
+      asTrimmedString(asRecord(snap.data()).projectId) || ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+    if (existingPid !== effectiveProjectId) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Esta sessao pertence a outro projeto. Abra uma nova conversa.',
+      );
+    }
+  } else {
+    sessionRef = db.collection('engineering_agent_sessions').doc();
+    sessionId = sessionRef.id;
+    const titleBase = message.replace(/\s+/g, ' ').trim().slice(0, 72);
+    await sessionRef.set({
+      ownerUid: claims.uid,
+      ownerCompanyId: claims.companyId,
+      ownerEmail: asTrimmedString(profile.email).toLowerCase(),
+      projectId: effectiveProjectId,
+      projectType: effectiveProjectType,
+      title: titleBase || 'Nova sessao',
+      createdAt: now,
+      updatedAt: now,
+      patchApproved: false,
+      lastPreview: '',
+      lastPlan: '',
+      lastFiles: '',
+      lastDocs: '',
+      lastRisks: '',
+      lastImpact: '',
+      lastPatchPreview: '',
+      lastCommand: '',
+    });
+
+    await db.collection('engineering_agent_tasks').add({
+      sessionId,
+      projectId: effectiveProjectId,
+      kind: 'session_created',
+      title: 'Sessao criada',
+      status: 'done',
+      payload: { projectType: effectiveProjectType },
+      ownerUid: claims.uid,
+      createdAt: now,
+    });
+  }
+
+  const msgCol = sessionRef.collection('messages');
+  await msgCol.add({
+    role: 'user',
+    text: message,
+    ownerUid: claims.uid,
+    projectId: effectiveProjectId,
+    createdAt: now,
+  });
+
+  const historySnap = await msgCol.orderBy('createdAt', 'desc').limit(ENGINEERING_AGENT_THREAD_LIMIT).get();
+  const ordered = [...historySnap.docs].reverse();
+  const turns: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+  for (const d of ordered) {
+    const md = asRecord(d.data());
+    const roleRaw = asTrimmedString(md.role);
+    const text = asTrimmedString(md.text);
+    if (!text) {
+      continue;
+    }
+    if (roleRaw === 'assistant') {
+      turns.push({ role: 'assistant', content: text });
+    } else if (roleRaw === 'user') {
+      turns.push({ role: 'user', content: text });
+    }
+  }
+  turns.pop();
+
+  let systemPrompt = buildEngineeringAgentSystemPromptPontocerto();
+  if (effectiveProjectId !== ENGINEERING_AGENT_BUILTIN_PROJECT_ID && externalProject) {
+    const snippet =
+      asTrimmedString(externalProject.manifestSnippet) ||
+      asTrimmedString(projectContextDoc?.notesMerged);
+    const ctxNotes = [
+      asTrimmedString(projectContextDoc?.structureNotes),
+      snippet.slice(0, 6000),
+    ]
+      .filter((x) => x.length > 0)
+      .join('\n---\n');
+    systemPrompt = buildEngineeringAgentSystemPromptExternal({
+      projectName: asTrimmedString(externalProject.name) || 'Projeto',
+      projectType: effectiveProjectType,
+      rootPath: asTrimmedString(externalProject.rootPath),
+      stackDetected:
+        asTrimmedString(externalProject.stackDetected) ||
+        detectEngineeringStackSnippet(snippet),
+      contextNotes: ctxNotes.slice(0, 12000),
+    });
+  }
+
+  const { text: replyRaw, usage } = await engineeringAgentChatCompletion({
+    config: assistantCfg,
+    system: systemPrompt,
+    turns,
+    userMessage: message,
+  });
+  const parsed = parseEngineeringAgentMarkers(replyRaw);
+  const safeReply = parsed.answer || replyRaw || '(sem texto)';
+
+  await msgCol.add({
+    role: 'assistant',
+    text: replyRaw,
+    ownerUid: claims.uid,
+    projectId: effectiveProjectId,
+    provider: 'openai',
+    model: assistantCfg.model,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await sessionRef.set(
+    {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastPreview: safeReply.slice(0, 400),
+      lastPlan: parsed.plan,
+      lastFiles: parsed.files,
+      lastDocs: parsed.docs,
+      lastRisks: parsed.risks,
+      lastImpact: parsed.impact,
+      lastPatchPreview: parsed.patchPreview,
+      lastCommand: parsed.command,
+      lastUsage: usage,
+    },
+    { merge: true },
+  );
+
+  const patchRef = await db.collection('engineering_agent_patches').add({
+    sessionId,
+    projectId: effectiveProjectId,
+    ownerUid: claims.uid,
+    ownerCompanyId: claims.companyId,
+    status: 'draft',
+    diffSummary: parsed.patchPreview.slice(0, 4000),
+    filesAffected: parsed.files,
+    impactNotes: parsed.impact,
+    risksAvoided: parsed.risks,
+    rawProposal: replyRaw.slice(0, 14000),
+    createdAt: now,
+  });
+
+  await db.collection('engineering_agent_audit').add({
+    sessionId,
+    projectId: effectiveProjectId,
+    patchId: patchRef.id,
+    action: 'send_message',
+    ownerUid: claims.uid,
+    ownerCompanyId: claims.companyId,
+    detail: `tokens=${asTrimmedString(JSON.stringify(usage))}`.slice(0, 800),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await writeAudit({
+    claims,
+    module: 'engineering_agent',
+    action: 'send_message',
+    entityPath: 'engineering_agent_sessions',
+    entityId: sessionId,
+    before: {},
+    after: {
+      preview: safeReply.slice(0, 160),
+      projectId: effectiveProjectId,
+      patchDraftId: patchRef.id,
+    },
+  });
+
+  return {
+    ok: true,
+    sessionId,
+    projectId: effectiveProjectId,
+    reply: safeReply,
+    replyRaw,
+    structured: {
+      plan: parsed.plan,
+      files: parsed.files,
+      docs: parsed.docs,
+      risks: parsed.risks,
+      impact: parsed.impact,
+      patchPreview: parsed.patchPreview,
+      command: parsed.command,
+    },
+  };
+});
+
+exports.engineeringAgentApprovePatch = functions.https.onCall(async (data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  const sessionId = asTrimmedString(data?.sessionId);
+  const approved = data?.approved === true;
+  const note = asTrimmedString(data?.note).slice(0, 800);
+  if (!sessionId) {
+    throw new functions.https.HttpsError('invalid-argument', 'sessionId obrigatorio.');
+  }
+  const ref = admin.firestore().collection('engineering_agent_sessions').doc(sessionId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Sessao nao encontrada.');
+  }
+  const sdata = asRecord(snap.data());
+  if (asTrimmedString(sdata.ownerUid) !== claims.uid) {
+    throw new functions.https.HttpsError('permission-denied', 'Sessao de outro utilizador.');
+  }
+
+  await ref.set(
+    {
+      patchApproved: approved,
+      patchApprovalNote: note,
+      patchApprovedAt: admin.firestore.FieldValue.serverTimestamp(),
+      patchApprovedByUid: claims.uid,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  const pid = asTrimmedString(sdata.projectId) || ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+  if (approved) {
+    const patchQ = await admin
+      .firestore()
+      .collection('engineering_agent_patches')
+      .where('sessionId', '==', sessionId)
+      .orderBy('createdAt', 'desc')
+      .limit(8)
+      .get();
+    const draftDoc = patchQ.docs.find((d) => asTrimmedString(asRecord(d.data()).status) === 'draft');
+    if (draftDoc) {
+      await draftDoc.ref.set(
+        {
+          status: 'approved',
+          approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+          approvedByUid: claims.uid,
+          approvalNote: note,
+        },
+        { merge: true },
+      );
+    }
+  }
+
+  await admin.firestore().collection('engineering_agent_audit').add({
+    sessionId,
+    projectId: pid,
+    action: approved ? 'approve_patch' : 'reject_patch',
+    ownerUid: claims.uid,
+    ownerCompanyId: claims.companyId,
+    detail: note,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await admin.firestore().collection('engineering_agent_tasks').add({
+    sessionId,
+    projectId: pid,
+    kind: 'patch_approval',
+    title: approved ? 'Patch aprovado (registo)' : 'Patch nao aprovado',
+    status: 'done',
+    payload: { approved, note },
+    ownerUid: claims.uid,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await writeAudit({
+    claims,
+    module: 'engineering_agent',
+    action: approved ? 'approve_patch' : 'reject_patch',
+    entityPath: 'engineering_agent_sessions',
+    entityId: sessionId,
+    before: { patchApproved: sdata.patchApproved === true },
+    after: { patchApproved: approved, note },
+  });
+
+  return { ok: true, sessionId, patchApproved: approved };
+});
+
+exports.engineeringAgentListProjects = functions.https.onCall(async (_data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  const prefsSnap = await admin
+    .firestore()
+    .collection('engineering_agent_operator_prefs')
+    .doc(claims.uid)
+    .get();
+  const selectedProjectId = prefsSnap.exists
+    ? asTrimmedString(asRecord(prefsSnap.data()).selectedProjectId) ||
+      ENGINEERING_AGENT_BUILTIN_PROJECT_ID
+    : ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+
+  const builtin = {
+    id: ENGINEERING_AGENT_BUILTIN_PROJECT_ID,
+    name: 'Ponto Certo',
+    type: 'pontocerto',
+    rootPath: '',
+    stackDetected: 'Flutter / Firebase (monorepo Ponto Certo)',
+    knownCommands: '',
+    mainDocs: 'docs/OFICIAL_*.md, CONTINUIDADE_ATUAL.md',
+    authorizationStatus: 'authorized',
+    lastUsedAtIso: '',
+  };
+
+  const pq = await admin
+    .firestore()
+    .collection('engineering_agent_projects')
+    .where('ownerUid', '==', claims.uid)
+    .orderBy('lastUsedAt', 'desc')
+    .limit(40)
+    .get();
+
+  const projects = pq.docs.map((d) => {
+    const r = asRecord(d.data());
+    return {
+      id: d.id,
+      name: asTrimmedString(r.name) || 'Projeto',
+      type: asTrimmedString(r.type) || 'externo',
+      rootPath: asTrimmedString(r.rootPath),
+      stackDetected: asTrimmedString(r.stackDetected),
+      knownCommands: asTrimmedString(r.knownCommands),
+      mainDocs: asTrimmedString(r.mainDocs),
+      authorizationStatus: asTrimmedString(r.authorizationStatus) || 'authorized',
+      lastUsedAtIso: timestampToIsoString(r.lastUsedAt),
+    };
+  });
+
+  return { ok: true, builtinProject: builtin, projects, selectedProjectId };
+});
+
+exports.engineeringAgentCreateProject = functions.https.onCall(async (data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  const name = asTrimmedString(data?.name).slice(0, 160);
+  const type = asTrimmedString(data?.type).toLowerCase();
+  const rootPath = asTrimmedString(data?.rootPath).slice(0, 2000);
+  const manifestSnippet = asTrimmedString(data?.manifestSnippet).slice(0, 24000);
+  if (!name || !rootPath) {
+    throw new functions.https.HttpsError('invalid-argument', 'nome e rootPath obrigatorios.');
+  }
+  if (type !== 'externo' && type !== 'novo') {
+    throw new functions.https.HttpsError('invalid-argument', 'type deve ser externo ou novo.');
+  }
+
+  const stackDetected = detectEngineeringStackSnippet(manifestSnippet);
+  const db = admin.firestore();
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const ref = await db.collection('engineering_agent_projects').add({
+    ownerUid: claims.uid,
+    ownerCompanyId: claims.companyId,
+    name,
+    type,
+    rootPath,
+    stackDetected,
+    knownCommands: '',
+    mainDocs: '',
+    authorizationStatus: 'authorized',
+    manifestSnippet,
+    createdAt: now,
+    updatedAt: now,
+    lastUsedAt: now,
+  });
+
+  await db.collection('engineering_agent_project_contexts').doc(ref.id).set({
+    projectId: ref.id,
+    ownerUid: claims.uid,
+    stackHints: stackDetected,
+    structureNotes: '',
+    notesMerged: manifestSnippet.slice(0, 12000),
+    updatedAt: now,
+  });
+
+  await db.collection('engineering_agent_audit').add({
+    projectId: ref.id,
+    action: 'create_project',
+    ownerUid: claims.uid,
+    ownerCompanyId: claims.companyId,
+    detail: name,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return {
+    ok: true,
+    projectId: ref.id,
+    stackDetected,
+  };
+});
+
+exports.engineeringAgentSelectProject = functions.https.onCall(async (data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  let projectId = asTrimmedString(data?.projectId);
+  if (!projectId) {
+    projectId = ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+  }
+  if (projectId !== ENGINEERING_AGENT_BUILTIN_PROJECT_ID) {
+    const ps = await admin.firestore().collection('engineering_agent_projects').doc(projectId).get();
+    if (!ps.exists || asTrimmedString(asRecord(ps.data()).ownerUid) !== claims.uid) {
+      throw new functions.https.HttpsError('permission-denied', 'Projeto invalido.');
+    }
+    await ps.ref.set({ lastUsedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  }
+
+  await admin
+    .firestore()
+    .collection('engineering_agent_operator_prefs')
+    .doc(claims.uid)
+    .set(
+      {
+        ownerUid: claims.uid,
+        selectedProjectId: projectId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+  return { ok: true, selectedProjectId: projectId };
+});
+
+exports.engineeringAgentGenerateCommand = HEAVY_RUNTIME.https.onCall(async (data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  const sessionId = asTrimmedString(data?.sessionId);
+  const mergeToSession = data?.mergeToSession === true;
+  if (!sessionId) {
+    throw new functions.https.HttpsError('invalid-argument', 'sessionId obrigatorio.');
+  }
+
+  const assistantCfg = await obterConfigAssistantRuntime(claims.companyId);
+  const missingCfg = missingAssistantConfig(assistantCfg);
+  if (missingCfg.length > 0) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `Modelo indisponivel. Configure: ${missingCfg.join(', ')}.`,
+    );
+  }
+
+  const sref = admin.firestore().collection('engineering_agent_sessions').doc(sessionId);
+  const ss = await sref.get();
+  if (!ss.exists || asTrimmedString(asRecord(ss.data()).ownerUid) !== claims.uid) {
+    throw new functions.https.HttpsError('permission-denied', 'Sessao invalida.');
+  }
+  const sd = asRecord(ss.data());
+  const sys =
+    'Output apenas uma linha PowerShell para Windows, sem markdown, sem aspas envolvendo a linha inteira, sem quebras de linha. ' +
+    'Se precisar de varios passos, encadeie com ; na mesma linha. Nunca inclua segredos nem tokens. ' +
+    'Responda somente com o comando.';
+  const user = [
+    `projectId=${asTrimmedString(sd.projectId) || ENGINEERING_AGENT_BUILTIN_PROJECT_ID}`,
+    `Plano: ${asTrimmedString(sd.lastPlan)}`,
+    `Arquivos: ${asTrimmedString(sd.lastFiles)}`,
+    `Docs: ${asTrimmedString(sd.lastDocs)}`,
+    `Riscos: ${asTrimmedString(sd.lastRisks)}`,
+    `Impacto: ${asTrimmedString(sd.lastImpact)}`,
+    `Patch resumo: ${asTrimmedString(sd.lastPatchPreview)}`,
+    `Comando anterior: ${asTrimmedString(sd.lastCommand)}`,
+    'Gere o comando final adequado (build/deploy/analyze) conforme convencoes do projeto.',
+  ].join('\n');
+
+  const { text: raw } = await engineeringAgentChatCompletion({
+    config: assistantCfg,
+    system: sys,
+    turns: [],
+    userMessage: user,
+  });
+  const command = raw.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
+
+  if (mergeToSession && command.length > 0) {
+    await sref.set(
+      {
+        lastCommand: command,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  }
+
+  await admin.firestore().collection('engineering_agent_audit').add({
+    sessionId,
+    action: 'generate_command',
+    ownerUid: claims.uid,
+    detail: command.slice(0, 800),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true, command };
+});
+
+exports.engineeringAgentRegisterContinuity = functions.https.onCall(async (data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  const sessionId = asTrimmedString(data?.sessionId);
+  const note = asTrimmedString(data?.note).slice(0, 16000);
+  if (!sessionId || !note) {
+    throw new functions.https.HttpsError('invalid-argument', 'sessionId e note obrigatorios.');
+  }
+  const sref = admin.firestore().collection('engineering_agent_sessions').doc(sessionId);
+  const ss = await sref.get();
+  if (!ss.exists || asTrimmedString(asRecord(ss.data()).ownerUid) !== claims.uid) {
+    throw new functions.https.HttpsError('permission-denied', 'Sessao invalida.');
+  }
+  const pid = asTrimmedString(asRecord(ss.data()).projectId) || ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  await admin.firestore().collection('engineering_agent_tasks').add({
+    sessionId,
+    projectId: pid,
+    kind: 'continuity_register',
+    title: 'Continuidade (texto operador)',
+    status: 'done',
+    payload: { note },
+    ownerUid: claims.uid,
+    createdAt: now,
+  });
+  await admin.firestore().collection('engineering_agent_audit').add({
+    sessionId,
+    projectId: pid,
+    action: 'register_continuity',
+    ownerUid: claims.uid,
+    detail: note.slice(0, 600),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  await writeAudit({
+    claims,
+    module: 'engineering_agent',
+    action: 'register_continuity',
+    entityPath: 'engineering_agent_sessions',
+    entityId: sessionId,
+    before: {},
+    after: { chars: note.length },
+  });
+  return { ok: true };
+});
+
+function engineeringWorkerCommandNeedsApproval(commandLine: string): boolean {
+  const c = commandLine.toLowerCase();
+  const needles = [
+    'firebase deploy',
+    'firebase hosting',
+    'firebase functions',
+    'firebase firestore',
+    'firebase logout',
+    'npm publish',
+    'git push',
+    'git push ',
+    ' git reset --hard',
+    ' git clean ',
+    'flutter build appbundle',
+    'flutter build apk',
+    'gradlew',
+    'gradle ',
+    'adb ',
+    'fastlane',
+    'remove-item',
+    'rimraf',
+    'erase ',
+    'del /',
+    'format-volume',
+    'invoke-webrequest',
+    'curl ',
+    'wget ',
+  ];
+  return needles.some((n) => c.includes(n));
+}
+
+exports.engineeringAgentWorkerEnqueueJob = functions.https.onCall(async (data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  const db = admin.firestore();
+  let commandLine = asTrimmedString(data?.commandLine);
+  const sessionId = asTrimmedString(data?.sessionId);
+  const projectIdRaw = asTrimmedString(data?.projectId);
+  const projectId =
+    projectIdRaw.length > 0 ? projectIdRaw : ENGINEERING_AGENT_BUILTIN_PROJECT_ID;
+  const cwdRelative = asTrimmedString(data?.cwdRelative).slice(0, 800);
+
+  if (!commandLine && sessionId) {
+    const ss = await db.collection('engineering_agent_sessions').doc(sessionId).get();
+    if (!ss.exists || asTrimmedString(asRecord(ss.data()).ownerUid) !== claims.uid) {
+      throw new functions.https.HttpsError('permission-denied', 'Sessao invalida.');
+    }
+    commandLine = asTrimmedString(asRecord(ss.data()).lastCommand);
+  }
+  if (!commandLine) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'commandLine obrigatorio ou sessionId com lastCommand preenchido.',
+    );
+  }
+
+  let projectRoot = '';
+  if (projectId === ENGINEERING_AGENT_BUILTIN_PROJECT_ID) {
+    projectRoot = asTrimmedString(data?.workspaceRoot).slice(0, 2400);
+    if (!projectRoot) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Para o modo Ponto Certo informe workspaceRoot (pasta do clone local).',
+      );
+    }
+  } else {
+    const pref = await db.collection('engineering_agent_projects').doc(projectId).get();
+    if (!pref.exists || asTrimmedString(asRecord(pref.data()).ownerUid) !== claims.uid) {
+      throw new functions.https.HttpsError('permission-denied', 'Projeto invalido.');
+    }
+    projectRoot = asTrimmedString(asRecord(pref.data()).rootPath).slice(0, 2400);
+    if (!projectRoot) {
+      throw new functions.https.HttpsError('failed-precondition', 'Projeto sem rootPath declarado.');
+    }
+  }
+
+  const requiresApproval = engineeringWorkerCommandNeedsApproval(commandLine);
+  const operatorApproved = data?.operatorApproved === true;
+  const approved = !requiresApproval || operatorApproved;
+  const status = approved ? 'queued' : 'pending_approval';
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  const jobRef = await db.collection('engineering_agent_worker_jobs').add({
+    ownerUid: claims.uid,
+    ownerCompanyId: claims.companyId,
+    sessionId: sessionId || null,
+    projectId,
+    projectRoot,
+    cwdRelative,
+    commandLine: commandLine.slice(0, 12000),
+    shell: 'powershell',
+    requiresApproval,
+    approved,
+    operatorApproved: operatorApproved === true,
+    status,
+    createdAt: now,
+    source: 'engineering_agent_callable',
+  });
+
+  await db.collection('engineering_agent_audit').add({
+    sessionId: sessionId || null,
+    projectId,
+    action: 'worker_enqueue',
+    ownerUid: claims.uid,
+    detail: `job=${jobRef.id} status=${status}`.slice(0, 800),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await writeAudit({
+    claims,
+    module: 'engineering_agent_worker',
+    action: 'enqueue_job',
+    entityPath: 'engineering_agent_worker_jobs',
+    entityId: jobRef.id,
+    before: {},
+    after: { status, requiresApproval },
+  });
+
+  return {
+    ok: true,
+    jobId: jobRef.id,
+    status,
+    requiresApproval,
+    message: approved
+      ? 'Job na fila para o worker local.'
+      : 'Job aguarda aprovacao (engineeringAgentWorkerApproveJob ou worker HTTP).',
+  };
+});
+
+exports.engineeringAgentWorkerApproveJob = functions.https.onCall(async (data, context) => {
+  const { claims } = await assertEngineeringAgentCaller(context);
+  const jobId = asTrimmedString(data?.jobId);
+  if (!jobId) {
+    throw new functions.https.HttpsError('invalid-argument', 'jobId obrigatorio.');
+  }
+  const ref = admin.firestore().collection('engineering_agent_worker_jobs').doc(jobId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Job nao encontrado.');
+  }
+  const jd = asRecord(snap.data());
+  if (asTrimmedString(jd.ownerUid) !== claims.uid) {
+    throw new functions.https.HttpsError('permission-denied', 'Job de outro utilizador.');
+  }
+
+  await ref.set(
+    {
+      approved: true,
+      operatorApproved: true,
+      status: 'queued',
+      approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      approvedByUid: claims.uid,
+    },
+    { merge: true },
+  );
+
+  await writeAudit({
+    claims,
+    module: 'engineering_agent_worker',
+    action: 'approve_job',
+    entityPath: 'engineering_agent_worker_jobs',
+    entityId: jobId,
+    before: { status: asTrimmedString(jd.status) },
+    after: { status: 'queued', approved: true },
+  });
+
+  return { ok: true, jobId, status: 'queued' };
+});
+
 exports.syncFinanceMovementRuntimeSummary = functions.firestore
   .document('finance_movements/{movementId}')
   .onWrite(async (change) => {

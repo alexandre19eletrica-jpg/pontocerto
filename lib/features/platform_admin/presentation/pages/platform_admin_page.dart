@@ -16,6 +16,7 @@ import 'package:pontocerto/core/theme/app_layout.dart';
 import 'package:pontocerto/core/utils/replace_trailing_paste_text_input_formatter.dart';
 import 'package:pontocerto/core/utils/trial_invite_bulk_parser.dart';
 import 'package:pontocerto/features/finance/presentation/utils/money.dart';
+import 'package:pontocerto/features/governance_engineering/presentation/pages/engineering_agent_page.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_demo_config_service.dart';
 import 'package:pontocerto/features/marketing/presentation/services/public_sales_config_service.dart';
 import 'package:pontocerto/features/platform_admin/presentation/platform_admin_section.dart';
@@ -112,7 +113,8 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
   void initState() {
     super.initState();
     _primeGovernanceFutures();
-    if (widget.section == PlatformAdminSection.governanca) {
+    if (widget.section == PlatformAdminSection.governanca ||
+        widget.section == PlatformAdminSection.engineeringAgent) {
       _future = Future.value(const <PlatformCompanySummary>[]);
     } else {
       _future = _load();
@@ -157,9 +159,11 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.section != widget.section) {
       _primeGovernanceFutures();
-      if (widget.section == PlatformAdminSection.governanca) {
+      if (widget.section == PlatformAdminSection.governanca ||
+          widget.section == PlatformAdminSection.engineeringAgent) {
         _future = Future.value(const <PlatformCompanySummary>[]);
-      } else if (oldWidget.section == PlatformAdminSection.governanca) {
+      } else if (oldWidget.section == PlatformAdminSection.governanca ||
+          oldWidget.section == PlatformAdminSection.engineeringAgent) {
         _future = _load();
       }
     }
@@ -1175,6 +1179,12 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
 
   AppWorkspaceHeader _headerForSection() {
     switch (widget.section) {
+      case PlatformAdminSection.engineeringAgent:
+        return const AppWorkspaceHeader(
+          title: 'Agente de Engenharia',
+          subtitle: '',
+          chips: [],
+        );
       case PlatformAdminSection.governanca:
         return const AppWorkspaceHeader(
           title: 'Governanca SaaS · acessos e cobranca cliente',
@@ -2134,7 +2144,7 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
       ...head,
       const Text('Painel desconhecido. Voltando ao menu recomendado.'),
       const SizedBox(height: 8),
-      const GovernanceHub(),
+      GovernanceHub(),
     ]);
   }
 
@@ -2149,6 +2159,39 @@ class _PlatformAdminPageState extends ConsumerState<PlatformAdminPage> {
           child: Text(
             'Acesso negado. Exija OWNER e empresa suprema ou e-mail em PLATFORM_ADMIN_EMAILS (build).',
           ),
+        ),
+      );
+    }
+
+    if (widget.section == PlatformAdminSection.engineeringAgent) {
+      ref.read(shellPageChromeProvider.notifier).state = const ShellPageChrome(
+        title: 'Agente de Engenharia',
+      );
+      if (!hasSupremePlatformAccess(session)) {
+        return AppGradientBackground(
+          child: AppPageLayout(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Text(
+                  'Acesso negado ao Agente de Engenharia: apenas dono da empresa suprema da plataforma.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppBrandColors.ink,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+      return AppGradientBackground(
+        child: AppPageLayout(
+          scrollable: false,
+          padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+          child: const EngineeringAgentPage(),
         ),
       );
     }

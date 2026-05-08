@@ -467,7 +467,22 @@ class RotasApp {
             ),
           ),
           GoRoute(
+            path: '/platform-admin/agente-engenharia',
+            builder: (context, state) => const PlatformAdminPage(
+              section: PlatformAdminSection.engineeringAgent,
+            ),
+          ),
+          GoRoute(
             path: '/platform-admin/governanca',
+            redirect: (context, state) {
+              final v = (state.uri.queryParameters['v'] ?? '')
+                  .trim()
+                  .toLowerCase();
+              if (v == 'engineering_agent') {
+                return kPlatformAdminEngineeringAgentPath;
+              }
+              return null;
+            },
             builder: (context, state) => PlatformAdminPage(
               section: PlatformAdminSection.governanca,
               governancePanel: state.uri.queryParameters['v'],

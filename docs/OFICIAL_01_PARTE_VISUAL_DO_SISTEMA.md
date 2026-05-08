@@ -1,6 +1,6 @@
 # Parte Visual Oficial do Sistema
 
-Data base: 23/04/2026
+Data base: 07/05/2026
 Projeto: Ponto Certo
 
 ## Objetivo
@@ -74,7 +74,7 @@ Regra:
 - `Trabalhista`: competencia, documentos, pagamentos e regularizacao
 - `Tarefas` e `Ordens de servico`: execucao, andamento, evidencias
 - `Contador`: carteira, perfil fiscal, faturamento e fiscal
-- `Plataforma`: gestao suprema, governanca e observabilidade
+- `Plataforma`: gestao suprema, governanca, agente de engenharia (suprema), observabilidade
 
 No modulo `Fiscal`, a faixa principal de acoes da NFS-e deve concentrar:
 
@@ -236,6 +236,10 @@ Esses alertas servem para impedir cadastro perdido no sistema e devem ficar visi
 - `/cadastro-empresa` (leve) e pre-cadastro comercial (`SalesPreRegistrationPage`): texto de confirmacao quando o envio por e-mail nao foi concluido.
 - `/fiscal`: cartao **Documentos fiscais via Focus** (sinc NF-e / NFS-e nacional recebidas, chips de status sync, lista com download XML) igual ao utilizado na pagina **Declaracoes** do contador; em demo aparece apenas aviso sem botoes de sync.
 - Pre-cadastro leve empresa e escritorio (`/pre-cadastro-empresa`, `/pre-cadastro-escritorio`): layout alinhado heroi + logo + cartao de vidro nos dois; linha localizacao com **Estado (UF)** em largura proporcional (flex) e fundo branco nos campos para leitura uniforme; escritorio com mesma linguagem de CTAs; botao Voltar do escritorio leve retorna ao login do contador via `BotaoVoltarApp`.
+
+## Atualizacao visual (07/05/2026)
+
+- **Plataforma — Agente de Engenharia** (`/platform-admin/agente-engenharia`): apenas **dono empresa suprema**; **primeiro item** do submenu Plataforma (antes de Escritorios); **seletor de projeto**, chip modo (**Ponto Certo** / externo / novo), **Novo projeto**; barra compacta; sessoes em **coluna estreita** (desktop) ou **folha inferior** (ecra estreito); **chat em altura flexivel**; campo de mensagem **multilinha**; slots e acoes (**aprovar patch**, **gerar/copiar comando**, **continuidade**, ver docs/arquivos, etc.) no menu **⋮ Entrega e acoes**. Sem token OpenAI na UI. Redirect automatico de `governanca?v=engineering_agent` para esta rota.
 
 ## Atualizacao visual (06/05/2026)
 

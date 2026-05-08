@@ -98,6 +98,9 @@ class AppShellScaffold extends StatefulWidget {
 
   /// Título padrão da app bar (menu lateral) a partir de [GoRouterState.matchedLocation].
   static String titleForPath(String matchedLocation) {
+    if (matchedLocation.startsWith(kPlatformAdminEngineeringAgentPath)) {
+      return 'Agente de Engenharia';
+    }
     if (matchedLocation.startsWith('/platform-admin')) {
       return 'Plataforma';
     }
@@ -831,6 +834,7 @@ class _ShellMenuState extends State<_ShellMenu> {
                       else if (item.group == _ShellGroup.platformAdmin)
                         _PlatformAdminShellGroup(
                           item: item,
+                          session: widget.session,
                           currentRoute: widget.currentRoute,
                           selected:
                               widget.currentRoute.startsWith('/platform-admin'),
@@ -868,6 +872,9 @@ class _ShellMenuState extends State<_ShellMenu> {
   }
 
   bool _canSeePrivilegedItem(Session session, String route) {
+    if (route == kPlatformAdminEngineeringAgentPath) {
+      return hasSupremePlatformAccess(session);
+    }
     if (route == kPlatformAdminEscritoriosPath) {
       return canAccessPlatformAdminRoute(session);
     }
@@ -1019,6 +1026,7 @@ class _AssistantShellGroup extends StatelessWidget {
 class _PlatformAdminShellGroup extends StatelessWidget {
   const _PlatformAdminShellGroup({
     required this.item,
+    required this.session,
     required this.currentRoute,
     required this.selected,
     required this.expanded,
@@ -1028,6 +1036,7 @@ class _PlatformAdminShellGroup extends StatelessWidget {
   });
 
   final _ShellItem item;
+  final Session session;
   final String currentRoute;
   final bool selected;
   final bool expanded;
@@ -1090,6 +1099,12 @@ class _PlatformAdminShellGroup extends StatelessWidget {
           ),
         ),
         if (expanded) ...[
+          if (hasSupremePlatformAccess(session))
+            _PlatformAdminSubEntry(
+              label: 'Agente Engenharia',
+              selected: currentRoute == kPlatformAdminEngineeringAgentPath,
+              onTap: () => onSubRoute(kPlatformAdminEngineeringAgentPath),
+            ),
           _PlatformAdminSubEntry(
             label: 'Escritorios',
             selected: currentRoute == kPlatformAdminEscritoriosPath,

@@ -18,7 +18,9 @@ void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      usePathUrlStrategy();
+      if (kIsWeb) {
+        usePathUrlStrategy();
+      }
 
       FlutterError.onError = (details) {
         FlutterError.presentError(details);
