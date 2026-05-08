@@ -22,9 +22,9 @@ Versao de referencia do app (este repositorio): `1.0.88+1059` (`pubspec.yaml`).
 | **OFICIAL_01** (este) | **Visual** — como as telas do **Ponto Certo** (web, Android, exe ERP) devem parecer e organizar-se. |
 | **OFICIAL_02** | **Funcional** — o que o utilizador consegue fazer, fluxos e permissoes. |
 | **OFICIAL_03** | **Arquitectura** — modulos, rotas, Functions, integracoes e dados. |
-| **OFICIAL_04** | **Memoria** — registo datado, decisoes e continuidade (inclui assuntos cuja UI vive fora deste repo quando relevante). |
+| **OFICIAL_04** | **Memoria** — registo datado, decisoes e continuidade alinhados aos outros tres. |
 
-**Ambito deste ficheiro:** nao descreve pixel-a-pixel o **Studio Ponto Certo** (IDE desktop separado, outro codigo). A UI web/Android/exe do produto **Ponto Certo** sim; referencias ao agente de engenharia na **Plataforma** referem-se as telas **dentro** deste projeto (`/platform-admin/agente-engenharia`).
+**Ambito deste ficheiro:** cobre apenas o produto **Ponto Certo** entregue por este repositorio (web, Android, cliente desktop **`pontocerto.exe`**). O **Agente de Engenharia** na **Plataforma** inclui as telas deste projeto em **`/platform-admin/agente-engenharia`**.
 
 ## Principio visual central
 

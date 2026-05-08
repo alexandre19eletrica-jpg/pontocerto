@@ -17,10 +17,7 @@ Ele e a referencia oficial para produto, suporte, vendas, assistente e continuid
 | **OFICIAL_03** | **Arquitectura** — implementacao tecnica alinhada a este comportamento. |
 | **OFICIAL_04** | **Memoria** — o que foi decidido e quando (evita contradizer 01–03 sem registo). |
 
-**Dois executaveis desktop diferentes (nao misturar):**
-
-- **Ponto Certo Windows (`pontocerto.exe`)** — Flutter **deste** repo; Firebase com **`DefaultFirebaseOptions.windows`**; login/dados em nuvem alinhados ao Web; Firestore **sem** persistencia local nesta plataforma (`lib/core/firebase/firebase_init.dart`) por estabilidade do exe.
-- **Studio Ponto Certo** — aplicacao desktop **fora deste monorepo** (repo/pasta proprios), orientada ao operador do agente de engenharia/worker local; **nao** constitui modulo do ERP aqui descrito; continuidade pontual na **OFICIAL_04** quando necessario.
+**Cliente desktop Windows (`pontocerto.exe`, opcional):** Flutter **deste** repo; Firebase com **`DefaultFirebaseOptions.windows`**; login/dados em nuvem alinhados ao Web; Firestore **sem** persistencia local nesta plataforma (`lib/core/firebase/firebase_init.dart`) por estabilidade do exe — ver **OFICIAL_03**.
 
 ## Estrutura funcional do sistema
 
