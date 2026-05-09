@@ -28,7 +28,7 @@ Toda leitura do sistema deve partir destes 4 documentos:
 3. [OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md](OFICIAL_03_ARQUITETURA_TECNICA_COMPLETA_DO_SISTEMA.md)
 4. [OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md](OFICIAL_04_MEMORIA_E_REGISTRO_ATUAL_DO_SISTEMA.md)
 
-**Ambito:** a documentacao oficial deste repositorio refere-se **unicamente** ao produto **Ponto Certo** (`lib/`, `functions/`, etc.). Outras aplicacoes ou arvores de codigo **fora** deste mono-repo **nao** sao descritas nos OFICIAL nem aqui.
+**Ambito:** estes quatro OFICIAL descrevem o produto **Ponto Certo** (`lib/`, `functions/`, etc.). O **Studio Ponto Certo** (IDE desktop em repo proprio) **nao** e modulo deste codigo, mas **integra-se** ao mesmo backend **`engineeringAgent*`**; a sua documentacao oficial de produto vive em **`docs/OFICIAL_*`** dentro da pasta do Studio (**ex.: `C:\StudioPontoCerto`**). Nos OFICIAL aqui mantem-se **referencias de fronteira** (dois exes, dois projectos Firebase) para nao misturar suporte.
 
 ## Como usar
 

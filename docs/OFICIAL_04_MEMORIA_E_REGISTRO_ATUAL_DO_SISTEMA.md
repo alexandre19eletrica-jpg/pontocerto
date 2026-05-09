@@ -9,12 +9,14 @@ Projeto: Ponto Certo
 |-----------|--------|
 | **OFICIAL_01** | Visual do **Ponto Certo** (este repo). |
 | **OFICIAL_02** | Funcional do **Ponto Certo**. |
-| **OFICIAL_03** | Arquitectura tecnica do **Ponto Certo** (este repo). |
-| **OFICIAL_04** (este) | **Memoria**: decisoes, datas, versao; mantem os outros tres documentos alinhados ao que ficou decidido. |
+| **OFICIAL_03** | Arquitectura tecnica do **Ponto Certo** (+ backend **`engineeringAgent*`** partilhado com ferramentas externas ao mono-repo). |
+| **OFICIAL_04** (este) | **Memoria**: decisoes, datas, versao; ponte quando algo (ex.: **Studio** desktop) **nao** esta no codigo deste repo mas afecta continuidade ou operadores. |
 
-Este ficheiro **nao** substitui 01–03 em visual/funcional/arquitectura; regista *o que foi acordado* para nao ficarem desfasados uns dos outros.
+Este ficheiro **nao** substitui 01–03 em visual/funcional/arquitectura; regista *o que foi acordado* para nao ficarem «desligados» uns dos outros.
 
-**Registo (08/05/2026 — arranque Windows `pontocerto.exe`):** Firebase **Windows** em `firebase_options.dart`; **`usePathUrlStrategy()`** apenas na Web (`main.dart`); Firestore **sem** persistencia local no Windows (`lib/core/firebase/firebase_init.dart`). Ver **OFICIAL_03** (Frontend).
+**Registo (09/05/2026 — Doc ERP vs Studio):** um commit anterior (**649eaa1**) tinha **removido** referencias ao **Studio Ponto Certo** nos OFICIAL deste repo («ambito so Ponto Certo»), o que gerou confusao operacional (parecia que o Studio «voltou» a ser so ERP). **Repoe-se** aqui e nos outros OFICIAL a distincao: **`pontocerto.exe`** + **`pontocerto-e1dab`** versus **`StudioPontoCerto`** + **`studiopontocerto`** + mesmo pipeline **`engineeringAgent*`**.
+
+**Registo (08/05/2026 — Windows exe ERP vs Studio):** o cenario «executavel no PC a nao responder» ou diferencas de **login** podem referir-se ao **Studio** (repo **`StudioPontoCerto`**, Firebase **`studiopontocerto`**, Callable **`studioWindowsEmailPasswordExchange`**, IAM **`serviceAccountTokenCreator`** na conta adminsdk do Studio) ou ao **Ponto Certo** (**`pontocerto.exe`**, **`pontocerto-e1dab`**). No **Ponto Certo** mantem-se melhorias de arranque Windows (Firebase **`windows`**, **`usePathUrlStrategy`** so Web, Firestore sem persistencia local no Windows). No Studio aplicam-se ajustes na copia local (frames antes de **`Firebase.initializeApp`**, worker **`node src/index.js`**, etc.) — ver docs OFICIAL **dentro** de **`C:\StudioPontoCerto`**.
 
 **Registo (07/05/2026 — Agente de Engenharia: Plataforma + publicacao web):** UI **fora da Governanca** — rota **`/platform-admin/agente-engenharia`**, primeiro item do submenu **Plataforma > Agente Engenharia** (apenas **OWNER empresa suprema**); cartao removido do hub Governanca; link antigo `?v=engineering_agent` redireciona para a nova rota. Layout orientado a chat: barra compacta (projeto, modo, novo projeto, menu **Entrega e acoes**); lista de sessoes em coluna (desktop) ou folha inferior (ecra estreito); area de mensagens em altura flexivel; campo de escrita multilinha. Publicacao confirmada pelo operador: build web + deploy **`functions` + `hosting`**. Prompt OpenAI e janela de historico nas Functions **sem mudanca funcional nesta rodada** (continua `buildEngineeringAgentSystemPromptPontocerto` / `buildEngineeringAgentSystemPromptExternal`, ultimas **16** mensagens por pedido, `temperature` **0.2**).
 

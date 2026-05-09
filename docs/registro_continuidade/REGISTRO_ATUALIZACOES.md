@@ -6,6 +6,11 @@ Regra de projeto: `.cursor/rules/documentacao-git-e-registro.mdc`.
 Este arquivo e o log operacional resumido do que foi publicado (web/functions/app).  
 Atualize sempre que entrar qualquer mudanca em producao.
 
+## 2026-05-09
+
+- **Documentacao oficial (repo pontocerto)**: revertida mentalidade «sem mencionar Studio» introduzida no commit **649eaa1**. Voltam ao texto dos OFICIAL/`README_OFICIAL_DOCUMENTACAO` as referencias de fronteira — **`pontocerto.exe`** + **`pontocerto-e1dab`** versus **Studio Ponto Certo** (Firebase **`studiopontocerto`**, docs em **`C:\StudioPontoCerto`**). Novo registo datado em **OFICIAL_04** explica o episódio para continuidade.
+- **Studio `README.md`**: corrigida lista de projectos Firebase (login **`studiopontocerto`**, worker pode usar **`pontocerto-e1dab`** na fila via `.env`).
+
 ## 2026-05-07
 
 - **Agente de Engenharia / navegacao**: saida da Governanca para **`/platform-admin/agente-engenharia`**; primeiro item **Plataforma > Agente Engenharia** (`PlatformAdminSection.engineeringAgent`, `kPlatformAdminEngineeringAgentPath`); cartao removido de `GovernanceHub`; redirect GoRouter de **`governanca?v=engineering_agent`** para a nova rota.

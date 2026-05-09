@@ -16,7 +16,7 @@ Este documento consolida a arquitetura tecnica oficial do sistema para desenvolv
 | **OFICIAL_03** (este) | **Arquitectura** — como o codigo e os servicos realizam o funcional. |
 | **OFICIAL_04** | **Memoria** — decisoes e cronologia; consultar quando houver duvida entre «o que dizia o doc» e «o que ficou decidido». |
 
-**Codigo neste repositorio (`lib/`, `functions/`, etc.)** implementa **somente** o produto **Ponto Certo**. Ferramentas, repos ou empacotamentos **externos** que invoquem o mesmo backend **nao** sao descritos nestes quatro OFICIAL; o seu ciclo de vida e documentacao ficam **fora** deste mono-repo.
+**Codigo neste repositorio (`lib/`, `functions/`, etc.)** implementa o **Ponto Certo**. O **Studio Ponto Certo** (desktop IDE, repo separado) **nao** esta na arvore Flutter deste mono-repo, mas **consome** os mesmos callables **`engineeringAgent*`** (regiao **`us-central1`**) expostos pelo backend acordado para o agente; configuracao Firebase **do Studio** e projecto **`studiopontocerto`**, distinto do **`pontocerto-e1dab`** do ERP — ver **`firebase_options`** em cada produto. Ciclo de vida e docs detalhadas do Studio: **`C:\StudioPontoCerto`** e os seus **`docs/OFICIAL_*`**.
 
 ## Camadas principais
 

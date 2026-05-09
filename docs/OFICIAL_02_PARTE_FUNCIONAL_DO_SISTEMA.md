@@ -17,7 +17,10 @@ Ele e a referencia oficial para produto, suporte, vendas, assistente e continuid
 | **OFICIAL_03** | **Arquitectura** — implementacao tecnica alinhada a este comportamento. |
 | **OFICIAL_04** | **Memoria** — o que foi decidido e quando (evita contradizer 01–03 sem registo). |
 
-**Cliente desktop Windows (`pontocerto.exe`, opcional):** Flutter **deste** repo; Firebase com **`DefaultFirebaseOptions.windows`**; login/dados em nuvem alinhados ao Web; Firestore **sem** persistencia local nesta plataforma (`lib/core/firebase/firebase_init.dart`) por estabilidade do exe — ver **OFICIAL_03**.
+**Dois executaveis desktop diferentes (nao misturar fluxos nem Firebase por engano):**
+
+- **Ponto Certo Windows (`pontocerto.exe`)** — Flutter **deste** repo; Firebase com **`DefaultFirebaseOptions.windows`** (projecto **`pontocerto-e1dab`**); login/dados alinhados ao Web; Firestore **sem** persistencia local no exe (`lib/core/firebase/firebase_init.dart`) — ver **OFICIAL_03**.
+- **Studio Ponto Certo (`studiopontocerto.exe`)** — aplicacao **fora deste mono-repo**; Firebase Auth/app **`studiopontocerto`**; mesmo conjunto de callables **`engineeringAgent*`** que serve o agente (deploy/host conforme repo Studio); worker local **`pontocerto-ai-worker`** — documentacao em **`C:\StudioPontoCerto\docs`** (OFICIAL proprios), login Windows via **`studioWindowsEmailPasswordExchange`** + **`signInWithCustomToken`** (nao duplicado aqui em detalhe).
 
 ## Estrutura funcional do sistema
 
